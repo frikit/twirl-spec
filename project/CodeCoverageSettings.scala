@@ -3,12 +3,12 @@ import scoverage.ScoverageKeys.*
 
 object CodeCoverageSettings {
 
-  /** Thresholds are per module, and set just under what each module actually
-    * reaches. A single global number does not work once the build is split: a
-    * small module of pure rule definitions has a very different shape from the
-    * core.
+  /** Every module is at 100% statement and branch, and the gate is set there so
+    * it stays that way: a new branch has to be covered, excluded with a
+    * `$COVERAGE-OFF$` marker and a reason, or deliberately dropped by lowering
+    * this number in a commit someone can see.
     */
-  def apply(statement: Int = 95, branch: Int = 90): Seq[Setting[?]] = Seq(
+  def apply(statement: Int = 100, branch: Int = 100): Seq[Setting[?]] = Seq(
     coverageExcludedPackages := "<empty>;Reverse.*;..*Routes.*;",
     coverageMinimumStmtTotal := statement,
     coverageMinimumBranchTotal := branch,

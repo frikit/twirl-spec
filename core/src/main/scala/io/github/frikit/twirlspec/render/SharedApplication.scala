@@ -19,9 +19,6 @@ package io.github.frikit.twirlspec.render
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 
-import java.util.concurrent.ConcurrentHashMap
-import scala.jdk.CollectionConverters._
-
 /** One Play application per distinct configuration, shared by every spec in the
   * JVM.
   *
@@ -44,51 +41,26 @@ object SharedApplication {
     "play.filters.csp.nonce.enabled" -> false
   )
 
-  private val applications = new ConcurrentHashMap[Map[String, Any], Application]()
+  private val cache = new ApplicationCache(config => new GuiceApplicationBuilder().configure(config).build())
 
   /** The application for this configuration, building it on first use. */
-  def apply(configuration: Map[String, Any]): Application = {
-    val effective = viewTestDefaults ++ configuration
-    applications.computeIfAbsent(
-      effective,
-      new java.util.function.Function[Map[String, Any], Application] {
-        def apply(config: Map[String, Any]): Application =
-          new GuiceApplicationBuilder().configure(config).build()
-      }
-    )
-  }
+  def apply(configuration: Map[String, Any]): Application = cache(viewTestDefaults ++ configuration)
 
   /** How many applications this JVM has built — asserted by twirl-spec's own
     * tests, and useful in a service that suspects it is still booting per spec.
     */
-  def instanceCount: Int = applications.size()
+  def instanceCount: Int = cache.instanceCount
 
-  // $COVERAGE-OFF$
-  // The hook body runs at JVM exit, and reset() stops the application the rest
-  // of the suite is sharing. Exercising either from a test would make the suite
-  // order-dependent in order to prove nothing, so they are excluded here rather
-  // than hidden behind a lower threshold.
-
-  private val shutdown = new Thread(new Runnable {
-    def run(): Unit = applications.values().asScala.foreach { app =>
-      try play.api.Play.stop(app)
-      catch { case _: Throwable => () }
-    }
-  })
-
-  Runtime.getRuntime.addShutdownHook(shutdown)
-
-  /** Drop the cache. Only needed by tests of the cache itself. */
-  def reset(): Unit = {
-    applications
-      .values()
-      .asScala
-      .foreach(app =>
-        try play.api.Play.stop(app)
-        catch { case _: Throwable => () }
-      )
-    applications.clear()
+  /** Stops every cached application and forgets it.
+    *
+    * Registered as a JVM shutdown hook, and exposed so it can be exercised
+    * directly. It resets rather than only stopping, so that running it leaves
+    * the cache able to rebuild instead of handing out a stopped application.
+    */
+  private[twirlspec] val shutdownHook: Runnable = new Runnable {
+    def run(): Unit = cache.reset()
   }
-  // $COVERAGE-ON$
+
+  Runtime.getRuntime.addShutdownHook(new Thread(shutdownHook))
 
 }

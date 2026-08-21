@@ -49,7 +49,7 @@ object Outline {
 
   private def framing(page: Page): Seq[String] = {
     val rows = Seq(
-      Some(field("title", Text.preview(page.title))),
+      Option(page.title).filter(_.nonEmpty).map(t => field("title", Text.preview(t))),
       page.htmlLang.map(l => field("lang", l)),
       page.serviceName.headOption.map(_ => field("service", page.serviceName.text)),
       page.h1.headOption.map(_ => field("h1", page.h1.text)),

@@ -87,9 +87,12 @@ object TwirlStandards extends RuleSet {
     "css"
   )
 
+  /** Callers only reach this for a marker they have already found, so there is
+    * no not-found case to handle: clamping the index covers it either way.
+    */
   private def snippetAround(body: String, marker: String): String = {
-    val i = body.indexOf(marker)
-    if (i < 0) marker else Text.preview(body.substring(math.max(0, i - 40), math.min(body.length, i + 60)), 110)
+    val i = math.max(0, body.indexOf(marker))
+    Text.preview(body.substring(math.max(0, i - 40), math.min(body.length, i + 60)), 110)
   }
 
 }

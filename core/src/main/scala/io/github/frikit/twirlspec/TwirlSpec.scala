@@ -73,7 +73,8 @@ trait TwirlSpec extends TwirlSpecDsl { self: Suite with Alerting =>
 
   /** Every language the application is configured for, English first. */
   def languages: Seq[Lang] = {
-    val configured = app.configuration.getOptional[Seq[String]]("play.i18n.langs").getOrElse(Seq("en")).map(Lang(_))
+    // Play's reference.conf always defines this, so there is no fallback to write.
+    val configured = app.configuration.get[Seq[String]]("play.i18n.langs").map(Lang(_))
     configured.sortBy(l => if (l.code == "en") 0 else 1)
   }
 

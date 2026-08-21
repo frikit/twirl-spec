@@ -298,7 +298,16 @@ one per view — a common pattern — costs a great deal and buys nothing.
 ```
 
 Formats, cross-compiles both Scala versions, tests every module, and measures
-coverage against a per-module gate (95% statement, 90% branch).
+coverage against a 100% statement and branch gate.
+
+Every module is fully covered, with no `$COVERAGE-OFF$` exclusions anywhere in
+the source. That is a deliberate constraint rather than a trophy: a new branch
+has to arrive with a test, be excluded with a marker and a stated reason, or
+lower the gate in a commit someone can see. Getting there also deleted three
+pieces of unreachable code — a `getOrElse` on a key Play always defines, a
+not-found branch in a helper only called for values already found, and a
+`catch` that the tests written to justify it showed had never caught
+anything.
 
 `src/test/resources/captured/` holds markup captured verbatim from a real GOV.UK
 Design System implementation, so the Design System rules are checked against

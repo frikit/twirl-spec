@@ -19,6 +19,8 @@ package io.github.frikit.twirlspec.expect
 import io.github.frikit.twirlspec.expect.Matching._
 import io.github.frikit.twirlspec.page.{Page, Selection, Text}
 
+import scala.jdk.CollectionConverters._
+
 /** Expectations about the words on the page and the components carrying them. */
 trait ContentExpectations {
 
@@ -148,7 +150,6 @@ trait ContentExpectations {
   def tableRow(cells: String*): Expectation = Expectation("tableRow") { page =>
     val expected = cells.toList.map(Text.normalise)
     val rows     = page.css("table tbody tr").elements.map { tr =>
-      import scala.jdk.CollectionConverters._
       tr.select("td, th").asScala.toList.map(c => Text.normalise(c.text()))
     }
     if (rows.contains(expected)) Nil
@@ -299,8 +300,16 @@ final case class SummaryRowExpectation(
     key.resolve(page) match {
       case Left(v)         => Seq(v.copy(rule = rule))
       case Right(keyValue) =>
-        page.summaryRows.find { case (k, _, _) => Text.same(k, keyValue) } match {
-          case None                            =>
+        // Locate the row once and read everything off it. Looking it up twice —
+        // once through summaryRows and again through the DOM — left a branch
+        // that could not be reached, because the two lookups always agree.
+        val row = page.document
+          .select(".govuk-summary-list__row")
+          .asScala
+          .find(r => Text.same(r.select(".govuk-summary-list__key").text(), keyValue))
+
+        row match {
+          case None    =>
             Seq(
               Violation(
                 rule = rule,
@@ -312,34 +321,33 @@ final case class SummaryRowExpectation(
                 )
               )
             )
-          case Some((_, actualValue, actions)) =>
-            val valueIssues  = value.toSeq.flatMap { expected =>
+          case Some(r) =>
+            val actualValue = Text.normalise(r.select(".govuk-summary-list__value").text())
+            val actions     = r.select(".govuk-summary-list__actions a").asScala.toList
+            val actionText  = actions.map(a => Text.normalise(a.text()))
+            val actionHrefs = actions.map(_.attr("href"))
+
+            val valueIssues = value.toSeq.flatMap { expected =>
               if (Text.same(actualValue, expected)) Nil
               else Seq(Violation.mismatch(s"$rule value", expected, actualValue))
             }
+
             val actionIssues = actionTexts.toSeq.flatMap { expectedActions =>
               val resolved = expectedActions.map(_.resolve(page))
               resolved.collect { case Left(v) => v.copy(rule = rule) } match {
                 case Nil =>
                   val want = resolved.collect { case Right(v) => v }
-                  if (want.forall(w => actions.exists(a => Text.containsText(a, w)))) Nil
-                  else Seq(Violation.mismatch(s"$rule actions", want.mkString(", "), actions.mkString(", ")))
+                  if (want.forall(w => actionText.exists(a => Text.containsText(a, w)))) Nil
+                  else Seq(Violation.mismatch(s"$rule actions", want.mkString(", "), actionText.mkString(", ")))
                 case es  => es
               }
             }
-            val hrefIssues   = changeHref.toSeq.flatMap { url =>
-              val hrefs = page.document
-                .select(".govuk-summary-list__row")
-                .stream()
-                .filter(r => Text.same(r.select(".govuk-summary-list__key").text(), keyValue))
-                .findFirst()
-              if (hrefs.isPresent) {
-                import scala.jdk.CollectionConverters._
-                val actual = hrefs.get().select(".govuk-summary-list__actions a").asScala.toList.map(_.attr("href"))
-                if (actual.contains(url)) Nil
-                else Seq(Violation.mismatch(s"$rule change link", url, actual.mkString(", ")))
-              } else Nil
+
+            val hrefIssues = changeHref.toSeq.flatMap { url =>
+              if (actionHrefs.contains(url)) Nil
+              else Seq(Violation.mismatch(s"$rule change link", url, actionHrefs.mkString(", ")))
             }
+
             valueIssues ++ actionIssues ++ hrefIssues
         }
     }

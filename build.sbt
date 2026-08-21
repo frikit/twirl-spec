@@ -13,6 +13,10 @@ ThisBuild / scalacOptions ++= Seq("-feature", "-deprecation", "-unchecked", "-re
 
 lazy val commonSettings = Seq(
   crossScalaVersions := Seq(scala2_13, scala3),
+  // Suites share one Play application through SharedApplication, so they run
+  // one at a time. Running them in parallel would let one suite stop an
+  // application another is still using.
+  Test / parallelExecution := false,
   Test / testOptions += Tests.Argument(TestFrameworks.ScalaTest, "-oD")
 )
 
