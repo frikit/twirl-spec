@@ -1,0 +1,568 @@
+
+
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Error: What is your name? - Example Service - GOV.UK</title>
+  </head>
+  <body>
+    <span class="govuk-service-navigation__service-name">Example Service</span>
+    <a href="/back" class="govuk-back-link">Back</a>
+    <main id="main-content">
+      
+        
+<div class="govuk-error-summary" data-module="govuk-error-summary">
+  <div role="alert"><h2 class="govuk-error-summary__title">There is a problem</h2>
+      <div class="govuk-error-summary__body">
+        
+        
+            <ul class="govuk-list govuk-error-summary__list">
+            
+                <li>
+                
+                    <a href="#firstName">Enter their first name</a>
+                
+                </li>
+            
+            </ul>
+        
+      </div>
+  </div>
+</div>
+
+      
+
+      <h1 class="govuk-heading-l">What is your name?</h1>
+
+      <form method="post" action="/register/name">
+        
+
+
+
+<div class="govuk-form-group govuk-form-group--error">
+  
+  
+    
+        
+      <label class="govuk-label" for="firstName">
+        First name
+      </label>
+    
+      
+  
+
+
+  
+
+
+
+
+
+
+
+
+
+<p id="firstName-error" class="govuk-error-message" >
+ <span class="govuk-visually-hidden">Error:</span>
+ Enter their first name
+</p>
+
+  
+  
+       <input class="govuk-input govuk-input--error" 
+    id="firstName" name="firstName" type="text"   aria-describedby="firstName-error"
+  
+     autocomplete="given-name"
+  > 
+    
+
+  
+
+
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        
+
+
+
+<div class="govuk-form-group">
+  
+  
+    
+        
+      <label class="govuk-label" for="lastName">
+        Last name
+      </label>
+    
+      
+  
+
+
+  
+
+
+
+
+
+
+<div id="lastName-hint" class="govuk-hint">
+  As shown on their passport
+</div>
+
+  
+  
+       <input class="govuk-input" 
+    id="lastName" name="lastName" type="text"   aria-describedby="lastName-hint"
+  
+    
+  > 
+    
+
+  
+
+
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        
+
+
+
+  
+    <div class="govuk-form-group">
+  
+      
+        <fieldset class="govuk-fieldset"  aria-describedby="livesInUk-hint" >
+  
+    
+        <legend class="govuk-fieldset__legend">
+          Does Ada live in the UK?
+        </legend>
+      
+  
+  
+
+
+
+
+
+
+<div id="livesInUk-hint" class="govuk-hint">
+  Select one option.
+</div>
+
+  <div class="govuk-radios" data-module="govuk-radios">
+  
+  
+    
+    
+      
+          
+          
+          
+          
+              <div class="govuk-radios__item">
+                <input class="govuk-radios__input" id="livesInUk" name="livesInUk" type="radio" value="true"
+            
+            
+            
+            
+          >
+                
+    
+        
+      <label class="govuk-label govuk-radios__label" for="livesInUk">
+        Yes
+      </label>
+    
+      
+  
+
+
+                  
+                  </div>
+              
+          
+        
+    
+  
+    
+    
+      
+          
+          
+          
+          
+              <div class="govuk-radios__item">
+                <input class="govuk-radios__input" id="livesInUk-2" name="livesInUk" type="radio" value="false"
+            
+            
+            
+            
+          >
+                
+    
+        
+      <label class="govuk-label govuk-radios__label" for="livesInUk-2">
+        No
+      </label>
+    
+      
+  
+
+
+                  
+                  </div>
+              
+          
+        
+    
+  
+  
+  </div>
+
+
+</fieldset>
+
+
+
+      
+    
+</div>
+
+  
+
+
+
+
+
+
+
+
+
+
+
+        
+
+
+
+  
+    <div class="govuk-form-group">
+  
+      
+        <fieldset class="govuk-fieldset" role="group"  aria-describedby="dateOfBirth-hint" >
+  
+    
+        <legend class="govuk-fieldset__legend">
+          What is their date of birth?
+        </legend>
+      
+  
+  
+
+
+
+
+
+
+<div id="dateOfBirth-hint" class="govuk-hint">
+  For example, 27 3 1993
+</div>
+
+  <div class="govuk-date-input" id="dateOfBirth">
+    
+    
+      <div class="govuk-date-input__item">
+        
+
+
+
+<div class="govuk-form-group">
+  
+  
+    
+        
+      <label class="govuk-label govuk-date-input__label" for="dateOfBirth-day">
+        Day
+      </label>
+    
+      
+  
+
+
+  
+
+
+
+
+
+
+
+  
+  
+       <input class="govuk-input govuk-date-input__input govuk-input--width-2" 
+    id="dateOfBirth-day" name="day" type="text"  
+  
+     inputmode="numeric"
+  > 
+    
+
+  
+
+
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      </div>
+    
+      <div class="govuk-date-input__item">
+        
+
+
+
+<div class="govuk-form-group">
+  
+  
+    
+        
+      <label class="govuk-label govuk-date-input__label" for="dateOfBirth-month">
+        Month
+      </label>
+    
+      
+  
+
+
+  
+
+
+
+
+
+
+
+  
+  
+       <input class="govuk-input govuk-date-input__input govuk-input--width-2" 
+    id="dateOfBirth-month" name="month" type="text"  
+  
+     inputmode="numeric"
+  > 
+    
+
+  
+
+
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      </div>
+    
+      <div class="govuk-date-input__item">
+        
+
+
+
+<div class="govuk-form-group">
+  
+  
+    
+        
+      <label class="govuk-label govuk-date-input__label" for="dateOfBirth-year">
+        Year
+      </label>
+    
+      
+  
+
+
+  
+
+
+
+
+
+
+
+  
+  
+       <input class="govuk-input govuk-date-input__input govuk-input--width-4" 
+    id="dateOfBirth-year" name="year" type="text"  
+  
+     inputmode="numeric"
+  > 
+    
+
+  
+
+
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      </div>
+    
+    
+  </div>
+
+
+</fieldset>
+
+
+
+      
+    
+</div>
+
+  
+
+
+
+
+
+
+
+
+
+        
+
+
+
+
+
+    
+  <dl class="govuk-summary-list">
+  
+    <div class="govuk-summary-list__row">
+      <dt class="govuk-summary-list__key">
+        Name
+      </dt>
+      <dd class="govuk-summary-list__value">
+        Ada Lovelace
+      </dd>
+      
+        <dd class="govuk-summary-list__actions">
+          
+             
+    <a class="govuk-link" href="/change/name">Change</a>
+          </dd>
+      </div>
+  </dl>
+
+  
+
+
+
+
+
+
+
+        
+  
+    
+      <button  type="submit"
+  
+ class="govuk-button" data-module="govuk-button" id="submit">
+        Continue
+           </button>
+    
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      </form>
+    </main>
+  </body>
+</html>

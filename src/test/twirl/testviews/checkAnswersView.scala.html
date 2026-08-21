@@ -1,0 +1,30 @@
+@this()
+@(name: String, dob: String)(implicit messages: Messages)
+
+<!DOCTYPE html>
+<html lang="@messages.lang.code">
+  <head><title>Check your answers - @messages("service.name") - GOV.UK</title></head>
+  <body>
+    <span class="govuk-service-navigation__service-name">@messages("service.name")</span>
+    <main id="main-content">
+      <h1 class="govuk-heading-l">Check your answers</h1>
+      <dl class="govuk-summary-list">
+        <div class="govuk-summary-list__row">
+          <dt class="govuk-summary-list__key">@messages("checkAnswers.name")</dt>
+          <dd class="govuk-summary-list__value">@name</dd>
+          <dd class="govuk-summary-list__actions">
+            <a class="govuk-link" href="/change/name">@messages("checkAnswers.change")<span class="govuk-visually-hidden"> @messages("checkAnswers.name")</span></a>
+          </dd>
+        </div>
+        <div class="govuk-summary-list__row">
+          <dt class="govuk-summary-list__key">@messages("checkAnswers.dob")</dt>
+          <dd class="govuk-summary-list__value">@dob</dd>
+          <dd class="govuk-summary-list__actions">
+            <a class="govuk-link" href="/change/dob">@messages("checkAnswers.change")<span class="govuk-visually-hidden"> @messages("checkAnswers.dob")</span></a>
+          </dd>
+        </div>
+      </dl>
+      <button type="submit" class="govuk-button" id="submit">@messages("site.continue")</button>
+    </main>
+  </body>
+</html>

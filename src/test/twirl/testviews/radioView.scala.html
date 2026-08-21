@@ -1,0 +1,35 @@
+@this()
+@(name: String, selected: Option[String] = None)(implicit messages: Messages)
+
+<!DOCTYPE html>
+<html lang="@messages.lang.code">
+  <head><title>@messages("livesInUk.title", name) - @messages("service.name") - GOV.UK</title></head>
+  <body>
+    <span class="govuk-service-navigation__service-name">@messages("service.name")</span>
+    <main id="main-content">
+      <form method="post" action="/register/lives-in-uk">
+        <div class="govuk-form-group">
+          <fieldset class="govuk-fieldset" aria-describedby="value-hint">
+            <legend class="govuk-fieldset__legend govuk-fieldset__legend--l">
+              <h1 class="govuk-fieldset__heading">@messages("livesInUk.heading", name)</h1>
+            </legend>
+            <div id="value-hint" class="govuk-hint">@messages("livesInUk.hint")</div>
+            <div class="govuk-radios" data-module="govuk-radios">
+              <div class="govuk-radios__item">
+                <input class="govuk-radios__input" id="value" name="value" type="radio" value="true"
+                       @if(selected.contains("true")) { checked }>
+                <label class="govuk-label govuk-radios__label" for="value">@messages("site.yes")</label>
+              </div>
+              <div class="govuk-radios__item">
+                <input class="govuk-radios__input" id="value-no" name="value" type="radio" value="false"
+                       @if(selected.contains("false")) { checked }>
+                <label class="govuk-label govuk-radios__label" for="value-no">@messages("site.no")</label>
+              </div>
+            </div>
+          </fieldset>
+        </div>
+        <button type="submit" class="govuk-button" id="submit">@messages("site.continue")</button>
+      </form>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,62 @@
+service.name = Example Service
+site.continue = Continue
+site.yes = Yes
+site.no = No
+error.summary.title = There is a problem
+error.browser.title.prefix = Error:
+
+whatIsYourName.title = What is your name?
+whatIsYourName.heading = What is your name?
+whatIsYourName.caption = Personal details
+whatIsYourName.firstName = First name
+whatIsYourName.lastName = Last name
+whatIsYourName.lastName.hint = As shown on their passport
+whatIsYourName.error.firstName.required = Enter their first name
+whatIsYourName.error.lastName.required = Enter their last name
+whatIsYourName.p1 = We need this so we can contact you.
+whatIsYourName.guidance = You can find this on their birth certificate.
+
+livesInUk.title = Does {0} live in the UK?
+livesInUk.heading = Does {0} live in the UK?
+livesInUk.legend = Does {0} live in the UK?
+livesInUk.hint = Select one option.
+
+checkAnswers.name = Name
+checkAnswers.dob = Date of birth
+checkAnswers.change = Change
+
+dateOfBirth.legend = What is their date of birth?
+dateOfBirth.hint = For example, 27 3 1993
+
+guidance.link = Read the guidance
+untranslated.key = This one is only in English
+
+kitchenSink.title = Everything at once
+kitchenSink.heading = Everything at once
+kitchenSink.caption = A caption
+kitchenSink.section = A section heading
+kitchenSink.p1 = A paragraph of guidance.
+kitchenSink.warning = You must tell us within 30 days.
+kitchenSink.inset = This is inset text.
+kitchenSink.banner = Your answers were saved.
+kitchenSink.panelTitle = Application complete
+kitchenSink.panelBody = Your reference is ABC123
+kitchenSink.details = Help with this question
+kitchenSink.b1 = First bullet
+kitchenSink.b2 = Second bullet
+kitchenSink.n1 = First step
+kitchenSink.n2 = Second step
+kitchenSink.link = Read the guidance
+kitchenSink.email = Email address
+kitchenSink.email.hint = We will only use this to contact you
+kitchenSink.notes = Additional notes
+kitchenSink.country = Country
+kitchenSink.colours = Choose your colours
+kitchenSink.red = Red
+kitchenSink.blue = Blue
+kitchenSink.upload = Upload a file
+kitchenSink.save = Save and come back later
+kitchenSink.col1 = Name
+kitchenSink.col2 = Year
+kitchenSink.absent = This text is not on the page
+kitchenSink.error.email.required = Enter an email address

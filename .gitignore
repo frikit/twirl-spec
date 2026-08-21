@@ -1,0 +1,200 @@
+# ---------------------------------------------------------------------------
+# sbt / Scala
+# ---------------------------------------------------------------------------
+target/
+project/target/
+project/project/
+project/boot/
+project/plugins/project/
+lib_managed/
+src_managed/
+.history
+.history/
+.cache
+.cache-*
+dist/
+
+# Build servers, language servers and their caches
+.bsp/
+.bloop/
+.metals/
+metals.sbt
+project/metals.sbt
+.scala-build/
+.ammonite/
+
+# sbt writes coverage, test reports and the runtime pid under target/, but a few
+# tools drop them at the root instead.
+scoverage-report/
+test-output/
+RUNNING_PID
+
+# ---------------------------------------------------------------------------
+# Other JVM build tools — a Scala repo picks these up as soon as it grows a
+# module in another language.
+# ---------------------------------------------------------------------------
+.gradle/
+/build/
+gradle-app.setting
+!gradle/wrapper/gradle-wrapper.jar
+.mvn/timing.properties
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+release.properties
+dependency-reduced-pom.xml
+out/
+
+# ---------------------------------------------------------------------------
+# JVM output and crash logs
+# ---------------------------------------------------------------------------
+*.class
+*.war
+*.ear
+*.nar
+*.hprof
+hs_err_pid*
+replay_pid*
+core.[0-9]*
+
+# ---------------------------------------------------------------------------
+# Logs and scratch
+# ---------------------------------------------------------------------------
+logs/
+*.log
+tmp/
+temp/
+*.tmp
+*.bak
+*.orig
+*.rej
+
+# ---------------------------------------------------------------------------
+# IntelliJ IDEA
+# ---------------------------------------------------------------------------
+.idea/
+.idea_modules/
+*.iml
+*.iws
+*.ipr
+
+# ---------------------------------------------------------------------------
+# VS Code — ignore the folder, but let the team share the four files that are
+# genuinely project configuration rather than personal state.
+# ---------------------------------------------------------------------------
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# ---------------------------------------------------------------------------
+# Eclipse / NetBeans / Zed / Fleet
+# ---------------------------------------------------------------------------
+.classpath
+.project
+.settings/
+.factorypath
+.apt_generated/
+nbproject/
+nbactions.xml
+.zed/
+.fleet/
+
+# ---------------------------------------------------------------------------
+# Editors
+# ---------------------------------------------------------------------------
+*.swp
+*.swo
+*~
+.netrwhist
+\#*\#
+.\#*
+*.sublime-workspace
+*.sublime-project
+
+# ---------------------------------------------------------------------------
+# Operating systems
+#
+# 26 .DS_Store files are committed across this workspace's repositories. It is
+# worth being thorough here.
+# ---------------------------------------------------------------------------
+.DS_Store
+**/.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+.fseventsd
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.directory
+.Trash-*
+.nfs*
+
+# ---------------------------------------------------------------------------
+# Agentic coding tools
+#
+# These leave per-developer state in the repository. The pattern below ignores
+# the local state while leaving genuinely shared project configuration — agents,
+# commands, skills — committable, so a team can check those in deliberately.
+# Across this workspace .claude exists in 40 repositories and is tracked in none.
+# ---------------------------------------------------------------------------
+.claude/*
+!.claude/settings.json
+!.claude/agents/
+!.claude/commands/
+!.claude/skills/
+!.claude/hooks/
+CLAUDE.local.md
+
+.cursor/
+.cursorignore
+.aider*
+.continue/
+.codeium/
+.windsurf/
+.gemini/
+.opencode/
+.crush/
+.serena/
+.roo/
+.kilocode/
+.goose/
+.specstory/
+repomix-output.*
+.repomix/
+
+# ---------------------------------------------------------------------------
+# Secrets and credentials — nothing here should ever reach a remote.
+# ---------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.jks
+*.keystore
+.netrc
+.npmrc
+
+# ---------------------------------------------------------------------------
+# Node, for repositories that carry front-end assets
+# ---------------------------------------------------------------------------
+node_modules/
+npm-debug.log*
+yarn-error.log*
+.pnpm-store/
+
+# ---------------------------------------------------------------------------
+# Environment managers
+# ---------------------------------------------------------------------------
+.direnv/
+.venv/
+__pycache__/

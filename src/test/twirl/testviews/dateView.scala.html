@@ -1,0 +1,35 @@
+@this()
+@()(implicit messages: Messages)
+
+<!DOCTYPE html>
+<html lang="@messages.lang.code">
+  <head><title>@messages("dateOfBirth.legend") - @messages("service.name") - GOV.UK</title></head>
+  <body>
+    <span class="govuk-service-navigation__service-name">@messages("service.name")</span>
+    <main id="main-content">
+      <form method="post" action="/register/date-of-birth">
+        <fieldset class="govuk-fieldset" role="group" aria-describedby="value-hint">
+          <legend class="govuk-fieldset__legend govuk-fieldset__legend--l">
+            <h1 class="govuk-fieldset__heading">@messages("dateOfBirth.legend")</h1>
+          </legend>
+          <div id="value-hint" class="govuk-hint">@messages("dateOfBirth.hint")</div>
+          <div class="govuk-date-input" id="value">
+            <div class="govuk-date-input__item">
+              <label class="govuk-label govuk-date-input__label" for="value.day">Day</label>
+              <input class="govuk-input govuk-date-input__input" id="value.day" name="value.day" type="text" inputmode="numeric">
+            </div>
+            <div class="govuk-date-input__item">
+              <label class="govuk-label govuk-date-input__label" for="value.month">Month</label>
+              <input class="govuk-input govuk-date-input__input" id="value.month" name="value.month" type="text" inputmode="numeric">
+            </div>
+            <div class="govuk-date-input__item">
+              <label class="govuk-label govuk-date-input__label" for="value.year">Year</label>
+              <input class="govuk-input govuk-date-input__input" id="value.year" name="value.year" type="text" inputmode="numeric">
+            </div>
+          </div>
+        </fieldset>
+        <button type="submit" class="govuk-button" id="submit">@messages("site.continue")</button>
+      </form>
+    </main>
+  </body>
+</html>

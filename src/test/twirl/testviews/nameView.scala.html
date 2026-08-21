@@ -1,0 +1,61 @@
+@this()
+@(form: Form[(String, String)], showErrors: Boolean = false)(implicit messages: Messages)
+
+@errorPrefix = @{ if(showErrors) messages("error.browser.title.prefix") + " " else "" }
+
+<!DOCTYPE html>
+<html lang="@messages.lang.code">
+  <head>
+    <title>@errorPrefix@messages("whatIsYourName.title") - @messages("service.name") - GOV.UK</title>
+  </head>
+  <body>
+    <header class="govuk-header">
+      <span class="govuk-service-navigation__service-name">@messages("service.name")</span>
+    </header>
+    <nav class="hmrc-language-select"><a href="?lang=cy" hreflang="cy" lang="cy">Cymraeg</a></nav>
+    <a href="/back" class="govuk-back-link">Back</a>
+    <main id="main-content">
+      @if(showErrors) {
+        <div class="govuk-error-summary" data-module="govuk-error-summary">
+          <h2 class="govuk-error-summary__title">@messages("error.summary.title")</h2>
+          <div class="govuk-error-summary__body">
+            <ul class="govuk-list govuk-error-summary__list">
+              <li><a href="#firstName">@messages("whatIsYourName.error.firstName.required")</a></li>
+              <li><a href="#lastName">@messages("whatIsYourName.error.lastName.required")</a></li>
+            </ul>
+          </div>
+        </div>
+      }
+      <span class="govuk-caption-l">@messages("whatIsYourName.caption")</span>
+      <h1 class="govuk-heading-l">@messages("whatIsYourName.heading")</h1>
+      <p class="govuk-body">@messages("whatIsYourName.p1")</p>
+      <form method="post" action="/register/name">
+        <div class="govuk-form-group">
+          <label class="govuk-label" for="firstName">@messages("whatIsYourName.firstName")</label>
+          @if(showErrors) {
+            <p id="firstName-error" class="govuk-error-message">
+              <span class="govuk-visually-hidden">Error:</span> @messages("whatIsYourName.error.firstName.required")
+            </p>
+          }
+          <input class="govuk-input" id="firstName" name="firstName" type="text" autocomplete="given-name"
+                 value="@form.data.getOrElse("firstName", "")"
+                 @if(showErrors) { aria-describedby="firstName-error" }>
+        </div>
+        <div class="govuk-form-group">
+          <label class="govuk-label" for="lastName">@messages("whatIsYourName.lastName")</label>
+          <div id="lastName-hint" class="govuk-hint">@messages("whatIsYourName.lastName.hint")</div>
+          @if(showErrors) {
+            <p id="lastName-error" class="govuk-error-message">
+              <span class="govuk-visually-hidden">Error:</span> @messages("whatIsYourName.error.lastName.required")
+            </p>
+          }
+          <input class="govuk-input" id="lastName" name="lastName" type="text" autocomplete="family-name"
+                 value="@form.data.getOrElse("lastName", "")"
+                 aria-describedby="lastName-hint@if(showErrors){ lastName-error}">
+        </div>
+        <button type="submit" class="govuk-button" id="submit">@messages("site.continue")</button>
+      </form>
+      <a class="govuk-link" href="/guidance">@messages("guidance.link")</a>
+    </main>
+  </body>
+</html>
