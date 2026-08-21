@@ -41,8 +41,9 @@ private[twirlspec] object Matching {
       case Right(value) =>
         val a  = Text.normalise(actual)
         val ok = expected match {
-          case Expected.Anything => a.nonEmpty
-          case _                 =>
+          case Expected.Anything       => a.nonEmpty
+          case Expected.Pattern(regex) => regex.findFirstIn(a).isDefined
+          case _                       =>
             mode match {
               case Exact      => a == value
               case Contains   => a.contains(value)

@@ -41,6 +41,21 @@ final class Page(
   def named(name: String, selector: String): Selection =
     Selection(name, selector, document.select(selector).asScala.toList)
 
+  /** Elements with this ARIA role, implicit or explicit. */
+  def byRole(role: String): Selection =
+    Selection(s"role=$role", Roles.selectorFor(role), Roles.matching(document, role))
+
+  /** Elements with this role whose accessible name matches. */
+  def byRole(role: String, name: String): Selection =
+    Selection(
+      s"""role=$role name="$name"""",
+      Roles.selectorFor(role),
+      Roles.matching(document, role).filter(e => Text.same(AccessibleName.of(document, e), name))
+    )
+
+  /** The name an assistive technology would announce for an element. */
+  def accessibleName(e: org.jsoup.nodes.Element): String = AccessibleName.of(document, e)
+
   def byId(elementId: String): Selection =
     named(s"#$elementId", Page.idSelector(elementId))
 

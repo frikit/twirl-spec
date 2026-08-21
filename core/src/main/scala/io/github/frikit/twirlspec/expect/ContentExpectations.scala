@@ -17,7 +17,7 @@
 package io.github.frikit.twirlspec.expect
 
 import io.github.frikit.twirlspec.expect.Matching._
-import io.github.frikit.twirlspec.page.{Page, Selection, Text}
+import io.github.frikit.twirlspec.page.{Page, Roles, Selection, Text}
 
 import scala.jdk.CollectionConverters._
 
@@ -349,6 +349,64 @@ final case class SummaryRowExpectation(
             valueIssues ++ actionIssues ++ hrefIssues
         }
     }
+  }
+
+}
+
+/** An element located by ARIA role and accessible name. */
+final case class RoleExpectation(roleName: String, name: Option[Expected], count: Option[Int]) extends Expectation {
+
+  /** The name an assistive technology announces, from a message key. */
+  def named(key: String, args: Any*): RoleExpectation = copy(name = Some(Expected.Key(key, args.toSeq)))
+
+  def namedText(literal: String): RoleExpectation = copy(name = Some(Expected.Literal(literal)))
+
+  def namedMatching(regex: scala.util.matching.Regex): RoleExpectation = copy(name = Some(Expected.Pattern(regex)))
+
+  /** Exactly this many elements carry the role. */
+  def occurring(times: Int): RoleExpectation = copy(count = Some(times))
+
+  def description: String = name.fold(s"role($roleName)")(n => s"role($roleName, ${n.describe})")
+
+  def check(page: Page): Seq[Violation] = {
+    val rule    = description
+    val matches = page.byRole(roleName)
+
+    val countIssues = count.toSeq.flatMap { expected =>
+      if (matches.size == expected) Nil
+      else Seq(Violation.mismatch(s"$rule count", expected.toString, matches.size.toString))
+    }
+
+    val nameIssues = name.toSeq.flatMap { expectedName =>
+      expectedName.resolve(page) match {
+        case Left(v)      => Seq(v.copy(rule = rule))
+        case Right(value) =>
+          val named = expectedName match {
+            case Expected.Pattern(regex) =>
+              matches.elements.filter(e => regex.findFirstIn(page.accessibleName(e)).isDefined)
+            case _                       => page.byRole(roleName, value).elements
+          }
+          if (named.nonEmpty) Nil
+          else
+            Seq(
+              Violation(
+                rule = rule,
+                message = s"no element with role `$roleName` announces this name",
+                expected = Some(value),
+                actual = Some(
+                  if (matches.isEmpty) s"(no element has role `$roleName`)"
+                  else matches.elements.map(page.accessibleName).filter(_.nonEmpty).mkString(" | ")
+                )
+              ).withHint("an element a screen reader cannot name is one it cannot describe")
+            )
+      }
+    }
+
+    val presence =
+      if (matches.isEmpty && count.isEmpty && name.isEmpty) Seq(Violation.missing(rule, Roles.selectorFor(roleName)))
+      else Nil
+
+    presence ++ countIssues ++ nameIssues
   }
 
 }

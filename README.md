@@ -153,6 +153,45 @@ element("submit"), noElement("warning"), elementHasClass("tag", "highlight")
 cssSelector(".panel"), elementCount(".row", 4)
 ```
 
+### Finding things the way a screen reader does
+
+Borrowed from [Testing Library](https://testing-library.com/docs/queries/about/), whose
+insight is that if you cannot find a control by its role and the name it
+announces, neither can an assistive technology — so the query itself is the
+accessibility test.
+
+```scala
+role("button").named("site.continue")
+role("textbox").namedText("Email address")
+role("heading").namedMatching("Sign\\s+up".r)
+role("radio").occurring(2)
+```
+
+Roles are resolved the way HTML-AAM defines them, implicit or explicit, and an
+element carrying an explicit `role` is matched only by that role — so
+`<a role="button">` is a button and not a link. The accessible name comes from
+`aria-labelledby`, `aria-label`, an associated `<label>`, a `<legend>`, `alt`,
+or the element's text, in that order.
+
+When it fails it lists the names that *are* announced, which is usually enough
+to see the problem:
+
+```
+x role(button, messages(site.continue)) — no element with role `button` announces this name
+      expected  "Continue"
+      actual    "Save and come back later | Cancel"
+```
+
+This is a working subset of the accessible name computation, not the whole
+specification: it resolves one hop of `aria-labelledby` and knows nothing that
+depends on CSS or JavaScript.
+
+Text expectations also take a regular expression anywhere a string is accepted:
+
+```scala
+heading(matching("Sign\\s+up".r))
+```
+
 Raw Jsoup is always one call away: `page.doc`, `page.summaryRows`,
 `page.fieldErrors`, `page.errorSummaryLinks`, `page.outline`.
 

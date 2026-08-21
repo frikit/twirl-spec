@@ -50,6 +50,11 @@ object Expected {
     def resolve(page: Page): Either[Violation, String] = Right(io.github.frikit.twirlspec.page.Text.normalise(value))
   }
 
+  final case class Pattern(regex: scala.util.matching.Regex) extends Expected {
+    def describe: String                               = s"matching /$regex/"
+    def resolve(page: Page): Either[Violation, String] = Right(regex.toString)
+  }
+
   /** Matches anything non-empty — for "there is a heading, I don't care what". */
   case object Anything extends Expected {
     def describe: String                               = "anything non-empty"

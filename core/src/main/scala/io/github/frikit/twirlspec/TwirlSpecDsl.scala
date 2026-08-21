@@ -42,6 +42,15 @@ trait TwirlSpecDsl extends FramingExpectations with FormExpectations with Conten
   /** For "there is a heading, its wording is asserted elsewhere". */
   val anyText: Expected = Expected.Anything
 
+  /** Match text against a regular expression rather than an exact string. */
+  def matching(regex: scala.util.matching.Regex): Expected = Expected.Pattern(regex)
+
+  /** Find an element the way an assistive technology does: by role, then by the
+    * name it announces. Prefer this over an id or a class — if a control cannot
+    * be found by role and name, it cannot be found by a screen reader either.
+    */
+  def role(role: String): RoleExpectation = RoleExpectation(role, None, None)
+
   /** Bundle expectations so a service can name its own house rules once. */
   def expectations(es: Expectation*): Expectation = Expectation.all(es.toSeq)
 
