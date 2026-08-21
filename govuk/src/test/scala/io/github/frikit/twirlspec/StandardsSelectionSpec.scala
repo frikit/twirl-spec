@@ -9,7 +9,7 @@ class StandardsSelectionSpec extends AnyWordSpec with Matchers with TwirlSpec {
 
   override def standardsRules: Seq[Rule] = WcagStandards.all ++ TwirlStandards.all ++ GovukStandards.all
 
-"the matcher variants" should {
+  "the matcher variants" should {
 
     "check expectations without the standards" in {
       // A page that breaks a standard but satisfies the expectation: displayOnly
@@ -21,7 +21,7 @@ class StandardsSelectionSpec extends AnyWordSpec with Matchers with TwirlSpec {
           english,
           messages
         )
-      broken                                            must displayOnly(headingText("One Two"))
+      broken                                         must displayOnly(headingText("One Two"))
       standardsExpectation.check(broken).map(_.rule) must contain("one-h1")
     }
 
@@ -33,7 +33,7 @@ class StandardsSelectionSpec extends AnyWordSpec with Matchers with TwirlSpec {
           english,
           messages
         )
-      noLabel                                            must meetStandardsExcept("labelled-controls")
+      noLabel                                         must meetStandardsExcept("labelled-controls")
       standardsExpectation.check(noLabel).map(_.rule) must contain("labelled-controls")
     }
 
@@ -52,7 +52,7 @@ class StandardsSelectionSpec extends AnyWordSpec with Matchers with TwirlSpec {
     }
   }
 
-"the standards rule set" should {
+  "the standards rule set" should {
 
     "select a named subset" in {
       WcagStandards.only("one-h1").map(_.id)    mustBe Seq("one-h1")
@@ -62,8 +62,9 @@ class StandardsSelectionSpec extends AnyWordSpec with Matchers with TwirlSpec {
 
     "skip page-level rules for a fragment" in {
       val fragment = io.github.frikit.twirlspec.page.Page.fromString("<p>just a component</p>", english, messages)
-      Rule.isFullPage(fragment)               mustBe false
+      Rule.isFullPage(fragment)            mustBe false
       standardsExpectation.check(fragment) mustBe empty
     }
   }
+
 }

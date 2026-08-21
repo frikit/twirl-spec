@@ -22,8 +22,8 @@ import io.github.frikit.twirlspec.page.Page
 sealed abstract class Level(val name: String, val order: Int)
 
 object Level {
-  case object A   extends Level("A", 0)
-  case object AA  extends Level("AA", 1)
+  case object A extends Level("A", 0)
+  case object AA extends Level("AA", 1)
   case object AAA extends Level("AAA", 2)
 
   val all: Seq[Level] = Seq(A, AA, AAA)
@@ -85,11 +85,12 @@ final class Rule(
       if (severity == Severity.Warning) found.map(_.warn) else found
     }
 
-  def level: Option[Level]         = criterion.map(_.level)
+  def level: Option[Level]             = criterion.map(_.level)
   def wcagVersion: Option[WcagVersion] = criterion.map(_.since)
 
   override def toString: String =
     criterion.fold(s"$id — $description")(c => s"$id — $description [$c]")
+
 }
 
 object Rule {
@@ -120,4 +121,5 @@ object Rule {
     val head = page.source.take(2000).toLowerCase
     head.contains("<!doctype html") || head.contains("<html")
   }
+
 }

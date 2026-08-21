@@ -87,8 +87,8 @@ class FailureReportingSpec extends AnyWordSpec with Matchers with TwirlSpec {
       val brokenHtml =
         """<!DOCTYPE html><html lang="en"><head><title>t</title></head>
           |<body><main><h1>A</h1><input id="x" name="x" type="text"></main></body></html>""".stripMargin
-      val broken  = io.github.frikit.twirlspec.page.Page.fromString(brokenHtml, english, messages)
-      val message = checkPage(broken, Seq(textInput("x").labelled("whatIsYourName.firstName"))).message
+      val broken     = io.github.frikit.twirlspec.page.Page.fromString(brokenHtml, english, messages)
+      val message    = checkPage(broken, Seq(textInput("x").labelled("whatIsYourName.firstName"))).message
       message must include("WCAG 3.3.2")
     }
   }

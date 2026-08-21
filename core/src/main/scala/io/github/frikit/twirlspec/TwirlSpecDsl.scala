@@ -36,11 +36,7 @@ import io.github.frikit.twirlspec.page.Page
   * Greenfield specs can take [[TwirlSpec]] instead, which adds the application,
   * the implicits and the language switching.
   */
-trait TwirlSpecDsl
-    extends FramingExpectations
-    with FormExpectations
-    with ContentExpectations
-    with TwirlMatchers {
+trait TwirlSpecDsl extends FramingExpectations with FormExpectations with ContentExpectations with TwirlMatchers {
 
   /** Parse rendered HTML into a page that can be asked questions. */
   def render(html: Html)(implicit messages: Messages): Page = Page(html)

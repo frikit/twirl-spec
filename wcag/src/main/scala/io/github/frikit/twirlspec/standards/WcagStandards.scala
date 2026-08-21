@@ -82,10 +82,20 @@ object WcagStandards extends RuleSet {
           )
       }
     },
-    Rule("title-present", "a page has a non-empty <title>", pageLevel = true, criterion = Some(Criterion("2.4.2", "Page Titled", Level.A, WcagVersion.V2_0))) { page =>
+    Rule(
+      "title-present",
+      "a page has a non-empty <title>",
+      pageLevel = true,
+      criterion = Some(Criterion("2.4.2", "Page Titled", Level.A, WcagVersion.V2_0))
+    ) { page =>
       if (page.title.nonEmpty) Nil else Seq(Violation("title-present", "the page has an empty <title>"))
     },
-    Rule("html-lang", "the <html> element declares the rendered language", pageLevel = true, criterion = Some(Criterion("3.1.1", "Language of Page", Level.A, WcagVersion.V2_0))) { page =>
+    Rule(
+      "html-lang",
+      "the <html> element declares the rendered language",
+      pageLevel = true,
+      criterion = Some(Criterion("3.1.1", "Language of Page", Level.A, WcagVersion.V2_0))
+    ) { page =>
       page.htmlLang match {
         case None                                     =>
           Seq(Violation("html-lang", "the <html> element has no lang attribute").withHint("WCAG 3.1.1"))
@@ -94,11 +104,21 @@ object WcagStandards extends RuleSet {
         case _                                        => Nil
       }
     },
-    Rule("main-landmark", "a page has a <main> landmark", pageLevel = true, Warning, criterion = Some(Criterion("1.3.1", "Info and Relationships", Level.A, WcagVersion.V2_0))) { page =>
+    Rule(
+      "main-landmark",
+      "a page has a <main> landmark",
+      pageLevel = true,
+      Warning,
+      criterion = Some(Criterion("1.3.1", "Info and Relationships", Level.A, WcagVersion.V2_0))
+    ) { page =>
       if (page.main.nonEmpty) Nil
       else Seq(Violation("main-landmark", "the page has no <main> landmark").warn.withHint("WCAG 1.3.1"))
     },
-    Rule("heading-order", "heading levels are not skipped", criterion = Some(Criterion("1.3.1", "Info and Relationships", Level.A, WcagVersion.V2_0))) { page =>
+    Rule(
+      "heading-order",
+      "heading levels are not skipped",
+      criterion = Some(Criterion("1.3.1", "Info and Relationships", Level.A, WcagVersion.V2_0))
+    ) { page =>
       val levels = page.headings.map(_._1)
       levels
         .sliding(2)
@@ -113,12 +133,20 @@ object WcagStandards extends RuleSet {
         }
         .toSeq
     },
-    Rule("no-empty-headings", "headings have text", criterion = Some(Criterion("2.4.6", "Headings and Labels", Level.AA, WcagVersion.V2_0))) { page =>
+    Rule(
+      "no-empty-headings",
+      "headings have text",
+      criterion = Some(Criterion("2.4.6", "Headings and Labels", Level.AA, WcagVersion.V2_0))
+    ) { page =>
       page.headings.filter(_._2.isEmpty).map { case (level, _) =>
         Violation("no-empty-headings", s"an <h$level> is empty")
       }
     },
-    Rule("unique-ids", "element ids are unique", criterion = Some(Criterion("4.1.2", "Name, Role, Value", Level.A, WcagVersion.V2_0))) { page =>
+    Rule(
+      "unique-ids",
+      "element ids are unique",
+      criterion = Some(Criterion("4.1.2", "Name, Role, Value", Level.A, WcagVersion.V2_0))
+    ) { page =>
       page.document
         .select("[id]")
         .asScala
@@ -134,7 +162,11 @@ object WcagStandards extends RuleSet {
             .withHint("duplicate ids break label/for, aria-describedby and error summary links")
         }
     },
-    Rule("labelled-controls", "every form control has an accessible name", criterion = Some(Criterion("3.3.2", "Labels or Instructions", Level.A, WcagVersion.V2_0))) { page =>
+    Rule(
+      "labelled-controls",
+      "every form control has an accessible name",
+      criterion = Some(Criterion("3.3.2", "Labels or Instructions", Level.A, WcagVersion.V2_0))
+    ) { page =>
       page.formControls.filterNot(hasAccessibleName(page, _)).map { e =>
         Violation(
           "labelled-controls",
@@ -144,7 +176,11 @@ object WcagStandards extends RuleSet {
         ).withHint("WCAG 3.3.2 / 4.1.2")
       }
     },
-    Rule("grouped-choices", "radios and checkboxes sit in a fieldset with a legend", criterion = Some(Criterion("1.3.1", "Info and Relationships", Level.A, WcagVersion.V2_0))) { page =>
+    Rule(
+      "grouped-choices",
+      "radios and checkboxes sit in a fieldset with a legend",
+      criterion = Some(Criterion("1.3.1", "Info and Relationships", Level.A, WcagVersion.V2_0))
+    ) { page =>
       val groups = page.document
         .select("input[type=radio], input[type=checkbox]")
         .asScala
@@ -166,7 +202,11 @@ object WcagStandards extends RuleSet {
         }
       }
     },
-    Rule("submit-has-name", "the submit control has visible text", criterion = Some(Criterion("4.1.2", "Name, Role, Value", Level.A, WcagVersion.V2_0))) { page =>
+    Rule(
+      "submit-has-name",
+      "the submit control has visible text",
+      criterion = Some(Criterion("4.1.2", "Name, Role, Value", Level.A, WcagVersion.V2_0))
+    ) { page =>
       page.document
         .select("button[type=submit], input[type=submit], button:not([type])")
         .asScala
@@ -174,7 +214,12 @@ object WcagStandards extends RuleSet {
         .filter(e => Text.normalise(e.text()).isEmpty && e.attr("value").isEmpty && e.attr("aria-label").isEmpty)
         .map(_ => Violation("submit-has-name", "a submit control has no accessible name").withHint("WCAG 4.1.2"))
     },
-    Rule("table-header-scope", "table headers declare a scope", severity = Warning, criterion = Some(Criterion("1.3.1", "Info and Relationships", Level.A, WcagVersion.V2_0))) { page =>
+    Rule(
+      "table-header-scope",
+      "table headers declare a scope",
+      severity = Warning,
+      criterion = Some(Criterion("1.3.1", "Info and Relationships", Level.A, WcagVersion.V2_0))
+    ) { page =>
       page.document
         .select("table th:not([scope])")
         .asScala
@@ -184,7 +229,11 @@ object WcagStandards extends RuleSet {
             .withHint("WCAG 1.3.1 — scope=\"col\" or scope=\"row\"")
         )
     },
-    Rule("link-has-name", "every link has an accessible name", criterion = Some(Criterion("2.4.4", "Link Purpose (In Context)", Level.A, WcagVersion.V2_0))) { page =>
+    Rule(
+      "link-has-name",
+      "every link has an accessible name",
+      criterion = Some(Criterion("2.4.4", "Link Purpose (In Context)", Level.A, WcagVersion.V2_0))
+    ) { page =>
       page.links.elements
         .filter(e => Text.normalise(e.text()).isEmpty && e.attr("aria-label").isEmpty && e.select("img[alt]").isEmpty)
         .map(e =>
@@ -192,7 +241,12 @@ object WcagStandards extends RuleSet {
             .withHint("WCAG 2.4.4")
         )
     },
-    Rule("link-text-is-meaningful", "link text makes sense out of context", severity = Warning, criterion = Some(Criterion("2.4.9", "Link Purpose (Link Only)", Level.AAA, WcagVersion.V2_0))) { page =>
+    Rule(
+      "link-text-is-meaningful",
+      "link text makes sense out of context",
+      severity = Warning,
+      criterion = Some(Criterion("2.4.9", "Link Purpose (Link Only)", Level.AAA, WcagVersion.V2_0))
+    ) { page =>
       page.links.texts
         .map(_.toLowerCase.replaceAll("[^a-z ]", "").trim)
         .filter(VagueLinkText.contains)
@@ -202,7 +256,12 @@ object WcagStandards extends RuleSet {
             .withHint("GOV.UK style — link text should make sense on its own")
         )
     },
-    Rule("new-tab-is-announced", "links opening a new tab say so", severity = Warning, criterion = Some(Criterion("3.2.5", "Change on Request", Level.AAA, WcagVersion.V2_0))) { page =>
+    Rule(
+      "new-tab-is-announced",
+      "links opening a new tab say so",
+      severity = Warning,
+      criterion = Some(Criterion("3.2.5", "Change on Request", Level.AAA, WcagVersion.V2_0))
+    ) { page =>
       page.links.elements
         .filter(_.attr("target") == "_blank")
         .filterNot { e =>
@@ -238,12 +297,17 @@ object WcagStandards extends RuleSet {
         .map { e =>
           Violation(
             "input-purpose-autocomplete",
-            s"""field "${if (e.attr("name").nonEmpty) e.attr("name") else e.id()}" collects information about the user but declares no autocomplete""",
+            s"""field "${if (e.attr("name").nonEmpty) e.attr("name")
+              else e.id()}" collects information about the user but declares no autocomplete""",
             expected = Some("an autocomplete token, for example autocomplete=\"email\"")
           ).warn.withHint("WCAG 1.3.5 — lets a browser fill the field on the user's behalf")
         }
     },
-    Rule("image-alt", "every image has an alt attribute", criterion = Some(Criterion("1.1.1", "Non-text Content", Level.A, WcagVersion.V2_0))) { page =>
+    Rule(
+      "image-alt",
+      "every image has an alt attribute",
+      criterion = Some(Criterion("1.1.1", "Non-text Content", Level.A, WcagVersion.V2_0))
+    ) { page =>
       page.images.elements
         .filterNot(_.hasAttr("alt"))
         .map(e =>
@@ -257,8 +321,22 @@ object WcagStandards extends RuleSet {
     * makes the heuristic defensible rather than a guess.
     */
   private val PersonalFieldNames =
-    Set("email", "tel", "phone", "postcode", "postal-code", "given-name", "family-name",
-      "firstname", "lastname", "surname", "address", "birthday", "username", "organization")
+    Set(
+      "email",
+      "tel",
+      "phone",
+      "postcode",
+      "postal-code",
+      "given-name",
+      "family-name",
+      "firstname",
+      "lastname",
+      "surname",
+      "address",
+      "birthday",
+      "username",
+      "organization"
+    )
 
   private val VagueLinkText =
     Set("click here", "here", "more", "read more", "link", "this page", "this", "click", "more information")

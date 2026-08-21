@@ -18,7 +18,7 @@ class WcagInternalsSpec extends AnyWordSpec with Matchers with TwirlSpec {
       messagesApi.preferred(Seq(lang))
     )
 
-"the standards" should {
+  "the standards" should {
 
     "flag an empty title, a missing main landmark and a nameless submit control" in {
       val noTitle = Page.fromString(
@@ -39,4 +39,5 @@ class WcagInternalsSpec extends AnyWordSpec with Matchers with TwirlSpec {
       v.flatMap(_.actual).getOrElse("") must include("Some(Ada)")
     }
   }
+
 }

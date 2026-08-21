@@ -8,7 +8,7 @@ import io.github.frikit.twirlspec.messages.MessagesIntegrity
 /** Edge cases of the message-file helpers. */
 class MessagesHelpersSpec extends AnyWordSpec with Matchers with TwirlSpec {
 
-"message file helpers" should {
+  "message file helpers" should {
     "expose each language's map" in {
       MessagesIntegrity.englishMessages(messagesApi)     must contain key "service.name"
       MessagesIntegrity.messagesFor(messagesApi, "cy")   must contain key "service.name"
@@ -25,4 +25,5 @@ class MessagesHelpersSpec extends AnyWordSpec with Matchers with TwirlSpec {
       v.flatMap(_.actual).getOrElse("") must include("more)")
     }
   }
+
 }

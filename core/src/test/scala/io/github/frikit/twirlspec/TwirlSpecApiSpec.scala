@@ -60,12 +60,6 @@ class TwirlSpecApiSpec extends AnyWordSpec with Matchers with TwirlSpec {
     }
   }
 
-  
-
-  
-
-  
-
   "the shared application" should {
     "hand back the same instance for the same configuration" in {
       val a = io.github.frikit.twirlspec.render.SharedApplication(Map.empty)

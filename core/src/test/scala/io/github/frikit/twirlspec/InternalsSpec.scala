@@ -87,10 +87,6 @@ class InternalsSpec extends AnyWordSpec with Matchers with TwirlSpec {
     }
   }
 
-  
-
-  
-
   "an expected value" should {
     "describe itself with and without arguments" in {
       Expected.Key("a.b").describe                mustBe "messages(a.b)"

@@ -10,7 +10,7 @@ import java.nio.file.Files
 /** The message-file matchers as a consuming spec would use them. */
 class MessagesMatchersSpec extends AnyWordSpec with Matchers with TwirlSpec with MessagesMatchers {
 
-"the message file matchers" should {
+  "the message file matchers" should {
 
     "check a file for duplicate keys" in {
       val good = Files.createTempFile("messages", "").toFile
@@ -52,4 +52,5 @@ class MessagesMatchersSpec extends AnyWordSpec with Matchers with TwirlSpec with
       MessagesIntegrity.duplicateKeys(Seq(new File("/definitely/not/here"))) mustBe empty
     }
   }
+
 }

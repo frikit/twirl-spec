@@ -85,7 +85,7 @@ class RuleSetSplitSpec extends AnyWordSpec with Matchers with TwirlSpec {
         english,
         messages
       )
-      GovukStandards.expectation().check(govukPage).map(_.rule)    must contain("error-title-prefix")
+      GovukStandards.expectation().check(govukPage).map(_.rule)                   must contain("error-title-prefix")
       // Warnings are advisory; what matters is that nothing blocking fires.
       WcagStandards
         .expectation(standardsRules)
@@ -108,7 +108,7 @@ class RuleSetSplitSpec extends AnyWordSpec with Matchers with TwirlSpec {
     "together account for every rule, each with a unique id" in {
       val ids = allStandards.map(_.id)
       ids.distinct.size mustBe ids.size
-      ids.size mustBe (WcagStandards.all.size + TwirlStandards.all.size + GovukStandards.all.size)
+      ids.size          mustBe (WcagStandards.all.size + TwirlStandards.all.size + GovukStandards.all.size)
     }
 
     "default to the design-system agnostic set" in {
@@ -118,7 +118,7 @@ class RuleSetSplitSpec extends AnyWordSpec with Matchers with TwirlSpec {
 
     "add the GOV.UK rules only when asked" in {
       allStandards.map(_.id) must contain("error-summary-targets")
-      allStandards.size mustBe (standardsRules.size + GovukStandards.all.size)
+      allStandards.size    mustBe (standardsRules.size + GovukStandards.all.size)
     }
   }
 
