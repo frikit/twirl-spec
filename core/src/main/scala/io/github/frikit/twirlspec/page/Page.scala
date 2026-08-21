@@ -17,6 +17,7 @@
 package io.github.frikit.twirlspec.page
 
 import org.jsoup.Jsoup
+import org.jsoup.parser.Parser
 import org.jsoup.nodes.{Document, Element}
 import play.api.i18n.{Lang, Messages}
 import play.twirl.api.Html
@@ -28,7 +29,8 @@ final class Page(
   val document: Document,
   val lang: Lang,
   val messages: Messages,
-  val source: String
+  val source: String,
+  val parseErrors: List[String] = Nil
 ) {
 
   // ---------------------------------------------------------------- selectors
@@ -52,6 +54,48 @@ final class Page(
       Roles.selectorFor(role),
       Roles.matching(document, role).filter(e => Text.same(AccessibleName.of(document, e), name))
     )
+
+  /** Position in document order, for asserting one thing comes before another. */
+  def positionOf(e: org.jsoup.nodes.Element): Int = document.getAllElements.indexOf(e)
+
+  /** Disabled as a browser sees it: on the control, or inherited from a fieldset. */
+  def isDisabled(e: org.jsoup.nodes.Element): Boolean =
+    e.hasAttr("disabled") || Option(e.closest("fieldset[disabled]")).isDefined
+
+  /** The description an assistive technology reads after the name. */
+  def accessibleDescription(e: org.jsoup.nodes.Element): String =
+    Text.normalise(
+      e.attr("aria-describedby")
+        .split("\\s+")
+        .filter(_.nonEmpty)
+        .flatMap(id => Option(document.getElementById(id)))
+        .map(_.text())
+        .mkString(" ")
+    )
+
+  /** Current value of every named control, as a browser would submit it. */
+  def formValues: Map[String, String] = {
+    val simple = document
+      .select("input:not([type=checkbox]):not([type=radio]):not([type=submit]):not([type=button]), textarea, select")
+      .asScala
+      .toList
+      .filter(_.attr("name").nonEmpty)
+      .map { e =>
+        val v =
+          if (e.tagName() == "textarea") Text.normalise(e.text())
+          else if (e.tagName() == "select")
+            e.select("option[selected]").asScala.headOption.map(_.attr("value")).getOrElse("")
+          else e.attr("value")
+        e.attr("name") -> v
+      }
+    val chosen = document
+      .select("input[type=checkbox][checked], input[type=radio][checked]")
+      .asScala
+      .toList
+      .filter(_.attr("name").nonEmpty)
+      .map(e => e.attr("name") -> e.attr("value"))
+    (simple ++ chosen).toMap
+  }
 
   /** The name an assistive technology would announce for an element. */
   def accessibleName(e: org.jsoup.nodes.Element): String = AccessibleName.of(document, e)
@@ -143,6 +187,13 @@ final class Page(
 
   def input(nameOrId: String): Selection =
     named(s"input($nameOrId)", Page.control("input", nameOrId))
+
+  /** Any control by name or id: input, select or textarea. */
+  def formControl(nameOrId: String): Selection =
+    named(
+      s"control($nameOrId)",
+      Seq("input", "select", "textarea").map(Page.control(_, nameOrId)).mkString(", ")
+    )
 
   def textarea(nameOrId: String): Selection =
     named(s"textarea($nameOrId)", Page.control("textarea", nameOrId))
@@ -258,7 +309,7 @@ final class Page(
   def outline: String = Outline.of(this)
 
   def withLang(newLang: Lang, newMessages: Messages): Page =
-    new Page(document, newLang, newMessages, source)
+    new Page(document, newLang, newMessages, source, parseErrors)
 
   override def toString: String = s"Page(lang=${lang.code}, title=${Text.preview(title, 60)})"
 }
@@ -278,7 +329,14 @@ object Page {
   def apply(html: Html, lang: Lang, messages: Messages): Page =
     fromString(html.body, lang, messages)
 
-  def fromString(html: String, lang: Lang, messages: Messages): Page =
-    new Page(Jsoup.parse(html), lang, messages, html)
+  def fromString(html: String, lang: Lang, messages: Messages): Page = {
+    // Twirl does not check that a template produces well-formed markup, and
+    // Jsoup will silently repair what it is given. Asking it to record what it
+    // repaired is free, and turns a whole class of template bug into a finding.
+    val parser   = Parser.htmlParser().setTrackErrors(50)
+    val document = Jsoup.parse(html, "", parser)
+    val errors   = parser.getErrors.asScala.toList.map(_.toString)
+    new Page(document, lang, messages, html, errors)
+  }
 
 }

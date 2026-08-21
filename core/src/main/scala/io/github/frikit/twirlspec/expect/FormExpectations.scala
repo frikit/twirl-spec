@@ -87,6 +87,82 @@ trait FormExpectations {
     }
   }
 
+  /** Every named control holds these values, as a browser would submit them. */
+  def formValues(expected: (String, String)*): Expectation = Expectation("formValues") { page =>
+    val actual = page.formValues
+    expected.toSeq.flatMap { case (field, want) =>
+      actual.get(field) match {
+        case Some(got) if Text.same(got, want) => Nil
+        case Some(got)                         => Seq(Violation.mismatch(s"formValues($field)", want, got))
+        case None                              =>
+          Seq(
+            Violation(
+              s"formValues($field)",
+              "no control on the page submits under this name",
+              expected = Some(want),
+              actual = Some(if (actual.isEmpty) "(no named controls)" else actual.keys.toList.sorted.mkString(", "))
+            )
+          )
+      }
+    }
+  }
+
+  /** The control is disabled, on itself or through an enclosing fieldset. */
+  def disabled(nameOrId: String): Expectation = controlState(nameOrId, "disabled", _ => true)
+
+  def enabled(nameOrId: String): Expectation = Expectation(s"enabled($nameOrId)") { page =>
+    val sel = page.formControl(nameOrId)
+    if (sel.isEmpty) Seq(Violation.missing(s"enabled($nameOrId)", sel.selector))
+    else if (!page.isDisabled(sel(0))) Nil
+    else Seq(Violation(s"enabled($nameOrId)", "the control is disabled"))
+  }
+
+  def required(nameOrId: String): Expectation = Expectation(s"required($nameOrId)") { page =>
+    val sel = page.formControl(nameOrId)
+    if (sel.isEmpty) Seq(Violation.missing(s"required($nameOrId)", sel.selector))
+    else if (sel(0).hasAttr("required") || sel(0).attr("aria-required") == "true") Nil
+    else
+      Seq(
+        Violation(s"required($nameOrId)", "the control is not marked required")
+          .withHint("""use the required attribute, or aria-required="true"""")
+      )
+  }
+
+  /** The control is marked invalid for an assistive technology. */
+  def invalid(nameOrId: String): Expectation = Expectation(s"invalid($nameOrId)") { page =>
+    val sel = page.formControl(nameOrId)
+    if (sel.isEmpty) Seq(Violation.missing(s"invalid($nameOrId)", sel.selector))
+    else if (sel(0).attr("aria-invalid") == "true") Nil
+    else
+      Seq(
+        Violation(s"invalid($nameOrId)", "the control is not marked invalid")
+          .withHint("""WCAG 3.3.1 — a field in error should carry aria-invalid="true"""")
+      )
+  }
+
+  /** What an assistive technology reads after the control's name. */
+  def describedAs(nameOrId: String, key: String, args: Any*): Expectation =
+    Expectation(s"describedAs($nameOrId)") { page =>
+      val sel = page.formControl(nameOrId)
+      if (sel.isEmpty) Seq(Violation.missing(s"describedAs($nameOrId)", sel.selector))
+      else
+        Matching.compare(
+          s"describedAs($nameOrId)",
+          Expected.Key(key, args.toSeq),
+          page.accessibleDescription(sel(0)),
+          page,
+          Matching.Exact
+        )
+    }
+
+  private def controlState(nameOrId: String, state: String, ok: org.jsoup.nodes.Element => Boolean): Expectation =
+    Expectation(s"$state($nameOrId)") { page =>
+      val sel = page.formControl(nameOrId)
+      if (sel.isEmpty) Seq(Violation.missing(s"$state($nameOrId)", sel.selector))
+      else if (page.isDisabled(sel(0)) && ok(sel(0))) Nil
+      else Seq(Violation(s"$state($nameOrId)", s"the control is not $state"))
+    }
+
   // ------------------------------------------------------------------ errors
 
   /** No error summary and no inline error messages anywhere on the page. */

@@ -22,7 +22,7 @@ class SignUpViewSpec extends AnyWordSpec with Matchers with TwirlSpec {
 }
 ```
 
-With the `twirl-spec-wcag` module mixed in, that block also runs 18
+With the `twirl-spec-wcag` module mixed in, that block also runs 19
 accessibility and rendering rules over the page. You do not list them, switch
 them on, or maintain them.
 
@@ -49,7 +49,7 @@ judges a page against a design system you are not using.
 | Artifact | Depends on | What it adds |
 |---|---|---|
 | `twirl-spec-core` | — | Page model, expectation DSL, ScalaTest matchers, `Rule` infrastructure |
-| `twirl-spec-wcag` | core | 18 rules: 15 tagged with a WCAG success criterion, 1 structural convention, 2 for Twirl rendering |
+| `twirl-spec-wcag` | core | 19 rules: 15 tagged with a WCAG success criterion, 1 structural convention, 3 for Twirl rendering |
 | `twirl-spec-govuk` | core, wcag | 5 GOV.UK Design System conventions |
 | `twirl-spec-messages` | core | Message-file integrity checks |
 
@@ -191,6 +191,28 @@ Text expectations also take a regular expression anywhere a string is accepted:
 ```scala
 heading(matching("Sign\\s+up".r))
 ```
+
+### Control state, form values and reading order
+
+Borrowed from [jest-dom](https://github.com/testing-library/jest-dom), keeping the
+matchers that mean something for server-rendered HTML and dropping the ones that
+need a browser.
+
+```scala
+formValues("email" -> "ada@example.com", "country" -> "GB", "contact" -> "email")
+
+disabled("locked")     // including a control disabled by an ancestor fieldset
+enabled("email")
+required("email")      // required attribute or aria-required
+invalid("email")       // aria-invalid
+describedAs("email", "signUp.email.hint")
+
+appearsBefore(".govuk-error-summary", "form")
+```
+
+`appearsBefore` is the one worth calling out: reading order is not cosmetic. An
+error summary announced after the form it describes is announced too late to be
+useful, and nothing else here could express that.
 
 Raw Jsoup is always one call away: `page.doc`, `page.summaryRows`,
 `page.fieldErrors`, `page.errorSummaryLinks`, `page.outline`.

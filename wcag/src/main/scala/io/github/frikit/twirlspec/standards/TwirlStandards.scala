@@ -43,6 +43,12 @@ object TwirlStandards extends RuleSet {
             .withHint(s"""add "$t" to conf/messages (and conf/messages.cy)""")
         }
     },
+    Rule("well-formed-html", "the template produced markup a browser does not have to repair") { page =>
+      page.parseErrors.take(5).map { e =>
+        Violation("well-formed-html", s"the parser had to repair the markup: $e")
+          .withHint("Twirl does not check that a template closes its tags")
+      }
+    },
     Rule("no-scala-leakage", "no Scala value leaks into the rendered page") { page =>
       val body    = page.text
       val markers = Seq("Some(", "None)", "List(", "Vector(", "Map(", "ArraySeq(", "$anonfun", "@scala.", "null null")

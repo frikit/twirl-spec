@@ -165,6 +165,25 @@ trait ContentExpectations {
 
   // --------------------------------------------------------------- structural
 
+  /** One selector's first match comes before another's in document order.
+    *
+    * Reading order is not a detail: an error summary announced after the form
+    * it describes is announced too late to be useful.
+    */
+  def appearsBefore(first: String, second: String): Expectation = Expectation(s"$first before $second") { page =>
+    val rule = s"order($first before $second)"
+    (page.css(first).headOption, page.css(second).headOption) match {
+      case (None, _)          => Seq(Violation.missing(rule, first))
+      case (_, None)          => Seq(Violation.missing(rule, second))
+      case (Some(a), Some(b)) =>
+        if (page.positionOf(a) < page.positionOf(b)) Nil
+        else
+          Seq(
+            Violation(rule, s"`$first` comes after `$second` in the document", expected = Some(s"$first, then $second"))
+          )
+    }
+  }
+
   def element(id: String): Expectation   = Expectation(s"element($id)")(p => present(s"element($id)", p.byId(id)))
   def noElement(id: String): Expectation = Expectation(s"noElement($id)")(p => absent(s"noElement($id)", p.byId(id)))
 
