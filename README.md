@@ -26,6 +26,7 @@ With the `twirl-spec-wcag` module mixed in, that block also runs 18
 accessibility and rendering rules over the page. You do not list them, switch
 them on, or maintain them.
 
+[![CI](https://github.com/frikit/twirl-spec/actions/workflows/ci.yml/badge.svg)](https://github.com/frikit/twirl-spec/actions/workflows/ci.yml)
 [![Scala 2.13 and 3](https://img.shields.io/badge/scala-2.13%20%7C%203.3-red)](build.sbt)
 [![Apache 2.0](https://img.shields.io/badge/licence-Apache%202.0-blue)](LICENSE)
 

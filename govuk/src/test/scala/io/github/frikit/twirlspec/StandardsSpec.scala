@@ -146,6 +146,25 @@ class StandardsSpec extends AnyWordSpec with Matchers with TwirlSpec {
       rulesFired(html) must not contain "error-aria-describedby"
     }
 
+    "not blame the field when the inline error points at one that does not exist" in {
+      // The error message is `ghost-error`, but there is no `#ghost` to carry
+      // the aria-describedby. error-summary-targets is the rule that reports a
+      // dangling reference; error-aria-describedby stays quiet rather than
+      // reporting the same defect twice under a misleading name.
+      val html  = page(
+        """<h1>A</h1>
+          |<div class="govuk-error-summary" data-module="govuk-error-summary">
+          |  <h2 class="govuk-error-summary__title">There is a problem</h2>
+          |  <ul><li><a href="#ghost">Enter a name</a></li></ul>
+          |</div>
+          |<p id="ghost-error" class="govuk-error-message"><span class="govuk-visually-hidden">Error:</span> Enter a name</p>""".stripMargin,
+        title = "Error: A page - Service - GOV.UK"
+      )
+      val fired = rulesFired(html)
+      fired must contain("error-summary-targets")
+      fired must not contain "error-aria-describedby"
+    }
+
     "flag an inline error with no visually hidden prefix" in {
       val html = page(
         """<h1>A</h1><label for="name">Name</label><input id="name" name="name" aria-describedby="name-error">

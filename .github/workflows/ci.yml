@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
 
 jobs:
   build:
@@ -27,3 +28,11 @@ jobs:
 
       - name: Coverage
         run: sbt coverage test coverageOff coverageReport
+
+      - name: Upload coverage reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scoverage-reports
+          path: '*/target/scala-*/scoverage-report'
+          if-no-files-found: warn
