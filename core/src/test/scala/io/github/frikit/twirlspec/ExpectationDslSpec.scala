@@ -21,13 +21,7 @@ import org.scalatest.wordspec.AnyWordSpec
 import io.github.frikit.twirlspec.expect.Expectation
 import io.github.frikit.twirlspec.page.Page
 
-/** Every expectation in the DSL, on a page that satisfies it and on one that
-  * does not.
-  *
-  * A testing library whose own assertions are untested is worse than no
-  * library: a check that silently never fails looks exactly like a passing
-  * suite. So each expectation here is exercised in both directions.
-  */
+/** Every expectation in the DSL, on a page that satisfies it and on one that does not. */
 class ExpectationDslSpec extends AnyWordSpec with Matchers with TwirlSpec {
 
   private val fixture =

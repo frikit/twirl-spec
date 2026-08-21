@@ -18,12 +18,7 @@ package io.github.frikit.twirlspec.expect
 
 import io.github.frikit.twirlspec.page.Page
 
-/** One question asked of a rendered page.
-  *
-  * Expectations are values. They compose, they can be held in a `Seq`, passed
-  * around, reused across specs and — crucially — evaluated all together so a
-  * failing page reports every problem at once instead of one per re-run.
-  */
+/** One question asked of a rendered page. */
 trait Expectation { self =>
 
   /** Human description, used when listing what a page was checked against. */

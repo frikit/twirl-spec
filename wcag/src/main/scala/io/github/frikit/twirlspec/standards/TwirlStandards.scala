@@ -22,13 +22,7 @@ import io.github.frikit.twirlspec.standards.Rule.Warning
 
 import scala.jdk.CollectionConverters._
 
-/** Mistakes specific to rendering a Twirl template with Play i18n.
-  *
-  * Neither of these is an accessibility rule; both are things that reach a
-  * reader as visible nonsense. A message key rendered raw means the key is
-  * missing from the messages file, and a `Some(...)` in the page text means a
-  * value reached the template without being unwrapped.
-  */
+/** Mistakes specific to rendering a Twirl template with Play i18n. */
 object TwirlStandards extends RuleSet {
 
   def all: Seq[Rule] = rules
@@ -87,8 +81,7 @@ object TwirlStandards extends RuleSet {
     "css"
   )
 
-  /** Callers only reach this for a marker they have already found, so there is
-    * no not-found case to handle: clamping the index covers it either way.
+  /** Callers only reach this for a marker they have already found, so there is no not-found case to handle: clamping the index covers it either way.
     */
   private def snippetAround(body: String, marker: String): String = {
     val i = math.max(0, body.indexOf(marker))

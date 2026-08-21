@@ -21,13 +21,7 @@ import play.api.inject.guice.GuiceApplicationBuilder
 import java.util.concurrent.ConcurrentHashMap
 import scala.jdk.CollectionConverters._
 
-/** A cache of Play applications keyed by configuration.
-  *
-  * Separated from [[SharedApplication]] so it can be exercised on its own. The
-  * shared instance is used by every spec in the JVM, so a test that stopped its
-  * applications would break whichever suite happened to run next; a test that
-  * owns its own cache can stop them freely.
-  */
+/** A cache of Play applications keyed by configuration. */
 final private[twirlspec] class ApplicationCache(build: Map[String, Any] => Application) {
 
   private val applications = new ConcurrentHashMap[Map[String, Any], Application]()
@@ -43,15 +37,7 @@ final private[twirlspec] class ApplicationCache(build: Map[String, Any] => Appli
 
   def instanceCount: Int = applications.size()
 
-  /** Stop every cached application.
-    *
-    * Deliberately without a `try`/`catch`. This began life wrapped in one, and
-    * the tests that were written to justify it — stopping the same application
-    * twice, and stopping one whose stop hook fails — both pass without it,
-    * because Play already absorbs those itself. A catch that has never caught
-    * anything only hides a genuine failure at shutdown, so if one ever does
-    * surface here it should surface loudly and arrive with a test.
-    */
+  /** Stop every cached application. No try/catch: Play already absorbs a double stop and a failing stop hook. */
   def stopAll(): Unit = applications.values().asScala.foreach(play.api.Play.stop)
 
   /** Stop everything and forget it. */

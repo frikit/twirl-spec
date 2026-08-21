@@ -28,8 +28,7 @@ object Level {
 
   val all: Seq[Level] = Seq(A, AA, AAA)
 
-  /** Every level up to and including this one, which is what conformance means:
-    * claiming AA requires satisfying A as well.
+  /** Every level up to and including this one, which is what conformance means: claiming AA requires satisfying A as well.
     */
   def upTo(level: Level): Seq[Level] = all.filter(_.order <= level.order)
 }
@@ -44,31 +43,17 @@ object WcagVersion {
 
   val all: Seq[WcagVersion] = Seq(V2_0, V2_1, V2_2)
 
-  /** Every version up to and including this one. WCAG is additive: 2.2 contains
-    * everything in 2.1, which contains everything in 2.0.
-    */
+  /** Every version up to and including this one. */
   def upTo(version: WcagVersion): Seq[WcagVersion] = all.filter(_.order <= version.order)
 }
 
-/** The success criterion a rule enforces, so a project can select the rules
-  * that match the conformance it is actually claiming.
+/** The success criterion a rule enforces, so a project can select the rules that match the conformance it is actually claiming.
   */
 final case class Criterion(number: String, title: String, level: Level, since: WcagVersion) {
   override def toString: String = s"WCAG $number $title (Level ${level.name}, since ${since.name})"
 }
 
-/** One named rule.
-  *
-  * `pageLevel` rules are skipped when the rendered HTML is a fragment rather
-  * than a whole page, so a spec for a partial can run the same standards call
-  * as a spec for a full page without drowning in "this component has no
-  * `<title>`".
-  *
-  * `criterion` is set where a rule enforces a WCAG success criterion, and left
-  * empty where it does not — a house convention, or a rendering mistake that
-  * has nothing to do with accessibility. That distinction is what makes
-  * selecting by level or version meaningful rather than decorative.
-  */
+/** One named rule. */
 final class Rule(
   val id: String,
   val description: String,
@@ -113,9 +98,7 @@ object Rule {
   )(run: Page => Seq[Violation]): Rule =
     new Rule(id, description, pageLevel, severity, criterion, run)
 
-  /** Jsoup wraps every fragment in `<html><head><body>`, so the parsed tree
-    * cannot tell us whether the template included the layout. The rendered
-    * source can.
+  /** Jsoup wraps every fragment in `<html><head><body>`, so the parsed tree cannot tell us whether the template included the layout.
     */
   private[twirlspec] def isFullPage(page: Page): Boolean = {
     val head = page.source.take(2000).toLowerCase

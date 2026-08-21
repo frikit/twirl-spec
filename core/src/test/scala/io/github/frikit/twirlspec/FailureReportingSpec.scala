@@ -22,12 +22,7 @@ import play.api.data.Form
 import play.api.data.Forms.{mapping, text}
 import testviews.html.nameView
 
-/** What a developer sees when a view test goes red.
-  *
-  * The failure message is the product. A view spec that says
-  * "false was not true" costs more time than it saves, so these are asserted
-  * as carefully as the checks themselves.
-  */
+/** What a developer sees when a view test goes red. */
 class FailureReportingSpec extends AnyWordSpec with Matchers with TwirlSpec {
 
   private val form = Form(mapping("firstName" -> text, "lastName" -> text)(Tuple2.apply)(t => Some((t._1, t._2))))

@@ -28,36 +28,11 @@ import io.github.frikit.twirlspec.render.SharedApplication
 import scala.reflect.ClassTag
 import scala.util.DynamicVariable
 
-/** The batteries-included entry point: an application, the implicits a Twirl
-  * view needs, and language switching, on top of the [[TwirlSpecDsl]] surface.
-  *
-  * {{{
-  * class WhatIsYourNameViewSpec extends AnyWordSpec with Matchers with TwirlSpec {
-  *
-  *   private val view = inject[WhatIsYourNameView]
-  *   private val form = inject[WhatIsYourNameFormProvider].apply()
-  *
-  *   "WhatIsYourNameView" should {
-  *     "render the question" in {
-  *       render(view(form, NormalMode)) must display(
-  *         title("whatIsYourName.title"),
-  *         heading("whatIsYourName.heading"),
-  *         textInput("firstName").labelled("whatIsYourName.firstName"),
-  *         submitButton()
-  *       )
-  *     }
-  *   }
-  * }
-  * }}}
-  *
-  * A frontend that already has a working spec base should mix in
-  * [[TwirlSpecDsl]] instead — it adds the DSL and nothing that could clash.
+/** The batteries-included entry point: an application, the implicits a Twirl view needs, and language switching, on top of the [[TwirlSpecDsl]] surface.
   */
 trait TwirlSpec extends TwirlSpecDsl { self: Suite with Alerting =>
 
-  /** Extra configuration for this suite's application. Suites sharing a
-    * configuration share the application; see [[SharedApplication]].
-    */
+  /** Extra configuration for this suite's application. */
   def applicationConfig: Map[String, Any] = Map.empty
 
   lazy val app: Application = SharedApplication(applicationConfig)
@@ -94,14 +69,7 @@ trait TwirlSpec extends TwirlSpecDsl { self: Suite with Alerting =>
 
   def inLanguage[A](lang: Lang)(block: => A): A = currentLanguage.withValue(lang)(block)
 
-  /** Run the same block once per configured language.
-    *
-    * Projects commonly check that their message files have matching keys, but
-    * rarely render a page in the second language. A translation that breaks the
-    * layout — an untranslated placeholder, a string long enough to wrap a
-    * button, a stray quote that eats the rest of the sentence — then ships
-    * unseen. This closes that gap for the cost of one wrapper.
-    */
+  /** Run the same block once per configured language. */
   def inEachLanguage(block: Lang => Unit): Unit = languages.foreach(lang => inLanguage(lang)(block(lang)))
 
   /** Render a view in the current language. */

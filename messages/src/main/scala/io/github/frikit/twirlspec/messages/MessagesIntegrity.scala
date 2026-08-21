@@ -23,19 +23,12 @@ import java.io.File
 import scala.io.Source
 import scala.util.Using
 
-/** Checks over a service's message files.
-  *
-  * Projects tend to grow a hand-written `MessagesSpec` doing some subset of
-  * this, and the copies drift. This is that spec, once.
-  */
+/** Checks over a service's message files. */
 object MessagesIntegrity {
 
   final case class Config(
     requireWelsh: Boolean = true,
-    /** How much of the Welsh file may be identical to the English before it is
-      * treated as untranslated. GOV.UK content that legitimately matches —
-      * acronyms, addresses, numbers — is usually a few per cent.
-      */
+    /** How much of the Welsh file may be identical to the English before it is treated as untranslated. */
     maxUntranslatedRatio: Double = 0.06,
     ignoreKeys: Set[String] = Set.empty,
     ignoreKeyPrefixes: Set[String] = Set.empty,
@@ -58,15 +51,7 @@ object MessagesIntegrity {
   private def placeholders(value: String): List[Int] =
     Placeholder.findAllMatchIn(value).map(_.group(1).toInt).toList
 
-  /** How a message's single quotes behave under `MessageFormat`, which Play
-    * applies to every message whether or not it takes arguments.
-    *
-    *  - `''` is an escaped apostrophe and renders as one.
-    *  - `'...'` is a quoted literal section, and is a legitimate way to show
-    *    text that would otherwise be special. Flagging it would be wrong.
-    *  - a single unpaired `'` opens a section that never closes: the
-    *    apostrophe disappears and every `{0}` after it stops being
-    *    substituted, so the citizen is shown a literal `{0}`.
+  /** How a message's single quotes behave under `MessageFormat`, which Play applies to every message whether or not it takes arguments.
     */
   sealed private[twirlspec] trait QuoteState
 
@@ -214,12 +199,7 @@ object MessagesIntegrity {
     parity ++ empty ++ quotes ++ placeholderParity ++ coverage
   }
 
-  /** Keys defined more than once in a single messages file.
-    *
-    * Play silently keeps the last definition, so a duplicated key is a change
-    * that quietly does nothing — invisible to every other check here, because
-    * by the time `MessagesApi` has loaded the file the earlier value is gone.
-    */
+  /** Keys defined more than once in a single messages file. */
   def duplicateKeys(files: Seq[File]): Seq[Violation] =
     files.filter(_.exists()).flatMap { file =>
       val keys = Using.resource(Source.fromFile(file, "UTF-8")) { source =>

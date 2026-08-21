@@ -22,19 +22,7 @@ import io.github.frikit.twirlspec.expect.{Severity, Violation}
 
 import java.io.File
 
-/** Matchers over a service's message files.
-  *
-  * {{{
-  * "conf/messages" should {
-  *   "be consistent across languages" in {
-  *     messagesApi must beConsistentAcrossLanguages()
-  *   }
-  *   "define every key once" in {
-  *     Seq(new File("conf/messages"), new File("conf/messages.cy")) must haveNoDuplicateKeys
-  *   }
-  * }
-  * }}}
-  */
+/** Matchers over a service's message files. */
 trait MessagesMatchers {
 
   def messagesIntegrityConfig: MessagesIntegrity.Config = MessagesIntegrity.Config.default

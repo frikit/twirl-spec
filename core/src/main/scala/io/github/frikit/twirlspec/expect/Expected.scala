@@ -18,15 +18,7 @@ package io.github.frikit.twirlspec.expect
 
 import io.github.frikit.twirlspec.page.Page
 
-/** Something a check expects to find on the page, expressed either as a
-  * message key (the default, because that is what GOV.UK content always is) or
-  * as a literal string.
-  *
-  * Resolving a key that is not in `conf/messages` produces a violation rather
-  * than silently comparing against the key text. Play returns the key itself
-  * for an undefined key, so a hand-written `doc.title mustBe messages("x.y")`
-  * passes happily when both sides are the missing key — a green test over a
-  * page showing "x.y" to a citizen. This type is where that stops.
+/** Something a check expects to find on the page, expressed either as a message key (the default, because that is what GOV.UK content always is) or as a literal string.
   */
 sealed trait Expected {
   def describe: String

@@ -5,17 +5,10 @@ import org.scalatest.wordspec.AnyWordSpec
 import io.github.frikit.twirlspec.expect.Expectation
 import io.github.frikit.twirlspec.page.Page
 
-/** The failure branch of every expectation.
-  *
-  * A check that cannot report its own failure correctly is the worst defect a
-  * testing library can carry: it is invisible, and it makes every consumer's
-  * suite look green. [[ExpectationDslSpec]] proves each expectation passes on a
-  * page that satisfies it; this proves each one fails, with a useful message,
-  * on a page that does not.
-  */
+/** The failure branch of every expectation. */
 class ExpectationFailureModesSpec extends AnyWordSpec with Matchers with TwirlSpec {
 
-  /** Nothing on it. Everything that looks for an element has to cope. */
+  /** Nothing on it. */
   private lazy val bare: Page =
     Page.fromString("""<!DOCTYPE html><html><head><title></title></head><body></body></html>""", english, messages)
 

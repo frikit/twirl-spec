@@ -8,18 +8,7 @@ import io.github.frikit.twirlspec.standards.{GovukChecks, WcagChecks}
 import scala.io.Source
 import scala.util.Using
 
-/** twirl-spec's selectors and rules, checked against genuine govuk-frontend
-  * markup.
-  *
-  * The fixtures in `test/resources/captured` are the real output of a GOV.UK
-  * Design System implementation — govukInput, govukRadios, govukDateInput,
-  * govukSummaryList, govukErrorSummary and govukButton — captured verbatim.
-  * They are checked in rather than generated at test time, so this library
-  * depends on no component package in order to verify itself against one.
-  *
-  * Recapture with a newer play-frontend-hmrc when the Design System moves; a
-  * diff of these files is then exactly the markup change to react to.
-  */
+/** twirl-spec's selectors and rules, checked against genuine govuk-frontend markup. */
 class GovukFrontendMarkupSpec extends AnyWordSpec with Matchers with TwirlSpec with WcagChecks with GovukChecks {
 
   private def captured(name: String): String =

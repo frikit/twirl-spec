@@ -21,21 +21,7 @@ import play.twirl.api.Html
 import io.github.frikit.twirlspec.expect._
 import io.github.frikit.twirlspec.page.Page
 
-/** The whole authoring surface, and nothing else.
-  *
-  * This trait declares no implicits and builds no application, so it drops into
-  * an existing `ViewSpecBase` — however that base already gets hold of
-  * `Messages`, a `FakeRequest` and the view itself — without a single ambiguous
-  * implicit. That is the intended way in for the 53 frontends that already have
-  * a working spec base they do not want to rewrite.
-  *
-  * {{{
-  * trait ViewSpecBase extends AnyWordSpec with Matchers with TwirlSpecDsl { ... }
-  * }}}
-  *
-  * Greenfield specs can take [[TwirlSpec]] instead, which adds the application,
-  * the implicits and the language switching.
-  */
+/** The whole authoring surface. Declares no implicits and builds no application, so it drops into an existing spec base. */
 trait TwirlSpecDsl extends FramingExpectations with FormExpectations with ContentExpectations with TwirlMatchers {
 
   /** Parse rendered HTML into a page that can be asked questions. */
@@ -49,24 +35,14 @@ trait TwirlSpecDsl extends FramingExpectations with FormExpectations with Conten
     Page(html(messages), lang, messages)
   }
 
-  /** Text expectations take message keys by default; wrap a string in
-    * `literal` when you really do mean the exact words.
-    *
-    * Deliberately not called `text` — that is `play.api.data.Forms.text`, which
-    * is imported in most specs that build a form inline.
+  /** Text expectations take message keys by default; wrap a string in `literal` when you really do mean the exact words.
     */
   def literal(exactWords: String): Expected = Expected.Literal(exactWords)
 
   /** For "there is a heading, its wording is asserted elsewhere". */
   val anyText: Expected = Expected.Anything
 
-  /** Bundle expectations so a service can name its own house rules once.
-    *
-    * {{{
-    * val aCheckAnswersPage = expectations(heading("checkYourAnswers.heading"), submitButton("site.confirm"))
-    * page must display(aCheckAnswersPage)
-    * }}}
-    */
+  /** Bundle expectations so a service can name its own house rules once. */
   def expectations(es: Expectation*): Expectation = Expectation.all(es.toSeq)
 
   /** Overridden by [[TwirlSpec]] to route warnings into the ScalaTest reporter. */

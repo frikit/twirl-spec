@@ -6,9 +6,7 @@ import io.github.frikit.twirlspec.expect.Severity
 import io.github.frikit.twirlspec.page.Page
 import io.github.frikit.twirlspec.standards.{Criterion, Level, Rule, WcagVersion}
 
-/** The branches the main specs reach past: components that are absent rather
-  * than wrong, keys that do not resolve, and the "nothing to show" half of a
-  * few failure messages.
+/** The branches the main specs reach past: components that are absent rather than wrong, keys that do not resolve, and the "nothing to show" half of a few failure messages.
   */
 class CoreEdgeCasesSpec extends AnyWordSpec with Matchers with TwirlSpec {
 

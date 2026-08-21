@@ -19,13 +19,11 @@ package io.github.frikit.twirlspec.expect
 import io.github.frikit.twirlspec.expect.Matching._
 import io.github.frikit.twirlspec.page.{Page, Text}
 
-/** Expectations about the frame of a GOV.UK page: what it is called, what it
-  * is headed, and the furniture the layout is responsible for.
+/** Expectations about the frame of a GOV.UK page: what it is called, what it is headed, and the furniture the layout is responsible for.
   */
 trait FramingExpectations {
 
-  /** The browser title, ignoring the " - Service name - GOV.UK" suffix the
-    * layout appends and the translated "Error:" prefix an error state adds.
+  /** The browser title, ignoring the " - Service name - GOV.UK" suffix the layout appends and the translated "Error:" prefix an error state adds.
     */
   def title(key: String, args: Any*): Expectation = title(Expected.Key(key, args.toSeq))
   def titleText(literal: String): Expectation     = title(Expected.Literal(literal))
@@ -68,9 +66,7 @@ trait FramingExpectations {
     }
   }
 
-  /** The service or site name in the header. Defaults to the `service.name`
-    * key, which is the usual convention.
-    */
+  /** The service or site name in the header. */
   def serviceName(key: String = "service.name"): Expectation = Expectation("serviceName") { page =>
     present("serviceName", page.serviceName) match {
       case Nil  => compare("serviceName", Expected.Key(key), page.serviceName.text, page, Exact)
@@ -78,7 +74,7 @@ trait FramingExpectations {
     }
   }
 
-  /** A GOV.UK back link is present. `.to(url)` additionally pins its target. */
+  /** A GOV.UK back link is present. */
   val backLink: BackLinkExpectation = BackLinkExpectation(None)
 
   val noBackLink: Expectation = Expectation("noBackLink")(page => absent("noBackLink", page.backLink))

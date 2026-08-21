@@ -17,16 +17,7 @@ package io.github.frikit.twirlspec.standards
 
 import io.github.frikit.twirlspec.TwirlSpecDsl
 
-/** Adds the design-system agnostic rules to every `display(...)` in a spec.
-  *
-  * {{{
-  * trait ViewSpecBase extends AnyWordSpec with Matchers with TwirlSpec with WcagChecks
-  * }}}
-  *
-  * Calls `super.standardsRules`, so mixing in more than one rule module
-  * accumulates rather than replaces: `with WcagChecks with GovukChecks` runs
-  * both sets.
-  */
+/** Adds the design-system agnostic rules to every `display(...)` in a spec. */
 trait WcagChecks extends TwirlSpecDsl {
   override def standardsRules: Seq[Rule] = super.standardsRules ++ WcagStandards.all ++ TwirlStandards.all
 }

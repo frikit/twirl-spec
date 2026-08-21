@@ -20,14 +20,7 @@ import org.jsoup.nodes.Element
 
 import scala.jdk.CollectionConverters._
 
-/** A readable skeleton of a rendered page.
-  *
-  * Two jobs. It is printed underneath every failure so you can see what the
-  * view actually produced without re-reading 400 lines of HTML, and it is
-  * stable enough to be committed as a structural snapshot — the shape of a
-  * page changes far less often than its markup, so a diff of the outline is a
-  * meaningful review artefact where a diff of the HTML is not.
-  */
+/** A readable skeleton of a rendered page. */
 object Outline {
 
   private val Gutter = 13 // widest label is "lang toggle" plus separation

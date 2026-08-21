@@ -22,8 +22,7 @@ import io.github.frikit.twirlspec.expect.{Severity, Violation}
 import io.github.frikit.twirlspec.page.Page
 import io.github.frikit.twirlspec.standards.{GovukStandards, TwirlStandards, WcagStandards}
 
-/** Every standards rule, proved to fire when it should and — just as
-  * importantly — to stay quiet on correct markup.
+/** Every standards rule, proved to fire when it should and — just as importantly — to stay quiet on correct markup.
   */
 class StandardsSpec extends AnyWordSpec with Matchers with TwirlSpec {
 
@@ -126,9 +125,7 @@ class StandardsSpec extends AnyWordSpec with Matchers with TwirlSpec {
     }
 
     "accept a grouped control whose fieldset carries the error reference" in {
-      // Exactly what govukDateInput emits: the wrapper div has id="value" but
-      // the fieldset is what references the error, because the error is about
-      // the group. Flagging this cost a real service a false failure.
+      // Exactly what govukDateInput emits: the wrapper div has id="value" but the fieldset is what references the erro
       val html = page(
         """<h1>A</h1>
           |<fieldset class="govuk-fieldset" role="group" aria-describedby="value-hint value-error">
@@ -147,10 +144,7 @@ class StandardsSpec extends AnyWordSpec with Matchers with TwirlSpec {
     }
 
     "not blame the field when the inline error points at one that does not exist" in {
-      // The error message is `ghost-error`, but there is no `#ghost` to carry
-      // the aria-describedby. error-summary-targets is the rule that reports a
-      // dangling reference; error-aria-describedby stays quiet rather than
-      // reporting the same defect twice under a misleading name.
+      // The error message is `ghost-error`, but there is no `#ghost` to carry the aria-describedby.
       val html  = page(
         """<h1>A</h1>
           |<div class="govuk-error-summary" data-module="govuk-error-summary">

@@ -104,9 +104,7 @@ trait FormExpectations {
        else Nil)
   }
 
-  /** GOV.UK requires the browser title of a page in an error state to be
-    * prefixed, so screen reader users hear that something went wrong before
-    * the page name.
+  /** GOV.UK requires the browser title of a page in an error state to be prefixed, so screen reader users hear that something went wrong before the page name.
     */
   val errorTitlePrefix: Expectation = Expectation("errorTitlePrefix") { page =>
     val prefixes = errorTitlePrefixes(page)
@@ -130,8 +128,7 @@ trait FormExpectations {
       }
     }
 
-  /** The error summary lists exactly these `field -> message key` entries, in
-    * order, and every entry links to an element that exists on the page.
+  /** The error summary lists exactly these `field -> message key` entries, in order, and every entry links to an element that exists on the page.
     */
   def errorSummary(entries: (String, String)*): Expectation =
     ErrorSummaryExpectation(entries.toList.map { case (f, k) => (f, Expected.Key(k): Expected) })
@@ -396,10 +393,7 @@ final case class DateInputExpectation(
   def description: String = rule
 
   def check(page: Page): Seq[Violation] = {
-    // Two conventions are both correct and both common. `govukDateInput` with
-    // default items emits `dateOfBirth-day`; services that bind a Play form to
-    // the component pass explicit items and get `value.day`. Accept either
-    // rather than making every service that used the defaults write it out.
+    // Two conventions are both correct and both common.
     val resolved: List[(String, Option[String])] =
       parts.map(part => part -> DateInputExpectation.partId(page, name, part))
 
@@ -543,14 +537,7 @@ private[twirlspec] object FormChecks {
       expected.toSeq.flatMap(e => Matching.compare(s"$rule label", e, label.text, page, Matching.Exact))
   }
 
-  /** Check the hint's wording, and that something announces it with the field.
-    *
-    * Which element carries `aria-describedby` depends on the component. A text
-    * input references its own hint; a radio group, a checkbox group and a date
-    * input reference theirs from the enclosing `<fieldset>`, because the hint
-    * describes the whole group rather than any one control. Accept either, and
-    * anything else on the path between them.
-    */
+  /** Check the hint's wording, and that it is announced. Grouped controls reference it from the fieldset, not the input. */
   def hintIssues(
     page: Page,
     rule: String,

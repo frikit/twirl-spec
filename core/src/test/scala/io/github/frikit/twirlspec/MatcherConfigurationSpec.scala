@@ -48,9 +48,7 @@ class MatcherConfigurationSpec extends AnyWordSpec with Matchers {
     }
   }
 
-  /** A spec base built on TwirlSpecDsl alone, which is the entry point a
-    * project with its own application uses — and which leaves `alertHook` at
-    * its default no-op.
+  /** A spec base built on TwirlSpecDsl alone, which is the entry point a project with its own application uses — and which leaves `alertHook` at its default no-op.
     */
   private trait Fixture extends TwirlSpecDsl with Matchers {
     override def standardsRules: Seq[Rule] = Seq(warnOnly)

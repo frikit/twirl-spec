@@ -6,11 +6,7 @@ import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import io.github.frikit.twirlspec.render.{ApplicationCache, SharedApplication}
 
-/** The cache in isolation, on applications this spec owns.
-  *
-  * Stopping the shared instance would break whichever suite ran next, which is
-  * exactly why the cache is a separate class.
-  */
+/** The cache in isolation, on applications this spec owns. */
 class ApplicationCacheSpec extends AnyWordSpec with Matchers {
 
   private def newApp(config: Map[String, Any]): Application =

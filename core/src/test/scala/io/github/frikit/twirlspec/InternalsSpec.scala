@@ -5,9 +5,7 @@ import org.scalatest.wordspec.AnyWordSpec
 import io.github.frikit.twirlspec.expect.Expected
 import io.github.frikit.twirlspec.page.{Page, Text}
 
-/** The small surfaces the bigger specs reach past: the escape hatches, the
-  * "nothing found" halves of failure messages, and the text normalisation
-  * everything else leans on.
+/** The small surfaces the bigger specs reach past: the escape hatches, the "nothing found" halves of failure messages, and the text normalisation everything else leans on.
   */
 class InternalsSpec extends AnyWordSpec with Matchers with TwirlSpec {
 

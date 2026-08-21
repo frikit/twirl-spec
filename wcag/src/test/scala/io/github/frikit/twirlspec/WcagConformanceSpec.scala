@@ -5,12 +5,7 @@ import org.scalatest.wordspec.AnyWordSpec
 import io.github.frikit.twirlspec.page.Page
 import io.github.frikit.twirlspec.standards.{Level, TwirlStandards, WcagStandards, WcagVersion}
 
-/** Selecting rules by conformance level and WCAG version.
-  *
-  * A project claiming AA should be able to run exactly the rules that bear on
-  * that claim, without the AAA rules it never promised and without the house
-  * conventions that are not WCAG at all.
-  */
+/** Selecting rules by conformance level and WCAG version. */
 class WcagConformanceSpec extends AnyWordSpec with Matchers with TwirlSpec {
 
   "selecting by conformance level" should {

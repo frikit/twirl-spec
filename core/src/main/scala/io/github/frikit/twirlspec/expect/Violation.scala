@@ -24,13 +24,7 @@ object Severity {
   case object Warning extends Severity("warning", 1)
 }
 
-/** A single thing that was wrong with a rendered page.
-  *
-  * Violations are values, not thrown exceptions. That is what lets `twirl-spec`
-  * report every problem with a page in one go instead of failing on the first
-  * one, and what lets the same checks be reused by the standards linter, the
-  * expectation DSL and the reporting tools.
-  */
+/** A single thing that was wrong with a rendered page. */
 final case class Violation(
   rule: String,
   message: String,

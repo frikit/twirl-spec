@@ -17,12 +17,7 @@ package io.github.frikit.twirlspec.standards
 
 import io.github.frikit.twirlspec.expect.Expectation
 
-/** A named collection of rules.
-  *
-  * Every rule module needs the same handful of operations over its own set, so
-  * they live here once rather than being copied into each object — which is the
-  * duplication this library exists to complain about.
-  */
+/** A named collection of rules. */
 trait RuleSet {
 
   /** Every rule in this set, at its natural severity. */

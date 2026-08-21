@@ -17,15 +17,7 @@ package io.github.frikit.twirlspec.standards
 
 import io.github.frikit.twirlspec.TwirlSpecDsl
 
-/** Adds the GOV.UK Design System rules to every `display(...)` in a spec.
-  *
-  * Intended alongside [[WcagChecks]] rather than instead of it, since a GOV.UK
-  * page is expected to satisfy the accessibility rules too:
-  *
-  * {{{
-  * trait ViewSpecBase extends AnyWordSpec with Matchers with TwirlSpec with WcagChecks with GovukChecks
-  * }}}
-  */
+/** Adds the GOV.UK Design System rules to every `display(...)` in a spec. */
 trait GovukChecks extends TwirlSpecDsl {
   override def standardsRules: Seq[Rule] = super.standardsRules ++ GovukStandards.all
 }

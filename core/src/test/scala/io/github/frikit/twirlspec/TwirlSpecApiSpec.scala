@@ -6,8 +6,7 @@ import play.api.data.Form
 import play.api.data.Forms.{mapping, text}
 import testviews.html.nameView
 
-/** The entry points a consuming service actually calls: the render helpers, the
-  * language switching, and the matcher variants.
+/** The entry points a consuming service actually calls: the render helpers, the language switching, and the matcher variants.
   */
 class TwirlSpecApiSpec extends AnyWordSpec with Matchers with TwirlSpec {
 

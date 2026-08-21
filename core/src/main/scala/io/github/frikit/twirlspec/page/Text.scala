@@ -16,13 +16,7 @@
 
 package io.github.frikit.twirlspec.page
 
-/** Whitespace and punctuation normalisation.
-  *
-  * Hand-written view assertions tend to accumulate a `.replaceAll(...)` or a
-  * `.replace("\n", "")`, because components emit non-breaking spaces and Twirl
-  * emits newlines where the message file has none. Doing it once, centrally,
-  * removes a whole class of "passes locally, fails in CI" failures.
-  */
+/** Whitespace and punctuation normalisation. */
 object Text {
 
   private val Nbsp        = 0x00a0.toChar.toString // non-breaking space

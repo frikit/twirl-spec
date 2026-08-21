@@ -5,12 +5,7 @@ import org.scalatest.wordspec.AnyWordSpec
 import io.github.frikit.twirlspec.page.Page
 import io.github.frikit.twirlspec.standards.{GovukStandards, Rule, TwirlStandards, WcagStandards}
 
-/** The rule sets have to be genuinely separable, not separate in name only.
-  *
-  * A Twirl page built on Bootstrap, Tailwind or nothing at all should pass the
-  * accessibility rules without being told it is broken for not using the GOV.UK
-  * Design System.
-  */
+/** The rule sets have to be genuinely separable, not separate in name only. */
 class RuleSetSplitSpec extends AnyWordSpec with Matchers with TwirlSpec {
 
   /** The default a project gets from `with WcagChecks`. */
@@ -56,10 +51,7 @@ class RuleSetSplitSpec extends AnyWordSpec with Matchers with TwirlSpec {
     }
 
     "not be judged against GOV.UK Design System conventions" in {
-      // The GOV.UK rules key off Design System markup — govuk-error-summary,
-      // govuk-error-message — so on a page that uses none of it they are silent
-      // rather than wrong. That makes them safe to add, and it is why the split
-      // is about naming and intent as much as behaviour.
+      // The GOV.UK rules key off Design System markup — govuk-error-summary, govuk-error-message — so on a page that u
       GovukStandards.expectation().check(plain) mustBe empty
 
       // They are still excluded from the default set, so nothing reports itself

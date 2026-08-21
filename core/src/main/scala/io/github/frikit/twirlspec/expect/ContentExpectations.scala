@@ -300,9 +300,7 @@ final case class SummaryRowExpectation(
     key.resolve(page) match {
       case Left(v)         => Seq(v.copy(rule = rule))
       case Right(keyValue) =>
-        // Locate the row once and read everything off it. Looking it up twice —
-        // once through summaryRows and again through the DOM — left a branch
-        // that could not be reached, because the two lookups always agree.
+        // Locate the row once and read everything off it.
         val row = page.document
           .select(".govuk-summary-list__row")
           .asScala

@@ -26,10 +26,7 @@ private[twirlspec] object Matching {
   case object Contains extends Mode { val verb = "contain" }
   case object StartsWith extends Mode { val verb = "start with" }
 
-  /** GOV.UK prefixes the browser title of a page in an error state. The prefix
-    * is itself translated, so read it from the message file where the service
-    * defines one and fall back to the two standard values otherwise.
-    */
+  /** GOV.UK prefixes the browser title of a page in an error state. */
   def errorTitlePrefixes(page: Page): Seq[String] =
     (page.message("error.browser.title.prefix").toSeq ++ Seq("Error:", "Gwall:")).map(Text.normalise)
 

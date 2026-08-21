@@ -20,12 +20,7 @@ import org.jsoup.nodes.Element
 
 import scala.jdk.CollectionConverters._
 
-/** A named set of elements pulled out of a page.
-  *
-  * Carries the human name of the thing being looked for ("back link") and the
-  * selector that was used, so that when a check fails the message can say what
-  * was looked for as well as what was found.
-  */
+/** A named set of elements pulled out of a page. */
 final class Selection private (
   val name: String,
   val selector: String,

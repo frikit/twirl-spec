@@ -22,17 +22,7 @@ import io.github.frikit.twirlspec.standards.Rule.Warning
 
 import scala.jdk.CollectionConverters._
 
-/** Conventions of the GOV.UK Design System, on top of [[WcagStandards]].
-  *
-  * These rules assume the Design System's markup — the `govuk-error-summary`
-  * and `govuk-error-message` components, and the convention that a page in an
-  * error state prefixes its browser title. They are separate from
-  * [[WcagStandards]] so that a Twirl page built on any other design system is
-  * not told it is broken for not using them.
-  *
-  * `meetGovukStandards` runs these together with the accessibility and Twirl
-  * rules, since a GOV.UK page is expected to satisfy all three.
-  */
+/** Conventions of the GOV.UK Design System, on top of [[WcagStandards]]. */
 object GovukStandards extends RuleSet {
 
   def all: Seq[Rule] = rules
@@ -72,10 +62,7 @@ object GovukStandards extends RuleSet {
           val field   = page.byId(fieldId)
           if (field.isEmpty) Nil // covered by error-summary-targets
           else {
-            // A single input references its own error. A grouped control — a
-            // date input, a radio or checkbox group — references it from the
-            // enclosing fieldset, because the error is about the group and not
-            // about any one of its inputs. Both are correct.
+            // A single input references its own error.
             val own         = field.attr("aria-describedby").getOrElse("")
             val ancestor    = field.headOption
               .flatMap(e => Option(e.closest("fieldset[aria-describedby]")))

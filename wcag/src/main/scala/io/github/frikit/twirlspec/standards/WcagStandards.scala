@@ -23,17 +23,7 @@ import io.github.frikit.twirlspec.standards.Rule.Warning
 
 import scala.jdk.CollectionConverters._
 
-/** Accessibility and document-structure rules that hold for any HTML page,
-  * checked without the spec having to name a single selector.
-  *
-  * Nothing here assumes a design system. Each rule cites the WCAG success
-  * criterion it comes from, or the structural mistake it catches: duplicate ids
-  * that silently break `for` and `aria-describedby`, inputs with no label,
-  * headings that skip a level, links with no accessible name.
-  *
-  * Rules that only make sense for a complete page (title, `<h1>`, `lang`) skip
-  * themselves when the rendered fragment is a component rather than a whole
-  * page, so the same call is safe in a partial's spec.
+/** Accessibility and document-structure rules that hold for any HTML page, checked without the spec having to name a single selector.
   */
 object WcagStandards extends RuleSet {
 
@@ -42,12 +32,7 @@ object WcagStandards extends RuleSet {
   /** Rules enforcing a success criterion at exactly this conformance level. */
   def atLevel(level: Level): Seq[Rule] = all.filter(_.level.contains(level))
 
-  /** Rules for a conformance claim, which is cumulative: `AA` includes `A`.
-    *
-    * Rules that enforce no success criterion — structural conventions rather
-    * than accessibility requirements — are excluded, so what you get back is
-    * exactly the WCAG surface this library covers at that level.
-    */
+  /** Rules for a conformance claim, which is cumulative: `AA` includes `A`. */
   def conformingTo(level: Level, version: WcagVersion = WcagVersion.V2_2): Seq[Rule] = {
     val levels   = Level.upTo(level).toSet
     val versions = WcagVersion.upTo(version).toSet
@@ -57,8 +42,7 @@ object WcagStandards extends RuleSet {
   /** Rules introduced in exactly this version of WCAG. */
   def introducedIn(version: WcagVersion): Seq[Rule] = all.filter(_.wcagVersion.contains(version))
 
-  /** Rules that enforce no WCAG success criterion: structural conventions this
-    * library checks because they are widely held, not because WCAG requires it.
+  /** Rules that enforce no WCAG success criterion: structural conventions this library checks because they are widely held, not because WCAG requires it.
     */
   def conventions: Seq[Rule] = all.filter(_.criterion.isEmpty)
 
@@ -283,11 +267,7 @@ object WcagStandards extends RuleSet {
       severity = Warning,
       criterion = Some(Criterion("1.3.5", "Identify Input Purpose", Level.AA, WcagVersion.V2_1))
     ) { page =>
-      // 1.3.5 applies to fields collecting information *about the user*, which
-      // cannot be detected in general. Matching the field name against the
-      // autofill tokens WCAG itself lists keeps this useful without guessing:
-      // a field called "email" almost certainly wants autocomplete="email", and
-      // a field called "reference" is left alone.
+      // 1.3.5 applies to fields collecting information *about the user*, which cannot be detected in general.
       page.formControls
         .filter(e => e.attr("autocomplete").isEmpty)
         .filter { e =>
@@ -317,8 +297,7 @@ object WcagStandards extends RuleSet {
     }
   )
 
-  /** Substrings of the autofill tokens WCAG 1.3.5 enumerates, which is what
-    * makes the heuristic defensible rather than a guess.
+  /** Substrings of the autofill tokens WCAG 1.3.5 enumerates, which is what makes the heuristic defensible rather than a guess.
     */
   private val PersonalFieldNames =
     Set(

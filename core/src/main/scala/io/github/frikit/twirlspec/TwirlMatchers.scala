@@ -23,60 +23,28 @@ import io.github.frikit.twirlspec.standards.Rule
 
 import scala.util.control.NonFatal
 
-/** ScalaTest matchers over a rendered page.
-  *
-  * Deliberately style-agnostic: these are plain `Matcher[Page]` values, so they
-  * work with `must` or `should`, inside `AnyWordSpec`, `AnyFreeSpec`,
-  * `PlaySpec` or anything else. Nothing here emits test cases, so no spec has
-  * to change shape to adopt it.
-  */
+/** ScalaTest matchers over a rendered page. */
 trait TwirlMatchers { self: TwirlSpecDsl =>
 
-  /** Which rules run alongside every `display(...)`.
-    *
-    * Empty in the core module, which carries no rules of its own. Mixing in a
-    * rule module's trait adds its set, and the traits compose, so
-    * `with WcagChecks with GovukChecks` runs both:
-    *
-    * {{{
-    * trait ViewSpecBase extends AnyWordSpec with Matchers with TwirlSpec with WcagChecks
-    * }}}
-    *
-    * Override it directly to pin an exact set, or to drop a rule by id.
-    */
+  /** Which rules run alongside every `display(...)`. Empty here; rule modules add theirs via `super.standardsRules`. */
   def standardsRules: Seq[Rule] = Nil
 
-  /** Whether warnings fail the test. Off by default so adoption is never
-    * blocked by advisory rules; turn it on once a service is clean.
-    */
+  /** Whether warnings fail the test. */
   def failOnWarnings: Boolean = false
 
   /** Whether passing tests still surface their warnings in the test output. */
   def reportWarnings: Boolean = true
 
-  /** The page shows all of this, and holds to the GOV.UK standards.
-    *
-    * {{{
-    * page must display(
-    *   title("whatIsYourName.title"),
-    *   heading("whatIsYourName.heading"),
-    *   textInput("firstName").labelled("whatIsYourName.firstName"),
-    *   submitButton()
-    * )
-    * }}}
-    */
+  /** The page shows all of this, and holds to the GOV.UK standards. */
   def display(expectations: Expectation*): Matcher[Page] =
     matcherFor(expectations.toSeq :+ Rule.expectation(standardsRules), "page")
 
-  /** As `display`, but without the standards — for the rare page that has to
-    * break a rule, or while a legacy view is being brought up to standard.
+  /** As `display`, but without the standards — for the rare page that has to break a rule, or while a legacy view is being brought up to standard.
     */
   def displayOnly(expectations: Expectation*): Matcher[Page] =
     matcherFor(expectations.toSeq, "page")
 
-  /** Whatever `standardsRules` resolves to, for a spec that has its own
-    * assertions already.
-    */
+  /** Whatever `standardsRules` resolves to, for a spec that has its own assertions already. */
   def meetStandards: Matcher[Page] = matcherFor(Seq(Rule.expectation(standardsRules)), "page")
 
   def meetStandardsExcept(ruleIds: String*): Matcher[Page] =
@@ -85,9 +53,7 @@ trait TwirlMatchers { self: TwirlSpecDsl =>
   /** The active rule set as one expectation, for asserting on the result. */
   def standardsExpectation: Expectation = Rule.expectation(standardsRules)
 
-  /** Assert against a page directly, outside a matcher. Returns the report so a
-    * caller can inspect the violations rather than fail.
-    */
+  /** Assert against a page directly, outside a matcher. */
   def checkPage(page: Page, expectations: Seq[Expectation]): CheckReport =
     CheckReport(page, Expectation.all(expectations).check(page), "page")
 
@@ -107,8 +73,7 @@ trait TwirlMatchers { self: TwirlSpecDsl =>
       }
     }
 
-  /** Warnings are worth seeing on a green run too — that is how a service
-    * finds out it is one fix away from being able to turn `failOnWarnings` on.
+  /** Warnings are worth seeing on a green run too — that is how a service finds out it is one fix away from being able to turn `failOnWarnings` on.
     */
   private def surface(report: CheckReport): Unit =
     try {

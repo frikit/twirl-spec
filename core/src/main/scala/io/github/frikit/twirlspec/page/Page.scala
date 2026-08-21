@@ -23,14 +23,7 @@ import play.twirl.api.Html
 
 import scala.jdk.CollectionConverters._
 
-/** A rendered GOV.UK page, ready to be asked questions.
-  *
-  * Wraps a Jsoup `Document` with named accessors, so specs talk about "the
-  * error summary" rather than about `.govuk-error-summary > div > ul > li`.
-  * Selectors cover plain HTML and, where a component library has a settled
-  * convention, its classes too. The raw document stays available as an escape
-  * hatch for anything not modelled here.
-  */
+/** A rendered GOV.UK page, ready to be asked questions. */
 final class Page(
   val document: Document,
   val lang: Lang,
@@ -85,9 +78,7 @@ final class Page(
   def languageToggle: Selection =
     named("language toggle", ".hmrc-language-select, nav[aria-label='Language switcher'], a[hreflang]")
 
-  /** `govukBackLink` renders `.govuk-back-link`; services that set their own id
-    * use `back` or `back-link`. Accept all three.
-    */
+  /** `govukBackLink` renders `.govuk-back-link`; services that set their own id use `back` or `back-link`. */
   def backLink: Selection = named("back link", ".govuk-back-link, #back-link, #back")
 
   def breadcrumbs: Selection = named("breadcrumbs", ".govuk-breadcrumbs")
@@ -114,9 +105,7 @@ final class Page(
 
   def errorMessages: Selection = named("error message", ".govuk-error-message")
 
-  /** Inline error text keyed by the field it belongs to, with the visually
-    * hidden "Error:" prefix stripped.
-    */
+  /** Inline error text keyed by the field it belongs to, with the visually hidden "Error:" prefix stripped. */
   def fieldErrors: Map[String, String] =
     document
       .select(".govuk-error-message")
@@ -185,12 +174,7 @@ final class Page(
 
   def buttons: Selection = named("button", ".govuk-button, button, input[type=submit]")
 
-  /** The control that submits the form.
-    *
-    * Narrowest match wins. A union selector would pick up every `.govuk-button`
-    * in the form — a page with "Continue" and "Save and come back later" would
-    * then compare against the text of both at once.
-    */
+  /** The control that submits the form. */
   def submitButton: Selection = {
     val candidates = Seq(
       "button[type=submit], input[type=submit]",
@@ -241,12 +225,7 @@ final class Page(
 
   // ----------------------------------------------------------------- messages
 
-  /** Resolve a message key in this page's language.
-    *
-    * Returns `None` when the key is not defined, which lets checks report
-    * "message key not defined" instead of silently comparing against the key
-    * itself — the single most common cause of a green test over a broken page.
-    */
+  /** Resolve a message key in this page's language. */
   def message(key: String, args: Seq[Any] = Nil): Option[String] =
     if (messages.isDefinedAt(key)) Some(Text.normalise(messages(key, args: _*))) else None
 
@@ -271,8 +250,7 @@ final class Page(
 
 object Page {
 
-  /** `[id="x"]` rather than `#x`: GOV.UK date and address fields carry ids
-    * like `value.day`, which a CSS id selector reads as a class.
+  /** `[id="x"]` rather than `#x`: GOV.UK date and address fields carry ids like `value.day`, which a CSS id selector reads as a class.
     */
   private[twirlspec] def idSelector(elementId: String): String = s"""[id="$elementId"]"""
 
