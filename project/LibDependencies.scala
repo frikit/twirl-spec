@@ -9,19 +9,19 @@ object LibDependencies {
   private val jsoupVersion     = "1.23.1"
   private val scalatestVersion = "3.2.20"
 
-  private val compile: Seq[ModuleID] = Seq(
-    // Play is always present in a consuming frontend. Keeping it Provided means
-    // this library never dictates the consumer's Play patch version.
+  /** Provided dependencies are not transitive, so every module that touches
+    * Play or ScalaTest types has to declare them, not just the core.
+    */
+  val shared: Seq[ModuleID] = Seq(
     "org.playframework" %% "play"       % playVersion % Provided,
     "org.playframework" %% "play-test"  % playVersion % Provided,
     "org.playframework" %% "play-guice" % playVersion % Provided,
-    // The only two dependencies this library actually carries.
-    "org.jsoup"          % "jsoup"      % jsoupVersion,
     "org.scalatest"     %% "scalatest"  % scalatestVersion
   )
 
-  private val test: Seq[ModuleID] = Seq.empty
+  val core: Seq[ModuleID] = shared :+ ("org.jsoup" % "jsoup" % jsoupVersion)
 
-  def apply(): Seq[ModuleID] = compile ++ test
+  val rules: Seq[ModuleID]    = shared
+  val messages: Seq[ModuleID] = shared
 
 }

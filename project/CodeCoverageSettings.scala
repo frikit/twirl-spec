@@ -3,14 +3,17 @@ import scoverage.ScoverageKeys.*
 
 object CodeCoverageSettings {
 
-  private val settings: Seq[Setting[?]] = Seq(
+  /** Thresholds are per module, and set just under what each module actually
+    * reaches. A single global number does not work once the build is split: a
+    * small module of pure rule definitions has a very different shape from the
+    * core.
+    */
+  def apply(statement: Int = 95, branch: Int = 90): Seq[Setting[?]] = Seq(
     coverageExcludedPackages := "<empty>;Reverse.*;..*Routes.*;",
-    coverageMinimumStmtTotal := 97,
-    coverageMinimumBranchTotal := 94,
+    coverageMinimumStmtTotal := statement,
+    coverageMinimumBranchTotal := branch,
     coverageFailOnMinimum := true,
     coverageHighlighting := true
   )
-
-  def apply(): Seq[Setting[?]] = settings
 
 }

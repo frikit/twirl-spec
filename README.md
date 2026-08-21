@@ -22,8 +22,9 @@ class SignUpViewSpec extends AnyWordSpec with Matchers with TwirlSpec {
 }
 ```
 
-That block also runs 17 accessibility and rendering rules over the page. You do
-not list them, switch them on, or maintain them.
+With the `twirl-spec-wcag` module mixed in, that block also runs 18
+accessibility and rendering rules over the page. You do not list them, switch
+them on, or maintain them.
 
 [![Scala 2.13 and 3](https://img.shields.io/badge/scala-2.13%20%7C%203.3-red)](build.sbt)
 [![Apache 2.0](https://img.shields.io/badge/licence-Apache%202.0-blue)](LICENSE)
@@ -39,15 +40,62 @@ nobody enjoys maintaining.
 that reads like the page, and failure messages that tell you what the template
 actually rendered.
 
-## Install
+## Modules
+
+Pick only what you need. The core carries no rules of its own, so it never
+judges a page against a design system you are not using.
+
+| Artifact | Depends on | What it adds |
+|---|---|---|
+| `twirl-spec-core` | — | Page model, expectation DSL, ScalaTest matchers, `Rule` infrastructure |
+| `twirl-spec-wcag` | core | 18 rules: 15 tagged with a WCAG success criterion, 1 structural convention, 2 for Twirl rendering |
+| `twirl-spec-govuk` | core, wcag | 5 GOV.UK Design System conventions |
+| `twirl-spec-messages` | core | Message-file integrity checks |
 
 ```scala
-libraryDependencies += "io.github.frikit" %% "twirl-spec" % "x.y.z" % Test
+libraryDependencies ++= Seq(
+  "io.github.frikit" %% "twirl-spec-core"     % twirlSpecVersion % Test,
+  "io.github.frikit" %% "twirl-spec-wcag"     % twirlSpecVersion % Test,  // optional
+  "io.github.frikit" %% "twirl-spec-govuk"    % twirlSpecVersion % Test,  // optional
+  "io.github.frikit" %% "twirl-spec-messages" % twirlSpecVersion % Test   // optional
+)
 ```
 
-Cross-built for Scala 2.13 and Scala 3, on Java 21 and Play 3.0. It depends on
-`jsoup` and `scalatest` only; Play is `provided`, so it never moves your Play
-version, and there is no dependency on any UI component library.
+Rule modules ship a trait that wires their rules into every `display(...)`. The
+traits compose, so mixing in two runs both sets:
+
+```scala
+trait ViewSpecBase extends AnyWordSpec with Matchers with TwirlSpec
+  with WcagChecks     // accessibility + Twirl rendering rules
+  with GovukChecks    // + GOV.UK Design System rules
+```
+
+Without a rule module, `display(...)` checks exactly what you asked it to and
+nothing else.
+
+## Compatibility
+
+| twirl-spec | Play | Scala | Java | Twirl | ScalaTest |
+|---|---|---|---|---|---|
+| 0.1.x | 3.0.x | 2.13.18, 3.3.7 | 21+ | 2.0.x | 3.2.x |
+
+**Scala.** Published for 2.13 and 3 from a single source tree. The 3.x build
+targets 3.3 LTS, which is binary-compatible with every later 3.x release, so a
+project on 3.4 through 3.7 uses the same artifact.
+
+**Play.** `play`, `play-test` and `play-guice` are `Provided`: your project
+supplies them, and this library never moves your Play version. Compiled against
+the oldest Play in the supported range, so anything newer in the same major line
+works. **Play 2.9 and earlier are not supported** — they predate the Pekko move
+and are not tested here.
+
+**Java.** Compiled with `-release 21`, so 21 is the floor. Later JDKs are fine.
+
+**ScalaTest.** A normal dependency, not `Provided`, so the version resolves
+upward against whatever your project already has.
+
+Anything outside this table is untested rather than known-broken. If you get a
+combination working, a note in an issue is welcome.
 
 ## Two ways in
 
@@ -109,37 +157,75 @@ Raw Jsoup is always one call away: `page.doc`, `page.summaryRows`,
 
 ## The rules
 
-Three sets, kept separate so a project is only judged against what it actually
-uses.
+Three sets in two optional modules, kept apart so a project is only judged
+against what it actually uses.
 
-**`WcagStandards`** — 15 rules that hold for any HTML page: exactly one `<h1>`,
-non-empty `<title>`, `lang` on `<html>`, a `<main>` landmark, no skipped heading
-levels, no empty headings, unique ids, every control labelled, radios and
-checkboxes in a fieldset with a legend, submit controls and links with an
-accessible name, `alt` on images, `scope` on table headers, meaningful link
-text, new tabs announced.
+**`WcagStandards`** (`twirl-spec-wcag`) — 16 rules: 15 enforce a WCAG success
+criterion, and 1 is a structural convention WCAG does not require but almost
+everyone wants (exactly one `<h1>`).
 
-**`TwirlStandards`** — 2 rules for Play rendering mistakes: a message key
-rendered raw because it is missing from the messages file, and a `Some(...)`
-reaching the page because a value was never unwrapped.
+**`TwirlStandards`** (`twirl-spec-wcag`) — 2 rules for Play rendering mistakes:
+a message key rendered raw because it is missing from the messages file, and a
+`Some(...)` reaching the page because a value was never unwrapped. Neither is an
+accessibility rule.
 
-**`GovukStandards`** — 5 conventions of the [GOV.UK Design
+**`GovukStandards`** (`twirl-spec-govuk`) — 5 conventions of the [GOV.UK Design
 System](https://design-system.service.gov.uk/): the error summary, the inline
 error message, and the `Error:` browser-title prefix. These key off Design
 System markup, so they stay silent on a page that does not use it.
 
-```scala
-page must display(...)          // WcagStandards ++ TwirlStandards
-page must meetWcagStandards     // those two, alone
-page must meetGovukStandards    // all three
-page must meetStandardsExcept("main-landmark")
+### Selecting by conformance level and WCAG version
 
-// or set it once, in your own base spec
-override def standardsRules = WcagStandards.all ++ TwirlStandards.all ++ GovukStandards.all
+Every accessibility rule carries the success criterion it enforces — number,
+title, level and the WCAG version it first appeared in — so a project can run
+exactly the rules that bear on the claim it is making.
+
+```scala
+WcagStandards.conformingTo(Level.AA)                     // A and AA, all versions
+WcagStandards.conformingTo(Level.AA, WcagVersion.V2_1)   // A and AA, up to WCAG 2.1
+WcagStandards.atLevel(Level.AAA)                         // exactly AAA
+WcagStandards.introducedIn(WcagVersion.V2_1)             // what 2.1 added
+WcagStandards.conventions                                // the rules that are not WCAG at all
+WcagStandards.criteria                                   // which criteria this set covers
+```
+
+Both selections are cumulative, because that is what they mean in WCAG: an AA
+claim includes A, and 2.2 includes everything in 2.1. `conformingTo` excludes
+the structural conventions, so what comes back is exactly the WCAG surface this
+library covers — nothing that would inflate a conformance claim.
+
+Criteria currently covered:
+
+| Criterion | Level | Since | Rules |
+|---|---|---|---|
+| 1.1.1 Non-text Content | A | 2.0 | `image-alt` |
+| 1.3.1 Info and Relationships | A | 2.0 | `main-landmark`, `heading-order`, `grouped-choices`, `table-header-scope` |
+| 1.3.5 Identify Input Purpose | AA | 2.1 | `input-purpose-autocomplete` |
+| 2.4.2 Page Titled | A | 2.0 | `title-present` |
+| 2.4.4 Link Purpose (In Context) | A | 2.0 | `link-has-name` |
+| 2.4.6 Headings and Labels | AA | 2.0 | `no-empty-headings` |
+| 2.4.9 Link Purpose (Link Only) | AAA | 2.0 | `link-text-is-meaningful` |
+| 3.1.1 Language of Page | A | 2.0 | `html-lang` |
+| 3.2.5 Change on Request | AAA | 2.0 | `new-tab-is-announced` |
+| 3.3.2 Labels or Instructions | A | 2.0 | `labelled-controls` |
+| 4.1.2 Name, Role, Value | A | 2.0 | `unique-ids`, `submit-has-name` |
+
+This is a useful subset, not full WCAG coverage. A static check over rendered
+markup cannot see colour contrast, focus order, motion or anything that depends
+on CSS or JavaScript. Treat a green run as "these mistakes are absent", not as a
+conformance claim.
+
+```scala
+page must display(...)                    // your expectations + whatever standardsRules resolves to
+page must meetStandards                   // the active rule set, alone
+page must meetStandardsExcept("one-h1")
+
+override def standardsRules = WcagStandards.conformingTo(Level.AA)
 override def failOnWarnings = true
 ```
 
-Warnings are reported but never fail a build until you ask them to.
+Warnings are reported but never fail a build until you ask them to. The two AAA
+rules ship as warnings for that reason.
 
 ## Languages
 
@@ -210,8 +296,8 @@ one per view — a common pattern — costs a great deal and buys nothing.
 ./run_all_tests.sh
 ```
 
-Formats, cross-compiles both Scala versions, tests, and measures coverage
-against a 97% statement gate.
+Formats, cross-compiles both Scala versions, tests every module, and measures
+coverage against a per-module gate (95% statement, 90% branch).
 
 `src/test/resources/captured/` holds markup captured verbatim from a real GOV.UK
 Design System implementation, so the Design System rules are checked against
