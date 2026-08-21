@@ -184,13 +184,15 @@ trait ContentExpectations {
     }
   }
 
-  def element(id: String): Expectation   = Expectation(s"element($id)")(p => present(s"element($id)", p.byId(id)))
+  def element(id: String): Expectation   =
+    Expectation(s"element($id)")(p => Matching.exactlyOne(s"element($id)", p.byId(id)).left.toSeq)
+
   def noElement(id: String): Expectation = Expectation(s"noElement($id)")(p => absent(s"noElement($id)", p.byId(id)))
 
   def elementWithText(id: String, key: String, args: Any*): Expectation = Expectation(s"element($id)") { page =>
-    present(s"element($id)", page.byId(id)) match {
-      case Nil  => compare(s"element($id)", Expected.Key(key, args.toSeq), page.byId(id).text, page, Exact)
-      case errs => errs
+    Matching.exactlyOne(s"element($id)", page.byId(id)) match {
+      case Left(v)  => Seq(v)
+      case Right(e) => compare(s"element($id)", Expected.Key(key, args.toSeq), e.text(), page, Exact)
     }
   }
 
@@ -207,10 +209,20 @@ trait ContentExpectations {
   }
 
   def elementHasClass(id: String, className: String): Expectation = Expectation(s"class($id)") { page =>
-    val sel = page.byId(id)
-    if (sel.isEmpty) Seq(Violation.missing(s"class($id)", sel.selector))
-    else if (sel.hasClass(className)) Nil
-    else Seq(Violation.mismatch(s"class($id)", className, sel.classes.toList.sorted.mkString(" "), "class not present"))
+    Matching.exactlyOne(s"class($id)", page.byId(id)) match {
+      case Left(v)                           => Seq(v)
+      case Right(e) if e.hasClass(className) => Nil
+      case Right(e)                          =>
+        import scala.jdk.CollectionConverters._
+        Seq(
+          Violation.mismatch(
+            s"class($id)",
+            className,
+            e.classNames().asScala.toList.sorted.mkString(" "),
+            "class not present"
+          )
+        )
+    }
   }
 
   // ----------------------------------------------------------------- internal
@@ -320,13 +332,23 @@ final case class SummaryRowExpectation(
       case Left(v)         => Seq(v.copy(rule = rule))
       case Right(keyValue) =>
         // Locate the row once and read everything off it.
-        val row = page.document
+        val rows = page.document
           .select(".govuk-summary-list__row")
           .asScala
-          .find(r => Text.same(r.select(".govuk-summary-list__key").text(), keyValue))
+          .toList
+          .filter(r => Text.same(r.select(".govuk-summary-list__key").text(), keyValue))
 
-        row match {
-          case None    =>
+        rows match {
+          case _ :: _ :: _ =>
+            Seq(
+              Violation(
+                rule = rule,
+                message = s"${rows.size} summary list rows have this key, so this assertion is ambiguous",
+                expected = Some("exactly one row"),
+                actual = Some(keyValue)
+              )
+            )
+          case Nil         =>
             Seq(
               Violation(
                 rule = rule,
@@ -338,7 +360,7 @@ final case class SummaryRowExpectation(
                 )
               )
             )
-          case Some(r) =>
+          case r :: Nil    =>
             val actualValue = Text.normalise(r.select(".govuk-summary-list__value").text())
             val actions     = r.select(".govuk-summary-list__actions a").asScala.toList
             val actionText  = actions.map(a => Text.normalise(a.text()))

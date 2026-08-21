@@ -217,6 +217,29 @@ useful, and nothing else here could express that.
 Raw Jsoup is always one call away: `page.doc`, `page.summaryRows`,
 `page.fieldErrors`, `page.errorSummaryLinks`, `page.outline`.
 
+### One match, or a failure
+
+An expectation that names a single element — `textInput("email")`,
+`element("submit")`, `backLink`, `dropdown("country")`, `summaryRow(...)` —
+fails when the page has **more than one** match, as well as when it has none:
+
+```
+x input(email) — 2 elements matched, so this assertion is ambiguous
+      expected  "exactly one match"
+      actual    "<input#email[name=email]> | <input#email2[name=email]>"
+      hint      name the one you mean, or assert on the group with cssSelector and elementCount
+```
+
+This follows [Testing Library's](https://testing-library.com/docs/queries/about/)
+`getBy`, and it exists because the alternative is worse than a failure: quietly
+taking the first of several is how a test ends up asserting against something
+other than the thing it names, and passing while it does so.
+
+Where several matches are legitimate, say so — `cssSelector` and
+`elementCount` are the plural form, and the accessors on `page` return
+everything without complaint. Expectations that are plural by nature —
+`radioGroup`, `checkboxGroup`, `bullets`, `link`, `tableRow` — are unaffected.
+
 ## The rules
 
 Three sets in two optional modules, kept apart so a project is only judged

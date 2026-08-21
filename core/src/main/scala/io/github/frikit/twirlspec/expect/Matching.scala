@@ -16,6 +16,7 @@
 
 package io.github.frikit.twirlspec.expect
 
+import org.jsoup.nodes.Element
 import io.github.frikit.twirlspec.page.{Page, Selection, Text}
 
 /** Shared plumbing for turning "expected this, found that" into violations. */
@@ -61,6 +62,36 @@ private[twirlspec] object Matching {
             )
           )
     }
+
+  /** Resolve a selection that is meant to identify one element.
+    *
+    * Empty is a failure, and so is more than one: an assertion written against
+    * "the email input" is not answerable when the page has two of them, and
+    * silently taking the first is how a test ends up checking something other
+    * than what it names. Where several matches are legitimate, assert on them
+    * as a group with `cssSelector` and `elementCount`.
+    */
+  def exactlyOne(rule: String, selection: Selection): Either[Violation, Element] =
+    selection.elements match {
+      case Nil        => Left(Violation.missing(rule, selection.selector))
+      case one :: Nil => Right(one)
+      case many       =>
+        Left(
+          Violation(
+            rule = rule,
+            message = s"${many.size} elements matched, so this assertion is ambiguous",
+            expected = Some("exactly one match"),
+            actual = Some(many.map(describe).mkString(" | "))
+          ).withHint("name the one you mean, or assert on the group with cssSelector and elementCount")
+        )
+    }
+
+  private def describe(e: Element): String = {
+    val id   = Option(e.id()).filter(_.nonEmpty).map("#" + _).getOrElse("")
+    val name = Option(e.attr("name")).filter(_.nonEmpty).map(n => s"[name=$n]").getOrElse("")
+    val text = Text.preview(e.text(), 40)
+    s"<${e.tagName()}$id$name>${if (text.nonEmpty) s" $text" else ""}"
+  }
 
   /** Assert a selection matched at least one element. */
   def present(rule: String, selection: Selection): Seq[Violation] =

@@ -68,9 +68,9 @@ trait FramingExpectations {
 
   /** The service or site name in the header. */
   def serviceName(key: String = "service.name"): Expectation = Expectation("serviceName") { page =>
-    present("serviceName", page.serviceName) match {
-      case Nil  => compare("serviceName", Expected.Key(key), page.serviceName.text, page, Exact)
-      case errs => errs
+    Matching.exactlyOne("serviceName", page.serviceName) match {
+      case Left(v)  => Seq(v)
+      case Right(e) => compare("serviceName", Expected.Key(key), e.text(), page, Exact)
     }
   }
 
@@ -127,17 +127,15 @@ final case class BackLinkExpectation(href: Option[String]) extends Expectation {
 
   def description: String = href.fold("backLink")(u => s"backLink -> $u")
 
-  def check(page: Page): Seq[Violation] = {
-    val link = page.backLink
-    if (link.isEmpty) Seq(Violation.missing("backLink", link.selector))
-    else
-      href match {
-        case None      => Nil
-        case Some(url) =>
-          val actual = link.attr("href").getOrElse("")
+  def check(page: Page): Seq[Violation] =
+    Matching.exactlyOne("backLink", page.backLink) match {
+      case Left(v)  => Seq(v)
+      case Right(e) =>
+        href.toSeq.flatMap { url =>
+          val actual = e.attr("href")
           if (actual == url) Nil
           else Seq(Violation.mismatch("backLink", url, actual, "back link pointed somewhere else"))
-      }
-  }
+        }
+    }
 
 }

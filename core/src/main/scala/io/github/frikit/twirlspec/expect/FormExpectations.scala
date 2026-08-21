@@ -111,56 +111,61 @@ trait FormExpectations {
   def disabled(nameOrId: String): Expectation = controlState(nameOrId, "disabled", _ => true)
 
   def enabled(nameOrId: String): Expectation = Expectation(s"enabled($nameOrId)") { page =>
-    val sel = page.formControl(nameOrId)
-    if (sel.isEmpty) Seq(Violation.missing(s"enabled($nameOrId)", sel.selector))
-    else if (!page.isDisabled(sel(0))) Nil
-    else Seq(Violation(s"enabled($nameOrId)", "the control is disabled"))
+    Matching.exactlyOne(s"enabled($nameOrId)", page.formControl(nameOrId)) match {
+      case Left(v)                         => Seq(v)
+      case Right(e) if !page.isDisabled(e) => Nil
+      case Right(_)                        => Seq(Violation(s"enabled($nameOrId)", "the control is disabled"))
+    }
   }
 
   def required(nameOrId: String): Expectation = Expectation(s"required($nameOrId)") { page =>
-    val sel = page.formControl(nameOrId)
-    if (sel.isEmpty) Seq(Violation.missing(s"required($nameOrId)", sel.selector))
-    else if (sel(0).hasAttr("required") || sel(0).attr("aria-required") == "true") Nil
-    else
-      Seq(
-        Violation(s"required($nameOrId)", "the control is not marked required")
-          .withHint("""use the required attribute, or aria-required="true"""")
-      )
+    Matching.exactlyOne(s"required($nameOrId)", page.formControl(nameOrId)) match {
+      case Left(v)                                                                => Seq(v)
+      case Right(e) if e.hasAttr("required") || e.attr("aria-required") == "true" => Nil
+      case Right(_)                                                               =>
+        Seq(
+          Violation(s"required($nameOrId)", "the control is not marked required")
+            .withHint("""use the required attribute, or aria-required="true"""")
+        )
+    }
   }
 
   /** The control is marked invalid for an assistive technology. */
   def invalid(nameOrId: String): Expectation = Expectation(s"invalid($nameOrId)") { page =>
-    val sel = page.formControl(nameOrId)
-    if (sel.isEmpty) Seq(Violation.missing(s"invalid($nameOrId)", sel.selector))
-    else if (sel(0).attr("aria-invalid") == "true") Nil
-    else
-      Seq(
-        Violation(s"invalid($nameOrId)", "the control is not marked invalid")
-          .withHint("""WCAG 3.3.1 — a field in error should carry aria-invalid="true"""")
-      )
+    Matching.exactlyOne(s"invalid($nameOrId)", page.formControl(nameOrId)) match {
+      case Left(v)                                      => Seq(v)
+      case Right(e) if e.attr("aria-invalid") == "true" => Nil
+      case Right(_)                                     =>
+        Seq(
+          Violation(s"invalid($nameOrId)", "the control is not marked invalid")
+            .withHint("""WCAG 3.3.1 — a field in error should carry aria-invalid="true"""")
+        )
+    }
   }
 
   /** What an assistive technology reads after the control's name. */
   def describedAs(nameOrId: String, key: String, args: Any*): Expectation =
     Expectation(s"describedAs($nameOrId)") { page =>
-      val sel = page.formControl(nameOrId)
-      if (sel.isEmpty) Seq(Violation.missing(s"describedAs($nameOrId)", sel.selector))
-      else
-        Matching.compare(
-          s"describedAs($nameOrId)",
-          Expected.Key(key, args.toSeq),
-          page.accessibleDescription(sel(0)),
-          page,
-          Matching.Exact
-        )
+      Matching.exactlyOne(s"describedAs($nameOrId)", page.formControl(nameOrId)) match {
+        case Left(v)  => Seq(v)
+        case Right(e) =>
+          Matching.compare(
+            s"describedAs($nameOrId)",
+            Expected.Key(key, args.toSeq),
+            page.accessibleDescription(e),
+            page,
+            Matching.Exact
+          )
+      }
     }
 
   private def controlState(nameOrId: String, state: String, ok: org.jsoup.nodes.Element => Boolean): Expectation =
     Expectation(s"$state($nameOrId)") { page =>
-      val sel = page.formControl(nameOrId)
-      if (sel.isEmpty) Seq(Violation.missing(s"$state($nameOrId)", sel.selector))
-      else if (page.isDisabled(sel(0)) && ok(sel(0))) Nil
-      else Seq(Violation(s"$state($nameOrId)", s"the control is not $state"))
+      Matching.exactlyOne(s"$state($nameOrId)", page.formControl(nameOrId)) match {
+        case Left(v)                                 => Seq(v)
+        case Right(e) if page.isDisabled(e) && ok(e) => Nil
+        case Right(_)                                => Seq(Violation(s"$state($nameOrId)", s"the control is not $state"))
+      }
     }
 
   // ------------------------------------------------------------------ errors
@@ -198,9 +203,9 @@ trait FormExpectations {
 
   def errorSummaryTitle(key: String = "error.summary.title"): Expectation =
     Expectation("errorSummaryTitle") { page =>
-      present("errorSummaryTitle", page.errorSummaryTitle) match {
-        case Nil  => compare("errorSummaryTitle", Expected.Key(key), page.errorSummaryTitle.text, page, Exact)
-        case errs => errs
+      Matching.exactlyOne("errorSummaryTitle", page.errorSummaryTitle) match {
+        case Left(v)  => Seq(v)
+        case Right(e) => compare("errorSummaryTitle", Expected.Key(key), e.text(), page, Exact)
       }
     }
 
@@ -271,37 +276,37 @@ final case class TextInputExpectation(
 
   def check(page: Page): Seq[Violation] = {
     val sel = if (tag == "textarea") page.textarea(name) else page.input(name)
-    if (sel.isEmpty) Seq(Violation.missing(rule, sel.selector))
-    else {
-      val element = sel(0)
-      val id      = if (element.id().nonEmpty) element.id() else name
+    Matching.exactlyOne(rule, sel) match {
+      case Left(v)        => Seq(v)
+      case Right(element) =>
+        val id = if (element.id().nonEmpty) element.id() else name
 
-      val labelIssues = FormChecks.labelIssues(page, rule, id, label, labelRequired)
-      val hintIssues  = hint.toSeq.flatMap(FormChecks.hintIssues(page, rule, id, _))
+        val labelIssues = FormChecks.labelIssues(page, rule, id, label, labelRequired)
+        val hintIssues  = hint.toSeq.flatMap(FormChecks.hintIssues(page, rule, id, _))
 
-      val valueIssues = value.toSeq.flatMap { expectedValue =>
-        val actual = if (tag == "textarea") Text.normalise(element.text()) else element.attr("value")
-        if (actual == expectedValue) Nil
-        else Seq(Violation.mismatch(s"$rule value", expectedValue, actual, "field was not populated as expected"))
-      }
+        val valueIssues = value.toSeq.flatMap { expectedValue =>
+          val actual = if (tag == "textarea") Text.normalise(element.text()) else element.attr("value")
+          if (actual == expectedValue) Nil
+          else Seq(Violation.mismatch(s"$rule value", expectedValue, actual, "field was not populated as expected"))
+        }
 
-      val autocompleteIssues = autocomplete.toSeq.flatMap { expectedAc =>
-        val actual = element.attr("autocomplete")
-        if (actual == expectedAc) Nil
-        else
-          Seq(
-            Violation
-              .mismatch(s"$rule autocomplete", expectedAc, if (actual.isEmpty) "(absent)" else actual)
-              .withHint("WCAG 1.3.5 — identify input purpose")
-          )
-      }
+        val autocompleteIssues = autocomplete.toSeq.flatMap { expectedAc =>
+          val actual = element.attr("autocomplete")
+          if (actual == expectedAc) Nil
+          else
+            Seq(
+              Violation
+                .mismatch(s"$rule autocomplete", expectedAc, if (actual.isEmpty) "(absent)" else actual)
+                .withHint("WCAG 1.3.5 — identify input purpose")
+            )
+        }
 
-      val typeIssues = inputType.toSeq.flatMap { expectedType =>
-        val actual = element.attr("type")
-        if (actual == expectedType) Nil else Seq(Violation.mismatch(s"$rule type", expectedType, actual))
-      }
+        val typeIssues = inputType.toSeq.flatMap { expectedType =>
+          val actual = element.attr("type")
+          if (actual == expectedType) Nil else Seq(Violation.mismatch(s"$rule type", expectedType, actual))
+        }
 
-      labelIssues ++ hintIssues ++ valueIssues ++ autocompleteIssues ++ typeIssues
+        labelIssues ++ hintIssues ++ valueIssues ++ autocompleteIssues ++ typeIssues
     }
   }
 
@@ -423,30 +428,30 @@ final case class DropdownExpectation(
 
   def check(page: Page): Seq[Violation] = {
     val sel = page.selectBox(name)
-    if (sel.isEmpty) Seq(Violation.missing(rule, sel.selector))
-    else {
-      val element = sel(0)
-      val id      = if (element.id().nonEmpty) element.id() else name
-      val actual  = element.select("option").asScala.toList.map(_.attr("value"))
+    Matching.exactlyOne(rule, sel) match {
+      case Left(v)        => Seq(v)
+      case Right(element) =>
+        val id     = if (element.id().nonEmpty) element.id() else name
+        val actual = element.select("option").asScala.toList.map(_.attr("value"))
 
-      val labelIssues = FormChecks.labelIssues(page, rule, id, label, labelRequired = true)
-      val valueIssues = optionValues.toSeq.flatMap { expected =>
-        if (expected.forall(actual.contains)) Nil
-        else
-          Seq(
-            Violation.mismatch(
-              s"$rule options",
-              expected.mkString(", "),
-              actual.mkString(", "),
-              s"missing: ${expected.filterNot(actual.contains).mkString(", ")}"
+        val labelIssues = FormChecks.labelIssues(page, rule, id, label, labelRequired = true)
+        val valueIssues = optionValues.toSeq.flatMap { expected =>
+          if (expected.forall(actual.contains)) Nil
+          else
+            Seq(
+              Violation.mismatch(
+                s"$rule options",
+                expected.mkString(", "),
+                actual.mkString(", "),
+                s"missing: ${expected.filterNot(actual.contains).mkString(", ")}"
+              )
             )
-          )
-      }
-      val countIssues = optionCount.toSeq.flatMap { n =>
-        if (actual.size == n) Nil
-        else Seq(Violation.mismatch(s"$rule option count", n.toString, actual.size.toString))
-      }
-      labelIssues ++ valueIssues ++ countIssues
+        }
+        val countIssues = optionCount.toSeq.flatMap { n =>
+          if (actual.size == n) Nil
+          else Seq(Violation.mismatch(s"$rule option count", n.toString, actual.size.toString))
+        }
+        labelIssues ++ valueIssues ++ countIssues
     }
   }
 
