@@ -184,7 +184,7 @@ trait ContentExpectations {
     }
   }
 
-  def element(id: String): Expectation   =
+  def element(id: String): Expectation =
     Expectation(s"element($id)")(p => Matching.exactlyOne(s"element($id)", p.byId(id)).left.toSeq)
 
   def noElement(id: String): Expectation = Expectation(s"noElement($id)")(p => absent(s"noElement($id)", p.byId(id)))
