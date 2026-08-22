@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+#
+# Runs what CI runs, before the push rather than after it.
+#
+# Formatting has broken CI twice, each time for a different reason: once because
+# .scalafmt.conf skipped untracked files, and once because sbt's scalafmt cache
+# reported success on a file it had not looked at. Both were invisible locally.
+#
+# Skip with `git push --no-verify` when you mean to.
+
+set -uo pipefail
+cd "$(git rev-parse --show-toplevel)" || exit 1
+
+echo "pre-push: checking formatting and tests (skip with --no-verify)"
+
+# Drop only the scalafmt caches, so a check cannot pass on a stale result. This
+# leaves compiled classes alone; `clean` here would make every push expensive.
+find . -type d -path '*/target/streams/*/scalafmt' -prune -exec rm -rf {} + 2>/dev/null
+
+if ! sbt -batch --no-colors scalafmtCheckAll scalafmtSbtCheck +test; then
+  cat >&2 <<'MSG'
+
+pre-push: failed.
+
+  formatting   sbt scalafmtSbt scalafmtAll
+  everything   ./run_all_tests.sh
+
+MSG
+  exit 1
+fi
+
+echo "pre-push: ok"

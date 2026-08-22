@@ -19,5 +19,8 @@ import io.github.frikit.twirlspec.TwirlSpecDsl
 
 /** Adds the design-system agnostic rules to every `display(...)` in a spec. */
 trait WcagChecks extends TwirlSpecDsl {
-  override def standardsRules: Seq[Rule] = super.standardsRules ++ WcagStandards.all ++ TwirlStandards.all
+
+  override def standardsRules: Seq[Rule] =
+    super.standardsRules ++ WcagStandards.all ++ TwirlStandards.all ++ SecurityStandards.all
+
 }

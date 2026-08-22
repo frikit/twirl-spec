@@ -284,6 +284,118 @@ object WcagStandards extends RuleSet {
         }
     },
     Rule(
+      "aria-references-resolve",
+      "every aria reference points at an element that exists",
+      criterion = Some(Criterion("1.3.1", "Info and Relationships", Level.A, WcagVersion.V2_0))
+    ) { page =>
+      val attributes = Seq("aria-describedby", "aria-labelledby", "aria-controls", "aria-owns")
+      page.document
+        .select(attributes.map(a => s"[$a]").mkString(", "))
+        .asScala
+        .toList
+        .flatMap { e =>
+          attributes.flatMap { attribute =>
+            e.attr(attribute)
+              .split("\\s+")
+              .filter(_.nonEmpty)
+              .filter(id => page.byId(id).isEmpty)
+              .map(id =>
+                Violation(
+                  "aria-references-resolve",
+                  s"""$attribute names "$id", but nothing on the page has that id""",
+                  actual = Some(Text.preview(e.outerHtml(), 90))
+                ).withHint("a reference that resolves to nothing is silently dropped by a screen reader")
+              )
+          }
+        }
+    },
+    Rule(
+      "no-aria-hidden-focusable",
+      "nothing hidden from assistive technology can still take focus",
+      criterion = Some(Criterion("4.1.2", "Name, Role, Value", Level.A, WcagVersion.V2_0))
+    ) { page =>
+      val focusable = "a[href], button, input, select, textarea, [tabindex]"
+      page.document
+        .select("[aria-hidden=true]")
+        .asScala
+        .toList
+        .filter(e => e.is(focusable) || e.select(focusable).asScala.nonEmpty)
+        .map(e =>
+          Violation(
+            "no-aria-hidden-focusable",
+            "an element hidden from assistive technology can still be reached by keyboard",
+            actual = Some(Text.preview(e.outerHtml(), 90))
+          ).withHint("""add tabindex="-1", or do not hide it""")
+        )
+    },
+    Rule(
+      "no-positive-tabindex",
+      "focus order follows the document",
+      criterion = Some(Criterion("2.4.3", "Focus Order", Level.A, WcagVersion.V2_0))
+    ) { page =>
+      page.document
+        .select("[tabindex]")
+        .asScala
+        .toList
+        .filter(e => scala.util.Try(e.attr("tabindex").toInt).toOption.exists(_ > 0))
+        .map(e =>
+          Violation(
+            "no-positive-tabindex",
+            s"""tabindex="${e.attr("tabindex")}" pulls this element out of the natural focus order""",
+            actual = Some(Text.preview(e.outerHtml(), 90))
+          ).withHint("order the markup instead; a positive tabindex must be kept correct against every change")
+        )
+    },
+    Rule(
+      "zoom-not-blocked",
+      "the page can be zoomed",
+      pageLevel = true,
+      criterion = Some(Criterion("1.4.4", "Resize Text", Level.AA, WcagVersion.V2_0))
+    ) { page =>
+      page.document
+        .select("meta[name=viewport]")
+        .asScala
+        .toList
+        .map(_.attr("content").toLowerCase.replaceAll("\\s", ""))
+        .filter(c => c.contains("user-scalable=no") || c.contains("maximum-scale=1"))
+        .map(c =>
+          Violation("zoom-not-blocked", "the viewport stops the page being zoomed", actual = Some(c))
+            .withHint("WCAG 1.4.4 — a reader who needs larger text cannot get it")
+        )
+    },
+    Rule(
+      "label-for-resolves",
+      "every label points at a control that exists",
+      criterion = Some(Criterion("3.3.2", "Labels or Instructions", Level.A, WcagVersion.V2_0))
+    ) { page =>
+      page.document
+        .select("label[for]")
+        .asScala
+        .toList
+        .filter(e => page.byId(e.attr("for")).isEmpty)
+        .map(e =>
+          Violation(
+            "label-for-resolves",
+            s"""a label points at "${e.attr("for")}", but no control has that id""",
+            actual = Some(Text.preview(e.text(), 60))
+          ).withHint("clicking the label does nothing, and the control is announced without a name")
+        )
+    },
+    Rule(
+      "single-main",
+      "a page has one main landmark",
+      pageLevel = true,
+      criterion = Some(Criterion("1.3.1", "Info and Relationships", Level.A, WcagVersion.V2_0))
+    ) { page =>
+      val mains = page.document.select("main, [role=main]").asScala.toList
+      if (mains.size <= 1) Nil
+      else
+        Seq(
+          Violation("single-main", s"the page has ${mains.size} main landmarks", expected = Some("1"))
+            .withHint("skip links and landmark navigation become ambiguous")
+        )
+    },
+    Rule(
       "image-alt",
       "every image has an alt attribute",
       criterion = Some(Criterion("1.1.1", "Non-text Content", Level.A, WcagVersion.V2_0))

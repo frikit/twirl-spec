@@ -22,8 +22,8 @@ class SignUpViewSpec extends AnyWordSpec with Matchers with TwirlSpec {
 }
 ```
 
-With the `twirl-spec-wcag` module mixed in, that block also runs 19
-accessibility and rendering rules over the page. You do not list them, switch
+With the `twirl-spec-wcag` module mixed in, that block also runs 29
+accessibility, rendering and safety rules over the page. You do not list them, switch
 them on, or maintain them.
 
 [![CI](https://github.com/frikit/twirl-spec/actions/workflows/ci.yml/badge.svg)](https://github.com/frikit/twirl-spec/actions/workflows/ci.yml)
@@ -49,7 +49,7 @@ judges a page against a design system you are not using.
 | Artifact | Depends on | What it adds |
 |---|---|---|
 | `twirl-spec-core` | — | Page model, expectation DSL, ScalaTest matchers, `Rule` infrastructure |
-| `twirl-spec-wcag` | core | 19 rules: 15 tagged with a WCAG success criterion, 1 structural convention, 3 for Twirl rendering |
+| `twirl-spec-wcag` | core | 29 rules: 21 tagged with a WCAG success criterion, 1 structural convention, 4 for Twirl rendering, 3 for safety |
 | `twirl-spec-govuk` | core, wcag | 5 GOV.UK Design System conventions |
 | `twirl-spec-messages` | core | Message-file integrity checks |
 
@@ -245,7 +245,7 @@ everything without complaint. Expectations that are plural by nature —
 Three sets in two optional modules, kept apart so a project is only judged
 against what it actually uses.
 
-**`WcagStandards`** (`twirl-spec-wcag`) — 16 rules: 15 enforce a WCAG success
+**`WcagStandards`** (`twirl-spec-wcag`) — 22 rules: 21 enforce a WCAG success
 criterion, and 1 is a structural convention WCAG does not require but almost
 everyone wants (exactly one `<h1>`).
 
@@ -293,7 +293,11 @@ Criteria currently covered:
 | 3.1.1 Language of Page | A | 2.0 | `html-lang` |
 | 3.2.5 Change on Request | AAA | 2.0 | `new-tab-is-announced` |
 | 3.3.2 Labels or Instructions | A | 2.0 | `labelled-controls` |
-| 4.1.2 Name, Role, Value | A | 2.0 | `unique-ids`, `submit-has-name` |
+| 1.3.1 Info and Relationships | A | 2.0 | `aria-references-resolve`, `single-main` |
+| 1.4.4 Resize Text | AA | 2.0 | `zoom-not-blocked` |
+| 2.4.3 Focus Order | A | 2.0 | `no-positive-tabindex` |
+| 3.3.2 Labels or Instructions | A | 2.0 | `label-for-resolves` |
+| 4.1.2 Name, Role, Value | A | 2.0 | `unique-ids`, `submit-has-name`, `no-aria-hidden-focusable` |
 
 This is a useful subset, not full WCAG coverage. A static check over rendered
 markup cannot see colour contrast, focus order, motion or anything that depends
@@ -374,6 +378,19 @@ own while building a view, and stable enough to commit as a structural snapshot.
 `SharedApplication` keeps one application per distinct configuration for the
 whole JVM. Views are stateless and only read from the application, so building
 one per view — a common pattern — costs a great deal and buys nothing.
+
+## The pre-push hook
+
+`.githooks/pre-push` runs the same formatting check and cross-version tests that
+CI runs, and `build.sbt` points `core.hooksPath` at it on load, so a fresh clone
+gets it by running sbt once rather than by remembering a setup step. It takes a
+few seconds; `git push --no-verify` skips it.
+
+It exists because formatting broke CI twice, each time for a different reason
+and each time invisible locally: `.scalafmt.conf` was skipping untracked files,
+and then sbt's scalafmt cache reported success on a file it had not looked at.
+The hook clears just the scalafmt caches — not the whole `target` — so being
+careful does not cost a full recompile on every push.
 
 ## Building
 

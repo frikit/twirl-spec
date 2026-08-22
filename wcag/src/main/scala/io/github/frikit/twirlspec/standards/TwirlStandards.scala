@@ -49,6 +49,21 @@ object TwirlStandards extends RuleSet {
           .withHint("Twirl does not check that a template closes its tags")
       }
     },
+    Rule("unambiguous-field-names", "no two controls submit under the same name") { page =>
+      page.document
+        .select("input:not([type=checkbox]):not([type=radio]):not([type=submit]):not([type=button]), select, textarea")
+        .asScala
+        .toList
+        .filter(_.attr("name").nonEmpty)
+        .groupBy(_.attr("name"))
+        .collect { case (name, controls) if controls.size > 1 => (name, controls.size) }
+        .toSeq
+        .sortBy(_._1)
+        .map { case (name, n) =>
+          Violation("unambiguous-field-names", s"""$n controls submit under the name "$name"""")
+            .withHint("the server sees one value and cannot tell which control produced it")
+        }
+    },
     Rule("no-scala-leakage", "no Scala value leaks into the rendered page") { page =>
       val body    = page.text
       val markers = Seq("Some(", "None)", "List(", "Vector(", "Map(", "ArraySeq(", "$anonfun", "@scala.", "null null")

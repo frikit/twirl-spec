@@ -20,6 +20,18 @@ lazy val commonSettings = Seq(
   Test / testOptions += Tests.Argument(TestFrameworks.ScalaTest, "-oD")
 )
 
+// Point git at the hooks in this repository, so a fresh clone gets the pre-push
+// check by running sbt once rather than by remembering a setup step.
+Global / onLoad := {
+  import scala.sys.process._
+  val installHooks = (state: State) => {
+    if (file(".git").exists() && "git config core.hooksPath .githooks".! != 0)
+      state.log.warn("could not set core.hooksPath; the pre-push check is not installed")
+    state
+  }
+  installHooks compose (Global / onLoad).value
+}
+
 lazy val root = Project("twirl-spec", file("."))
   .settings(name := "twirl-spec", publish / skip := true)
   .aggregate(core, wcag, govuk, messages)
