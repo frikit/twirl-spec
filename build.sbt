@@ -34,7 +34,7 @@ Global / onLoad := {
 
 lazy val root = Project("twirl-spec", file("."))
   .settings(name := "twirl-spec", publish / skip := true)
-  .aggregate(core, wcag, govuk, messages)
+  .aggregate(core, wcag, govuk, quality, messages)
 
 /** The page model, the expectation DSL and the ScalaTest matchers. Carries no
   * rules of its own, so it never judges a page against a design system.
@@ -69,6 +69,16 @@ lazy val govuk = Project("twirl-spec-govuk", file("govuk"))
   .settings(CodeCoverageSettings())
   .settings(libraryDependencies ++= LibDependencies.rules)
   .settings(description := "GOV.UK Design System rules for twirl-spec.")
+
+/** Checks that are neither accessibility, safety nor design system: semantics,
+  * page weight and metadata.
+  */
+lazy val quality = Project("twirl-spec-quality", file("quality"))
+  .dependsOn(core % "compile->compile;test->test")
+  .settings(commonSettings)
+  .settings(CodeCoverageSettings())
+  .settings(libraryDependencies ++= LibDependencies.rules)
+  .settings(description := "Semantic, performance and metadata rules for twirl-spec.")
 
 /** Message-file integrity checks. */
 lazy val messages = Project("twirl-spec-messages", file("messages"))

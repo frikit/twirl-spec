@@ -51,6 +51,7 @@ judges a page against a design system you are not using.
 | `twirl-spec-core` | — | Page model, expectation DSL, ScalaTest matchers, `Rule` infrastructure |
 | `twirl-spec-wcag` | core | 29 rules: 21 tagged with a WCAG success criterion, 1 structural convention, 4 for Twirl rendering, 3 for safety |
 | `twirl-spec-govuk` | core, wcag | 5 GOV.UK Design System conventions |
+| `twirl-spec-quality` | core | 12 rules: semantics, page weight and metadata |
 | `twirl-spec-messages` | core | Message-file integrity checks |
 
 ```scala
@@ -58,6 +59,7 @@ libraryDependencies ++= Seq(
   "io.github.frikit" %% "twirl-spec-core"     % twirlSpecVersion % Test,
   "io.github.frikit" %% "twirl-spec-wcag"     % twirlSpecVersion % Test,  // optional
   "io.github.frikit" %% "twirl-spec-govuk"    % twirlSpecVersion % Test,  // optional
+  "io.github.frikit" %% "twirl-spec-quality"  % twirlSpecVersion % Test,  // optional
   "io.github.frikit" %% "twirl-spec-messages" % twirlSpecVersion % Test   // optional
 )
 ```
@@ -67,8 +69,9 @@ traits compose, so mixing in two runs both sets:
 
 ```scala
 trait ViewSpecBase extends AnyWordSpec with Matchers with TwirlSpec
-  with WcagChecks     // accessibility + Twirl rendering rules
-  with GovukChecks    // + GOV.UK Design System rules
+  with WcagChecks     // accessibility, rendering and safety rules
+  with GovukChecks    // + GOV.UK Design System conventions
+  with QualityChecks  // + semantics, page weight and metadata
 ```
 
 Without a rule module, `display(...)` checks exactly what you asked it to and
