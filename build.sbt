@@ -34,7 +34,7 @@ Global / onLoad := {
 
 lazy val root = Project("twirl-spec", file("."))
   .settings(name := "twirl-spec", publish / skip := true)
-  .aggregate(core, wcag, govuk, quality, messages)
+  .aggregate(core, wcag, govuk, quality, messages, all)
 
 /** The page model, the expectation DSL and the ScalaTest matchers. Carries no
   * rules of its own, so it never judges a page against a design system.
@@ -87,3 +87,15 @@ lazy val messages = Project("twirl-spec-messages", file("messages"))
   .settings(CodeCoverageSettings())
   .settings(libraryDependencies ++= LibDependencies.messages)
   .settings(description := "Message-file integrity checks for twirl-spec.")
+
+/** Everything, for a project that would rather add one dependency than five.
+  *
+  * Carries no rules of its own; it exists to pull the others in and to offer
+  * `AllChecks`, which mixes in every rule module at once.
+  */
+lazy val all = Project("twirl-spec-all", file("all"))
+  .dependsOn(core % "compile->compile;test->test", wcag, govuk, quality, messages)
+  .settings(commonSettings)
+  .settings(CodeCoverageSettings())
+  .settings(libraryDependencies ++= LibDependencies.rules)
+  .settings(description := "All of twirl-spec in one dependency.")
