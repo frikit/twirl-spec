@@ -83,7 +83,7 @@ object Rule {
   /** A set of rules as one expectation. */
   def expectation(rules: Seq[Rule]): Expectation = new Expectation {
     def description: String               = s"standards (${rules.size} rules)"
-    def check(page: Page): Seq[Violation] = rules.flatMap(_.check(page))
+    def check(page: Page): Seq[Violation] = page.withRecordingPaused(rules.flatMap(_.check(page)))
   }
 
   val Warning: Severity  = Severity.Warning

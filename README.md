@@ -51,8 +51,9 @@ judges a page against a design system you are not using.
 | `twirl-spec-core` | — | Page model, expectation DSL, ScalaTest matchers, `Rule` infrastructure |
 | `twirl-spec-wcag` | core | 29 rules: 21 tagged with a WCAG success criterion, 1 structural convention, 4 for Twirl rendering, 3 for safety |
 | `twirl-spec-govuk` | core, wcag | 5 GOV.UK Design System conventions |
-| `twirl-spec-quality` | core | 12 rules: semantics, page weight and metadata |
+| `twirl-spec-quality` | core | 12 rules: semantics, page weight and metadata, plus the coverage and entry-point checks |
 | `twirl-spec-messages` | core | Message-file integrity checks |
+| `twirl-spec-all` | all of the above | One dependency that pulls in everything, and `AllChecks` |
 
 ```scala
 libraryDependencies ++= Seq(
@@ -62,6 +63,12 @@ libraryDependencies ++= Seq(
   "io.github.frikit" %% "twirl-spec-quality"  % twirlSpecVersion % Test,  // optional
   "io.github.frikit" %% "twirl-spec-messages" % twirlSpecVersion % Test   // optional
 )
+```
+
+Or take the lot in one line:
+
+```scala
+libraryDependencies += "io.github.frikit" %% "twirl-spec-all" % twirlSpecVersion % Test
 ```
 
 Rule modules ship a trait that wires their rules into every `display(...)`. The
@@ -81,7 +88,7 @@ nothing else.
 
 | twirl-spec | Play | Scala | Java | Twirl | ScalaTest |
 |---|---|---|---|---|---|
-| 0.1.x | 3.0.x | 2.13.18, 3.3.7 | 21+ | 2.0.x | 3.2.x |
+| 0.1.x – 0.3.x | 3.0.x | 2.13.18, 3.3.7 | 21+ | 2.0.x | 3.2.x |
 
 **Scala.** Published for 2.13 and 3 from a single source tree. The 3.x build
 targets 3.3 LTS, which is binary-compatible with every later 3.x release, so a
@@ -243,25 +250,239 @@ Where several matches are legitimate, say so — `cssSelector` and
 everything without complaint. Expectations that are plural by nature —
 `radioGroup`, `checkboxGroup`, `bullets`, `link`, `tableRow` — are unaffected.
 
+### Reference
+
+Every expectation and matcher the DSL exposes. Expectations take a message
+key by default; the `…Text` variants take the exact words instead.
+
+**Rendering**
+
+| | |
+|---|---|
+| `render` | The whole authoring surface. |
+| `renderIn` | Render the same view in a given language. |
+| `literal` | Text expectations take message keys by default; wrap a string in `literal` when you really do mean the exact words. |
+| `anyText` | For "there is a heading, its wording is asserted elsewhere". |
+| `matching` | Match text against a regular expression rather than an exact string. |
+| `role` | Find an element the way an assistive technology does: by role, then by the name it announces. |
+| `expectations` | Bundle expectations so a service can name its own house rules once. |
+
+**Matchers**
+
+| | |
+|---|---|
+| `standardsRules` | ScalaTest matchers over a rendered page. |
+| `failOnWarnings` | Whether warnings fail the test. |
+| `reportWarnings` | Whether passing tests still surface their warnings in the test output. |
+| `display` | The page shows all of this, and holds to the GOV.UK standards. |
+| `displayOnly` | As `display`, but without the standards — for the rare page that has to break a rule, or while a legacy view is being brought up to standard. |
+| `meetStandards` | Whatever `standardsRules` resolves to, for a spec that has its own assertions already. |
+| `meetStandardsExcept` | The standards, minus the named rules. |
+| `standardsExpectation` | The active rule set as one expectation, for asserting on the result. |
+| `checkPage` | Assert against a page directly, outside a matcher. |
+
+**Page framing**
+
+| | |
+|---|---|
+| `title` | Expectations about the frame of a GOV.UK page: what it is called, what it is headed, and the furniture the layout is responsible for. |
+| `titleText` | The browser title, given as the exact words rather than a message key. |
+| `exactTitle` | The browser title in full, including service name and " - GOV.UK". |
+| `heading` | The single `<h1>`. |
+| `headingText` | The `<h1>`, given as the exact words rather than a message key. |
+| `caption` | The caption rendered above (or inside) the h1. |
+| `captionText` | The caption, given as the exact words rather than a message key. |
+| `serviceName` | The service or site name in the header. |
+| `backLink` | A GOV.UK back link is present. |
+| `noBackLink` | There is no back link, for a page a citizen must not reverse out of. |
+| `languageToggle` | A language switcher, however it is rendered. |
+| `timeoutDialog` | The session-timeout dialog is wired up. |
+| `signOutLink` | A sign out link is present, and points where it should. |
+| `phaseBanner` | The alpha or beta phase banner is present, with the phase it names. |
+| `subheading` | An `h2` with the given message key. |
+| `headingAtLevel` | A heading at a given level says this. |
+| `to` | Back link check, optionally pinned to a target URL. |
+
+**Content**
+
+| | |
+|---|---|
+| `content` | Expectations about the words on the page and the components carrying them. |
+| `contentText` | Somewhere in the page body, given as the exact words rather than a message key. |
+| `noContent` | The resolved message appears nowhere in the page's visible text. |
+| `paragraph` | The message appears inside a paragraph. |
+| `warning` | The text of a GOV.UK warning callout. |
+| `insetText` | The text of an inset text block. |
+| `notificationBanner` | The text of a notification banner. |
+| `panelTitle` | The title of a confirmation panel. |
+| `panelBody` | The body of a confirmation panel. |
+| `detailsSummary` | The visible summary of a collapsed details block. |
+| `bullets` | The bullet list contains exactly these items, in order. |
+| `numberedItems` | The numbered list contains exactly these items, in order. |
+| `link` | A link with the given text pointing at the given URL. |
+| `linkText` | A link, given as the exact words rather than a message key. |
+| `linkWithId` | A link found by id, whatever it says. |
+| `summaryRow` | A row of a `govukSummaryList`, by its key. |
+| `summaryList` | The summary list holds exactly these `key -> value` rows, in order. |
+| `tableHeaders` | The table header cells, in order. |
+| `tableRow` | A row whose cells read exactly like this. |
+| `appearsBefore` | One selector's first match comes before another's in document order. |
+| `element` | An element with this id exists. |
+| `noElement` | No element with this id exists. |
+| `elementWithText` | The element with this id says this. |
+| `cssSelector` | At least one element matches this selector. |
+| `noCssSelector` | Nothing matches this selector. |
+| `elementCount` | Exactly this many elements match. |
+| `elementHasClass` | The element with this id carries this class. |
+| `named` | A link, by text and/or id, optionally pinned to a URL. |
+| `namedText` | The accessible name, given as the exact words rather than a message key. |
+| `namedMatching` | The accessible name matches this pattern. |
+| `occurring` | Exactly this many elements carry the role. |
+
+**Forms**
+
+| | |
+|---|---|
+| `formPostsTo` | Expectations about form controls and the error states they can be in. |
+| `formGetsFrom` | The form is a GET to this action. |
+| `formValues` | Every named control holds these values, as a browser would submit them. |
+| `disabled` | The control is disabled, on itself or through an enclosing fieldset. |
+| `enabled` | This control is not disabled. |
+| `required` | This control is marked required. |
+| `invalid` | The control is marked invalid for an assistive technology. |
+| `describedAs` | What an assistive technology reads after the control's name. |
+| `noErrors` | No error summary and no inline error messages anywhere on the page. |
+| `errorTitlePrefix` | GOV.UK requires the browser title of a page in an error state to be prefixed, so screen reader users hear that something went wrong before the page name. |
+| `errorSummaryTitle` | The heading above the error summary. |
+| `errorSummary` | The error summary lists exactly these `field -> message key` entries, in order, and every entry links to an element that exists on the page. |
+| `errorSummaryContaining` | The error summary mentions this field, whatever else it lists. |
+| `fieldError` | The inline error message rendered against a specific field. |
+| `labelledByLegend` | A text input (or textarea), its label, hint, value and autocomplete. |
+| `hintIssues` | A radio or checkbox group: its legend, its options and what is selected. |
+
+**Coverage and entry points**
+
+| | |
+|---|---|
+| `trackedAttributes` | Two checks about the spec rather than the page. |
+| `coverageScope` | Which part of the page a spec answers for. |
+| `coverageIgnored` | Ids, links or tracking values every page in this project inherits from its layout. |
+| `assertEverything` | Every id, link and tracked element on the page was asserted by some test in this spec. |
+| `assertEverythingExcept` | As `assertEverything`, but these ids, links or tracking values are deliberately not asserted. |
+| `unassertedContent` | What this spec has asserted so far, for a spec that wants to report rather than fail. |
+| `entryPointsAgree` | Twirl's generated `render`, `f` and `ref` all agree with `apply`. |
 ## The rules
 
-Three sets in two optional modules, kept apart so a project is only judged
-against what it actually uses.
+46 rules in seven sets across three optional modules, kept apart so a
+project is only judged against what it actually uses.
 
-**`WcagStandards`** (`twirl-spec-wcag`) — 22 rules: 21 enforce a WCAG success
-criterion, and 1 is a structural convention WCAG does not require but almost
-everyone wants (exactly one `<h1>`).
+| Set | Module | Rules | Covers |
+|---|---|---|---|
+| `WcagStandards` | `twirl-spec-wcag` | 22 | Accessibility |
+| `TwirlStandards` | `twirl-spec-wcag` | 4 | Play rendering mistakes |
+| `SecurityStandards` | `twirl-spec-wcag` | 3 | Ways a page can leak or be turned against its reader |
+| `GovukStandards` | `twirl-spec-govuk` | 5 | [GOV |
+| `SemanticStandards` | `twirl-spec-quality` | 4 | Markup that parses but does not mean what it looks like |
+| `PerformanceStandards` | `twirl-spec-quality` | 4 | Page weight and rendering cost |
+| `MetadataStandards` | `twirl-spec-quality` | 4 | What a browser tab, a search result and a share preview make of the page |
 
-**`TwirlStandards`** (`twirl-spec-wcag`) — 2 rules for Play rendering mistakes:
-a message key rendered raw because it is missing from the messages file, and a
-`Some(...)` reaching the page because a value was never unwrapped. Neither is an
-accessibility rule.
+A rule is blocking unless marked a warning; warnings are reported on a green
+run too, and `failOnWarnings` promotes them. See [Failure output](#failure-output).
 
-**`GovukStandards`** (`twirl-spec-govuk`) — 5 conventions of the [GOV.UK Design
-System](https://design-system.service.gov.uk/): the error summary, the inline
-error message, and the `Error:` browser-title prefix. These key off Design
-System markup, so they stay silent on a page that does not use it.
+### `WcagStandards`
 
+Accessibility: 21 rules each enforce a WCAG success criterion, and `one-h1` is a structural convention WCAG does not require but almost everyone wants.
+
+| Rule | Checks | Criterion |
+|---|---|---|
+| `one-h1` | a page has exactly one <h1> | convention |
+| `title-present` | a page has a non-empty <title> | 2.4.2 Page Titled · A · WCAG 2.0 |
+| `html-lang` | the <html> element declares the rendered language | 3.1.1 Language of Page · A · WCAG 2.0 |
+| `main-landmark` | a page has a <main> landmark | 1.3.1 Info and Relationships · A · WCAG 2.0 |
+| `heading-order` | heading levels are not skipped | 1.3.1 Info and Relationships · A · WCAG 2.0 |
+| `no-empty-headings` | headings have text | 2.4.6 Headings and Labels · AA · WCAG 2.0 |
+| `unique-ids` | element ids are unique | 4.1.2 Name, Role, Value · A · WCAG 2.0 |
+| `labelled-controls` | every form control has an accessible name | 3.3.2 Labels or Instructions · A · WCAG 2.0 |
+| `grouped-choices` | radios and checkboxes sit in a fieldset with a legend | 1.3.1 Info and Relationships · A · WCAG 2.0 |
+| `submit-has-name` | the submit control has visible text | 4.1.2 Name, Role, Value · A · WCAG 2.0 |
+| `table-header-scope` | table headers declare a scope *(warning)* | 1.3.1 Info and Relationships · A · WCAG 2.0 |
+| `link-has-name` | every link has an accessible name | 2.4.4 Link Purpose (In Context) · A · WCAG 2.0 |
+| `link-text-is-meaningful` | link text makes sense out of context *(warning)* | 2.4.9 Link Purpose (Link Only) · AAA · WCAG 2.0 |
+| `new-tab-is-announced` | links opening a new tab say so *(warning)* | 3.2.5 Change on Request · AAA · WCAG 2.0 |
+| `input-purpose-autocomplete` | inputs collecting information about the user declare an autocomplete purpose *(warning)* | 1.3.5 Identify Input Purpose · AA · WCAG 2.1 |
+| `aria-references-resolve` | every aria reference points at an element that exists | 1.3.1 Info and Relationships · A · WCAG 2.0 |
+| `no-aria-hidden-focusable` | nothing hidden from assistive technology can still take focus | 4.1.2 Name, Role, Value · A · WCAG 2.0 |
+| `no-positive-tabindex` | focus order follows the document | 2.4.3 Focus Order · A · WCAG 2.0 |
+| `zoom-not-blocked` | the page can be zoomed | 1.4.4 Resize Text · AA · WCAG 2.0 |
+| `label-for-resolves` | every label points at a control that exists | 3.3.2 Labels or Instructions · A · WCAG 2.0 |
+| `single-main` | a page has one main landmark | 1.3.1 Info and Relationships · A · WCAG 2.0 |
+| `image-alt` | every image has an alt attribute | 1.1.1 Non-text Content · A · WCAG 2.0 |
+
+### `TwirlStandards`
+
+Play rendering mistakes: an unresolved message key, markup the parser had to repair, two controls sharing a name, and a Scala value reaching the page.
+
+| Rule | Checks |
+|---|---|
+| `no-raw-message-keys` | no unresolved message key is shown to a citizen |
+| `well-formed-html` | the template produced markup a browser does not have to repair |
+| `unambiguous-field-names` | no two controls submit under the same name |
+| `no-scala-leakage` | no Scala value leaks into the rendered page |
+
+### `SecurityStandards`
+
+Ways a page can leak or be turned against its reader.
+
+| Rule | Checks |
+|---|---|
+| `no-password-in-get` | a password is never submitted in a URL |
+| `no-javascript-href` | links do not carry javascript: URLs |
+| `target-blank-is-safe` | a link opening a new tab cannot reach back *(warning)* |
+
+### `GovukStandards`
+
+[GOV.UK Design System](https://design-system.service.gov.uk/) error conventions. They key off Design System markup, so they stay silent on a page that does not use it.
+
+| Rule | Checks |
+|---|---|
+| `error-title-prefix` | an error state prefixes the browser title |
+| `error-aria-describedby` | an inline error is announced with its field |
+| `error-hidden-prefix` | an inline error carries a visually hidden prefix |
+| `error-summary-targets` | every error summary link lands on an element |
+| `error-summary-focusable` | the error summary can take focus *(warning)* |
+
+### `SemanticStandards`
+
+Markup that parses but does not mean what it looks like.
+
+| Rule | Checks |
+|---|---|
+| `no-nested-interactive` | no control contains another control |
+| `lists-contain-list-items` | a list contains only list items |
+| `no-presentational-markup` | meaning is carried by markup, not by looks *(warning)* |
+| `no-br-for-layout` | spacing comes from styling, not from line breaks *(warning)* |
+
+### `PerformanceStandards`
+
+Page weight and rendering cost. All four are warnings.
+
+| Rule | Checks |
+|---|---|
+| `images-have-dimensions` | images reserve their space before they load *(warning)* |
+| `scripts-are-deferred` | scripts in the head do not block rendering *(warning)* |
+| `no-oversized-data-uri` | large assets are files, not attributes *(warning)* |
+| `no-large-inline-style` | styling lives in a stylesheet *(warning)* |
+
+### `MetadataStandards`
+
+What a browser tab, a search result and a share preview make of the page.
+
+| Rule | Checks |
+|---|---|
+| `has-charset` | the page declares its character encoding |
+| `not-noindex` | the page is not accidentally hidden from search |
+| `has-meta-description` | the page describes itself for a search result |
+| `title-is-concise` | the title survives being truncated |
 ### Selecting by conformance level and WCAG version
 
 Every accessibility rule carries the success criterion it enforces — number,
@@ -318,6 +539,66 @@ override def failOnWarnings = true
 
 Warnings are reported but never fail a build until you ask them to. The two AAA
 rules ship as warnings for that reason.
+
+## What the spec missed
+
+Rules answer "is this page sound". These two answer the other question: "did the
+spec actually look at it". A view can pass every rule while half of it goes
+unasserted, because rendering a page is not the same as testing it.
+
+### Coverage
+
+Every id, link and tracked element the page shows has to be asserted by some
+test in the spec. Put it in the last test — it can only see assertions that have
+already run.
+
+```scala
+"everything this page shows" must {
+  "have been asserted by one of these tests" in {
+    page must assertEverything
+  }
+}
+```
+
+```
+7 things on this page were never asserted:
+  id (3): #sub-header, #sub-header-link, #upload-file
+  link (1): "upload a new file or download one that is waiting."
+  tracking (1): data-journey-click=link - click:File not available:Choose something else to do
+```
+
+Assertions are recorded by what they touch, not by the selector they used, so
+asserting `#action-list > *` does not count as asserting `#action-list`. Renders
+of the same view in different states add up, so a spec that checks a valid form
+in one test and an invalid one in the next is measured as a whole.
+
+Three things are adjustable, usually once on a project's spec base:
+
+```scala
+override def coverageScope: String        = "main, #main-content"   // the layout is not the view spec's problem
+override def coverageIgnored: Set[String] = Set("#content")         // what every page inherits
+override def trackedAttributes: Set[String] = Set("data-journey-click")
+```
+
+`assertEverythingExcept("#id")` covers the one-off case, and
+`unassertedContent(page)` reports without failing.
+
+### Entry points
+
+Twirl generates `render`, `f` and `ref` beside `apply`. Nothing in a normal
+service calls them, so a change to a template's parameters can break them with
+no test noticing, and they sit in coverage reports as permanently unreached
+lines. One line exercises all three:
+
+```scala
+memberNameView must entryPointsAgree(
+  memberNameView(form, edit = false)(request, messages, appConfig),
+  form, false, request, messages, appConfig
+)
+```
+
+The arguments are the ones `render` takes: every parameter including the
+implicit ones, flattened, in order.
 
 ## Languages
 

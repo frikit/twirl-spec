@@ -38,14 +38,45 @@ final class Page(
   /** Escape hatch: raw Jsoup. */
   def doc: Document = document
 
+  // ------------------------------------------------------------- coverage
+
+  /** Which spec this page belongs to, so several renders of one view share a coverage record. */
+  private var group: String = Integer.toHexString(source.hashCode)
+
+  private[twirlspec] def coverageGroup: String = group
+
+  private[twirlspec] def belongingTo(newGroup: String): this.type = {
+    if (newGroup.nonEmpty) group = newGroup
+    this
+  }
+
+  private var recording: Boolean = true
+
+  /** Standards rules sweep the whole document, so what they touch says nothing about what the spec asserted. */
+  private[twirlspec] def withRecordingPaused[A](f: => A): A = {
+    val was = recording
+    recording = false
+    try f
+    finally recording = was
+  }
+
+  private[twirlspec] def record(elements: List[Element]): Unit =
+    if (recording && elements.nonEmpty) CoverageRegistry.record(group, elements.flatMap(e => Anchors.namesOf(e)))
+
   def css(selector: String): Selection = named(selector, selector)
 
-  def named(name: String, selector: String): Selection =
-    Selection(name, selector, document.select(selector).asScala.toList)
+  def named(name: String, selector: String): Selection = {
+    val elements = document.select(selector).asScala.toList
+    record(elements)
+    Selection(name, selector, elements)
+  }
 
   /** Elements with this ARIA role, implicit or explicit. */
-  def byRole(role: String): Selection =
-    Selection(s"role=$role", Roles.selectorFor(role), Roles.matching(document, role))
+  def byRole(role: String): Selection = {
+    val elements = Roles.matching(document, role)
+    record(elements)
+    Selection(s"role=$role", Roles.selectorFor(role), elements)
+  }
 
   /** Elements with this role whose accessible name matches. */
   def byRole(role: String, name: String): Selection =

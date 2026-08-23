@@ -47,6 +47,7 @@ trait TwirlMatchers { self: TwirlSpecDsl =>
   /** Whatever `standardsRules` resolves to, for a spec that has its own assertions already. */
   def meetStandards: Matcher[Page] = matcherFor(Seq(Rule.expectation(standardsRules)), "page")
 
+  /** The standards, minus the named rules. Prefer fixing the page: an exclusion here hides the rule on every page it is applied to. */
   def meetStandardsExcept(ruleIds: String*): Matcher[Page] =
     matcherFor(Seq(Rule.expectation(standardsRules.filterNot(r => ruleIds.toSet.contains(r.id)))), "page")
 

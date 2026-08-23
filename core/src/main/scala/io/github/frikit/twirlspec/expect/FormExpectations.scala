@@ -70,7 +70,9 @@ trait FormExpectations {
     }
 
   /** The form posts (or gets) to a specific URL. */
-  def formPostsTo(url: String): Expectation  = formTo("POST", url)
+  def formPostsTo(url: String): Expectation = formTo("POST", url)
+
+  /** The form is a GET to this action. */
   def formGetsFrom(url: String): Expectation = formTo("GET", url)
 
   private def formTo(method: String, url: String): Expectation = Expectation(s"form $method $url") { page =>
@@ -110,6 +112,7 @@ trait FormExpectations {
   /** The control is disabled, on itself or through an enclosing fieldset. */
   def disabled(nameOrId: String): Expectation = controlState(nameOrId, "disabled", _ => true)
 
+  /** This control is not disabled. */
   def enabled(nameOrId: String): Expectation = Expectation(s"enabled($nameOrId)") { page =>
     Matching.exactlyOne(s"enabled($nameOrId)", page.formControl(nameOrId)) match {
       case Left(v)                         => Seq(v)
@@ -118,6 +121,7 @@ trait FormExpectations {
     }
   }
 
+  /** This control is marked required. */
   def required(nameOrId: String): Expectation = Expectation(s"required($nameOrId)") { page =>
     Matching.exactlyOne(s"required($nameOrId)", page.formControl(nameOrId)) match {
       case Left(v)                                                                => Seq(v)
@@ -201,6 +205,7 @@ trait FormExpectations {
       )
   }
 
+  /** The heading above the error summary. */
   def errorSummaryTitle(key: String = "error.summary.title"): Expectation =
     Expectation("errorSummaryTitle") { page =>
       Matching.exactlyOne("errorSummaryTitle", page.errorSummaryTitle) match {
@@ -214,6 +219,7 @@ trait FormExpectations {
   def errorSummary(entries: (String, String)*): Expectation =
     ErrorSummaryExpectation(entries.toList.map { case (f, k) => (f, Expected.Key(k): Expected) })
 
+  /** The error summary mentions this field, whatever else it lists. */
   def errorSummaryContaining(field: String, key: String, args: Any*): Expectation =
     ErrorSummaryExpectation(List((field, Expected.Key(key, args.toSeq))), exhaustive = false)
 

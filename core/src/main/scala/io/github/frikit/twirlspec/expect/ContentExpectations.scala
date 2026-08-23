@@ -26,7 +26,9 @@ trait ContentExpectations {
 
   /** The resolved message appears somewhere in the page's visible text. */
   def content(key: String, args: Any*): Expectation = contentIn("content", _.text, Expected.Key(key, args.toSeq))
-  def contentText(literal: String): Expectation     = contentIn("content", _.text, Expected.Literal(literal))
+
+  /** Somewhere in the page body, given as the exact words rather than a message key. */
+  def contentText(literal: String): Expectation = contentIn("content", _.text, Expected.Literal(literal))
 
   /** The resolved message appears nowhere in the page's visible text. */
   def noContent(key: String, args: Any*): Expectation = Expectation("noContent") { page =>
@@ -49,21 +51,27 @@ trait ContentExpectations {
   def paragraph(key: String, args: Any*): Expectation =
     contentIn("paragraph", _.paragraphs.text, Expected.Key(key, args.toSeq))
 
+  /** The text of a GOV.UK warning callout. */
   def warning(key: String, args: Any*): Expectation =
     componentText("warning", _.warningText, Expected.Key(key, args.toSeq))
 
+  /** The text of an inset text block. */
   def insetText(key: String, args: Any*): Expectation =
     componentText("insetText", _.insetText, Expected.Key(key, args.toSeq))
 
+  /** The text of a notification banner. */
   def notificationBanner(key: String, args: Any*): Expectation =
     componentText("notificationBanner", _.notificationBanner, Expected.Key(key, args.toSeq))
 
+  /** The title of a confirmation panel. */
   def panelTitle(key: String, args: Any*): Expectation =
     componentText("panelTitle", _.css(".govuk-panel__title"), Expected.Key(key, args.toSeq))
 
+  /** The body of a confirmation panel. */
   def panelBody(key: String, args: Any*): Expectation =
     componentText("panelBody", _.css(".govuk-panel__body"), Expected.Key(key, args.toSeq))
 
+  /** The visible summary of a collapsed details block. */
   def detailsSummary(key: String, args: Any*): Expectation =
     componentText("detailsSummary", _.css(".govuk-details__summary-text, summary"), Expected.Key(key, args.toSeq))
 
@@ -97,8 +105,12 @@ trait ContentExpectations {
 
   /** A link with the given text pointing at the given URL. */
   def link(key: String, args: Any*): LinkExpectation = LinkExpectation(Expected.Key(key, args.toSeq), None, None)
-  def linkText(literal: String): LinkExpectation     = LinkExpectation(Expected.Literal(literal), None, None)
-  def linkWithId(id: String): LinkExpectation        = LinkExpectation(Expected.Anything, None, Some(id))
+
+  /** A link, given as the exact words rather than a message key. */
+  def linkText(literal: String): LinkExpectation = LinkExpectation(Expected.Literal(literal), None, None)
+
+  /** A link found by id, whatever it says. */
+  def linkWithId(id: String): LinkExpectation = LinkExpectation(Expected.Anything, None, Some(id))
 
   // -------------------------------------------------------------- check answers
 
@@ -128,6 +140,7 @@ trait ContentExpectations {
 
   // ------------------------------------------------------------------- tables
 
+  /** The table header cells, in order. */
   def tableHeaders(keys: String*): Expectation = Expectation("tableHeaders") { page =>
     val resolved   = keys.toList.map(k => Expected.Key(k).resolve(page))
     val unresolved = resolved.collect { case Left(v) => v.copy(rule = "tableHeaders") }
@@ -147,6 +160,7 @@ trait ContentExpectations {
     }
   }
 
+  /** A row whose cells read exactly like this. */
   def tableRow(cells: String*): Expectation = Expectation("tableRow") { page =>
     val expected = cells.toList.map(Text.normalise)
     val rows     = page.css("table tbody tr").elements.map { tr =>
@@ -184,11 +198,14 @@ trait ContentExpectations {
     }
   }
 
+  /** An element with this id exists. */
   def element(id: String): Expectation =
     Expectation(s"element($id)")(p => Matching.exactlyOne(s"element($id)", p.byId(id)).left.toSeq)
 
+  /** No element with this id exists. */
   def noElement(id: String): Expectation = Expectation(s"noElement($id)")(p => absent(s"noElement($id)", p.byId(id)))
 
+  /** The element with this id says this. */
   def elementWithText(id: String, key: String, args: Any*): Expectation = Expectation(s"element($id)") { page =>
     Matching.exactlyOne(s"element($id)", page.byId(id)) match {
       case Left(v)  => Seq(v)
@@ -196,18 +213,22 @@ trait ContentExpectations {
     }
   }
 
+  /** At least one element matches this selector. The plural form, where several matches are legitimate. */
   def cssSelector(selector: String): Expectation =
     Expectation(s"css($selector)")(p => present(s"css($selector)", p.css(selector)))
 
+  /** Nothing matches this selector. */
   def noCssSelector(selector: String): Expectation =
     Expectation(s"noCss($selector)")(p => absent(s"noCss($selector)", p.css(selector)))
 
+  /** Exactly this many elements match. */
   def elementCount(selector: String, expected: Int): Expectation = Expectation(s"count($selector)") { page =>
     val actual = page.css(selector).size
     if (actual == expected) Nil
     else Seq(Violation.mismatch(s"count($selector)", expected.toString, actual.toString))
   }
 
+  /** The element with this id carries this class. */
   def elementHasClass(id: String, className: String): Expectation = Expectation(s"class($id)") { page =>
     Matching.exactlyOne(s"class($id)", page.byId(id)) match {
       case Left(v)                           => Seq(v)
@@ -400,8 +421,10 @@ final case class RoleExpectation(roleName: String, name: Option[Expected], count
   /** The name an assistive technology announces, from a message key. */
   def named(key: String, args: Any*): RoleExpectation = copy(name = Some(Expected.Key(key, args.toSeq)))
 
+  /** The accessible name, given as the exact words rather than a message key. */
   def namedText(literal: String): RoleExpectation = copy(name = Some(Expected.Literal(literal)))
 
+  /** The accessible name matches this pattern. */
   def namedMatching(regex: scala.util.matching.Regex): RoleExpectation = copy(name = Some(Expected.Pattern(regex)))
 
   /** Exactly this many elements carry the role. */

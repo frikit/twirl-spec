@@ -16,7 +16,7 @@
 package io.github.frikit.twirlspec
 
 import io.github.frikit.twirlspec.messages.MessagesMatchers
-import io.github.frikit.twirlspec.standards.{GovukChecks, QualityChecks, WcagChecks}
+import io.github.frikit.twirlspec.standards.{CoverageChecks, GovukChecks, QualityChecks, WcagChecks}
 
 /** Every rule module and the message-file matchers, in one mixin.
   *
@@ -28,4 +28,4 @@ import io.github.frikit.twirlspec.standards.{GovukChecks, QualityChecks, WcagChe
   * others — a project not using the GOV.UK Design System has no use for
   * [[io.github.frikit.twirlspec.standards.GovukChecks]].
   */
-trait AllChecks extends WcagChecks with GovukChecks with QualityChecks with MessagesMatchers
+trait AllChecks extends WcagChecks with GovukChecks with QualityChecks with CoverageChecks with MessagesMatchers

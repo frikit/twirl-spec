@@ -25,14 +25,15 @@ import io.github.frikit.twirlspec.page.Page
 trait TwirlSpecDsl extends FramingExpectations with FormExpectations with ContentExpectations with TwirlMatchers {
 
   /** Parse rendered HTML into a page that can be asked questions. */
-  def render(html: Html)(implicit messages: Messages): Page = Page(html)
+  def render(html: Html)(implicit messages: Messages): Page = Page(html).belongingTo(getClass.getName)
 
-  def render(html: Html, lang: Lang, messages: Messages): Page = Page(html, lang, messages)
+  def render(html: Html, lang: Lang, messages: Messages): Page =
+    Page(html, lang, messages).belongingTo(getClass.getName)
 
   /** Render the same view in a given language. */
   def renderIn(lang: Lang)(html: Messages => Html)(implicit messagesApi: MessagesApi): Page = {
     val messages = messagesApi.preferred(Seq(lang))
-    Page(html(messages), lang, messages)
+    Page(html(messages), lang, messages).belongingTo(getClass.getName)
   }
 
   /** Text expectations take message keys by default; wrap a string in `literal` when you really do mean the exact words.

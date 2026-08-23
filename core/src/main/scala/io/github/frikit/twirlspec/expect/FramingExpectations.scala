@@ -26,7 +26,9 @@ trait FramingExpectations {
   /** The browser title, ignoring the " - Service name - GOV.UK" suffix the layout appends and the translated "Error:" prefix an error state adds.
     */
   def title(key: String, args: Any*): Expectation = title(Expected.Key(key, args.toSeq))
-  def titleText(literal: String): Expectation     = title(Expected.Literal(literal))
+
+  /** The browser title, given as the exact words rather than a message key. */
+  def titleText(literal: String): Expectation = title(Expected.Literal(literal))
 
   def title(expected: Expected): Expectation = Expectation("title") { page =>
     compare("title", expected, stripErrorPrefix(page, page.title), page, StartsWith)
@@ -39,7 +41,9 @@ trait FramingExpectations {
 
   /** The single `<h1>`. */
   def heading(key: String, args: Any*): Expectation = heading(Expected.Key(key, args.toSeq))
-  def headingText(literal: String): Expectation     = heading(Expected.Literal(literal))
+
+  /** The `<h1>`, given as the exact words rather than a message key. */
+  def headingText(literal: String): Expectation = heading(Expected.Literal(literal))
 
   def heading(expected: Expected): Expectation = Expectation("heading") { page =>
     val h1 = page.h1
@@ -57,7 +61,9 @@ trait FramingExpectations {
 
   /** The caption rendered above (or inside) the h1. */
   def caption(key: String, args: Any*): Expectation = caption(Expected.Key(key, args.toSeq))
-  def captionText(literal: String): Expectation     = caption(Expected.Literal(literal))
+
+  /** The caption, given as the exact words rather than a message key. */
+  def captionText(literal: String): Expectation = caption(Expected.Literal(literal))
 
   def caption(expected: Expected): Expectation = Expectation("caption") { page =>
     present("caption", page.caption) match {
@@ -77,6 +83,7 @@ trait FramingExpectations {
   /** A GOV.UK back link is present. */
   val backLink: BackLinkExpectation = BackLinkExpectation(None)
 
+  /** There is no back link, for a page a citizen must not reverse out of. */
   val noBackLink: Expectation = Expectation("noBackLink")(page => absent("noBackLink", page.backLink))
 
   /** A language switcher, however it is rendered. */
@@ -84,14 +91,17 @@ trait FramingExpectations {
     present("languageToggle", page.languageToggle)
   }
 
+  /** The session-timeout dialog is wired up. */
   val timeoutDialog: Expectation = Expectation("timeoutDialog") { page =>
     present("timeoutDialog", page.timeoutDialog)
   }
 
+  /** A sign out link is present, and points where it should. */
   val signOutLink: Expectation = Expectation("signOutLink") { page =>
     present("signOutLink", page.signOutLink)
   }
 
+  /** The alpha or beta phase banner is present, with the phase it names. */
   val phaseBanner: Expectation = Expectation("phaseBanner") { page =>
     present("phaseBanner", page.phaseBanner)
   }
@@ -99,6 +109,7 @@ trait FramingExpectations {
   /** An `h2` with the given message key. */
   def subheading(key: String, args: Any*): Expectation = headingAtLevel(2, Expected.Key(key, args.toSeq))
 
+  /** A heading at a given level says this. */
   def headingAtLevel(level: Int, expected: Expected): Expectation =
     Expectation(s"h$level") { page =>
       expected.resolve(page) match {
@@ -123,6 +134,7 @@ trait FramingExpectations {
 /** Back link check, optionally pinned to a target URL. */
 final case class BackLinkExpectation(href: Option[String]) extends Expectation {
 
+  /** The href this back link points at. */
   def to(url: String): BackLinkExpectation = copy(href = Some(url))
 
   def description: String = href.fold("backLink")(u => s"backLink -> $u")
