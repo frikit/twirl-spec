@@ -15,6 +15,8 @@
  */
 package io.github.frikit.twirlspec
 
+import io.github.frikit.twirlspec.aria.AriaChecks
+import io.github.frikit.twirlspec.i18n.I18nChecks
 import io.github.frikit.twirlspec.messages.MessagesMatchers
 import io.github.frikit.twirlspec.standards.{CoverageChecks, GovukChecks, QualityChecks, WcagChecks}
 
@@ -28,4 +30,11 @@ import io.github.frikit.twirlspec.standards.{CoverageChecks, GovukChecks, Qualit
   * others — a project not using the GOV.UK Design System has no use for
   * [[io.github.frikit.twirlspec.standards.GovukChecks]].
   */
-trait AllChecks extends WcagChecks with GovukChecks with QualityChecks with CoverageChecks with MessagesMatchers
+trait AllChecks
+    extends WcagChecks
+    with GovukChecks
+    with QualityChecks
+    with AriaChecks
+    with CoverageChecks
+    with I18nChecks
+    with MessagesMatchers

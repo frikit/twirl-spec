@@ -52,6 +52,8 @@ judges a page against a design system you are not using.
 | `twirl-spec-wcag` | core | 29 rules: 21 tagged with a WCAG success criterion, 1 structural convention, 4 for Twirl rendering, 3 for safety |
 | `twirl-spec-govuk` | core, wcag | 5 GOV.UK Design System conventions |
 | `twirl-spec-quality` | core | 12 rules: semantics, page weight and metadata, plus the coverage and entry-point checks |
+| `twirl-spec-aria` | core | 16 ARIA correctness rules, the static half of what an automated tool reports |
+| `twirl-spec-i18n` | core | Language parity: every language renders the same page as the base |
 | `twirl-spec-messages` | core | Message-file integrity checks |
 | `twirl-spec-all` | all of the above | One dependency that pulls in everything, and `AllChecks` |
 
@@ -61,6 +63,8 @@ libraryDependencies ++= Seq(
   "io.github.frikit" %% "twirl-spec-wcag"     % twirlSpecVersion % Test,  // optional
   "io.github.frikit" %% "twirl-spec-govuk"    % twirlSpecVersion % Test,  // optional
   "io.github.frikit" %% "twirl-spec-quality"  % twirlSpecVersion % Test,  // optional
+  "io.github.frikit" %% "twirl-spec-aria"     % twirlSpecVersion % Test,  // optional
+  "io.github.frikit" %% "twirl-spec-i18n"     % twirlSpecVersion % Test,  // optional
   "io.github.frikit" %% "twirl-spec-messages" % twirlSpecVersion % Test   // optional
 )
 ```
@@ -79,6 +83,7 @@ trait ViewSpecBase extends AnyWordSpec with Matchers with TwirlSpec
   with WcagChecks     // accessibility, rendering and safety rules
   with GovukChecks    // + GOV.UK Design System conventions
   with QualityChecks  // + semantics, page weight and metadata
+  with AriaChecks     // + ARIA correctness
 ```
 
 Without a rule module, `display(...)` checks exactly what you asked it to and
@@ -88,7 +93,7 @@ nothing else.
 
 | twirl-spec | Play | Scala | Java | Twirl | ScalaTest |
 |---|---|---|---|---|---|
-| 0.1.x – 0.3.x | 3.0.x | 2.13.18, 3.3.7 | 21+ | 2.0.x | 3.2.x |
+| 0.1.x – 0.4.x | 3.0.x | 2.13.18, 3.3.7 | 21+ | 2.0.x | 3.2.x |
 
 **Scala.** Published for 2.13 and 3 from a single source tree. The 3.x build
 targets 3.3 LTS, which is binary-compatible with every later 3.x release, so a
@@ -371,9 +376,19 @@ key by default; the `…Text` variants take the exact words instead.
 | `assertEverythingExcept` | As `assertEverything`, but these ids, links or tracking values are deliberately not asserted. |
 | `unassertedContent` | What this spec has asserted so far, for a spec that wants to report rather than fail. |
 | `entryPointsAgree` | Twirl's generated `render`, `f` and `ref` all agree with `apply`. |
+
+**Languages**
+
+| | |
+|---|---|
+| `translationConfig` | Compares the same view rendered in several languages. |
+| `translateConsistently` | Every language renders the same page as the base language, differing only in words. |
+| `translateConsistentlyExcept` | As `translateConsistently`, without the named rules. |
+| `basedOn` | Measure the other languages against this one rather than against the first page given. |
+| `translationDifferences` | The differences, for a spec that would rather report than fail. |
 ## The rules
 
-46 rules in seven sets across three optional modules, kept apart so a
+62 rules in eight sets across four optional modules, kept apart so a
 project is only judged against what it actually uses.
 
 | Set | Module | Rules | Covers |
@@ -382,6 +397,7 @@ project is only judged against what it actually uses.
 | `TwirlStandards` | `twirl-spec-wcag` | 4 | Play rendering mistakes |
 | `SecurityStandards` | `twirl-spec-wcag` | 3 | Ways a page can leak or be turned against its reader |
 | `GovukStandards` | `twirl-spec-govuk` | 5 | [GOV |
+| `AriaStandards` | `twirl-spec-aria` | 16 | ARIA correctness |
 | `SemanticStandards` | `twirl-spec-quality` | 4 | Markup that parses but does not mean what it looks like |
 | `PerformanceStandards` | `twirl-spec-quality` | 4 | Page weight and rendering cost |
 | `MetadataStandards` | `twirl-spec-quality` | 4 | What a browser tab, a search result and a share preview make of the page |
@@ -398,7 +414,7 @@ Accessibility: 21 rules each enforce a WCAG success criterion, and `one-h1` is a
 | `one-h1` | a page has exactly one <h1> | convention |
 | `title-present` | a page has a non-empty <title> | 2.4.2 Page Titled · A · WCAG 2.0 |
 | `html-lang` | the <html> element declares the rendered language | 3.1.1 Language of Page · A · WCAG 2.0 |
-| `main-landmark` | a page has a <main> landmark | 1.3.1 Info and Relationships · A · WCAG 2.0 |
+| `main-landmark` | a page has a <main> landmark *(warning)* | 1.3.1 Info and Relationships · A · WCAG 2.0 |
 | `heading-order` | heading levels are not skipped | 1.3.1 Info and Relationships · A · WCAG 2.0 |
 | `no-empty-headings` | headings have text | 2.4.6 Headings and Labels · AA · WCAG 2.0 |
 | `unique-ids` | element ids are unique | 4.1.2 Name, Role, Value · A · WCAG 2.0 |
@@ -451,6 +467,29 @@ Ways a page can leak or be turned against its reader.
 | `error-summary-targets` | every error summary link lands on an element |
 | `error-summary-focusable` | the error summary can take focus *(warning)* |
 
+### `AriaStandards`
+
+ARIA correctness: whether a name is real, whether its value is allowed, and whether roles that only mean something together appear together.
+
+| Rule | Checks |
+|---|---|
+| `aria-attr-is-real` | every aria- attribute is one the specification defines |
+| `aria-attr-value-is-allowed` | an aria- attribute taking a fixed set of values carries one of them |
+| `aria-role-is-real` | every role is one the specification defines, and not an abstract one |
+| `aria-required-attr` | a role that depends on state declares it |
+| `aria-required-parent` | a role that only means something inside another sits inside one |
+| `aria-required-children` | a role that must contain something is not empty |
+| `aria-hidden-not-on-body` | the whole page is not hidden from assistive technology |
+| `no-role-conflict` | an element made presentational is not also announced |
+| `accesskey-unique` | no two elements answer to the same access key |
+| `autocomplete-is-valid` | an autocomplete attribute uses tokens the specification defines |
+| `no-meta-refresh` | the page does not redirect or refresh itself on a timer |
+| `no-deprecated-effects` | nothing on the page blinks or scrolls by itself |
+| `embedded-content-has-name` | an object, embedded image or svg carries a name *(warning)* |
+| `table-headers-resolve` | every headers attribute points at a header on the same table |
+| `definition-list-structure` | a definition list contains only terms and descriptions |
+| `landmarks-are-distinguishable` | two landmarks of the same kind are told apart by name |
+
 ### `SemanticStandards`
 
 Markup that parses but does not mean what it looks like.
@@ -480,9 +519,9 @@ What a browser tab, a search result and a share preview make of the page.
 | Rule | Checks |
 |---|---|
 | `has-charset` | the page declares its character encoding |
-| `not-noindex` | the page is not accidentally hidden from search |
-| `has-meta-description` | the page describes itself for a search result |
-| `title-is-concise` | the title survives being truncated |
+| `not-noindex` | the page is not accidentally hidden from search *(warning)* |
+| `has-meta-description` | the page describes itself for a search result *(warning)* |
+| `title-is-concise` | the title survives being truncated *(warning)* |
 ### Selecting by conformance level and WCAG version
 
 Every accessibility rule carries the success criterion it enforces — number,
@@ -610,11 +649,51 @@ implicit ones, flattened, in order.
 }
 ```
 
-`inWelsh { … }` and `inLanguage(lang) { … }` swap the implicit `messages` and
-request for a block. A key that is not defined in that language is reported as
-missing, rather than silently compared against itself — which is what a plain
+`inLanguage(lang) { … }` swaps the implicit `messages` and request for a block.
+A key that is not defined in that language is reported as missing, rather than
+silently compared against itself — which is what a plain
 `doc.title mustBe messages("x.y")` does, passing happily while the page shows a
 raw key.
+
+### Comparing languages
+
+`twirl-spec-messages` compares the message *files*. `twirl-spec-i18n` compares
+the *pages* those files produce, which is where a translation that parses but
+renders differently shows up: a control that vanished, a link that kept its
+original href, a heading level that moved.
+
+```scala
+"say the same thing in every language" in {
+  renderInEachLanguage(memberNameView(form, edit = false)) must translateConsistently
+}
+```
+
+The first page given is the base; nominate a different one with
+`basedOn(Lang("fr"))`. Nothing here knows about any particular language pair —
+whichever languages the application is configured for are the ones compared.
+
+| Rule | Checks |
+|---|---|
+| `i18n-lang-attribute` | the page declares the language it was rendered in |
+| `i18n-same-ids` | every language renders the same elements |
+| `i18n-same-links` | every language links to the same places |
+| `i18n-same-controls` | every language collects the same fields |
+| `i18n-same-headings` | every language has the same heading structure |
+| `i18n-nothing-lost` | no text present in the base language goes missing |
+| `i18n-actually-translated` | the page is translated, not copied *(warning)* |
+
+Text that is meant to read the same everywhere — a product name, a unit — would
+otherwise be reported by `i18n-actually-translated`. Say so once:
+
+```scala
+override def translationConfig: TranslationConfig =
+  TranslationConfig(sameTextIsFine = Set("GOV.UK", "Example Ltd", "ISBN"))
+```
+
+`translateConsistentlyExcept("i18n-same-links")` drops a rule, and
+`translationDifferences(pages)` reports without failing.
+
+A single configured language passes: there is nothing to compare it against.
 
 ## Message files
 
