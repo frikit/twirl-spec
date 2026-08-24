@@ -165,8 +165,17 @@ final class Page(
 
   def phaseBanner: Selection = named("phase banner", ".govuk-phase-banner")
 
-  def languageToggle: Selection =
-    named("language toggle", ".hmrc-language-select, nav[aria-label='Language switcher'], a[hreflang]")
+  /** A switcher offers another language, so a link declaring the one it is already in does not count —
+    * a "report a technical issue" link carrying `hreflang="en"` on an English page is not a toggle.
+    */
+  def languageToggle: Selection = {
+    val selector = ".hmrc-language-select, nav[aria-label='Language switcher'], a[hreflang]"
+    val elements = document.select(selector).asScala.toList.filter { e =>
+      !e.hasAttr("hreflang") || !e.attr("hreflang").toLowerCase.startsWith(lang.code.toLowerCase)
+    }
+    record(elements)
+    Selection("language toggle", selector, elements)
+  }
 
   /** `govukBackLink` renders `.govuk-back-link`; services that set their own id use `back` or `back-link`. */
   def backLink: Selection = named("back link", ".govuk-back-link, #back-link, #back")
@@ -337,7 +346,8 @@ final class Page(
   def contains(needle: String): Boolean = Text.containsText(document.text(), needle)
 
   /** The page's structural skeleton, for review and snapshotting. */
-  def outline: String = Outline.of(this)
+  /** Building this touches most of the page, and a failure message is not an assertion, so it must not count as coverage. */
+  def outline: String = withRecordingPaused(Outline.of(this))
 
   def withLang(newLang: Lang, newMessages: Messages): Page =
     new Page(document, newLang, newMessages, source, parseErrors)

@@ -67,11 +67,21 @@ object ContentCoverage {
     trackedAttributes: Set[String] = defaultTrackedAttributes,
     scope: String = defaultScope
   ): List[Anchor] = {
-    val touched = CoverageRegistry.touched(page.coverageGroup)
-    anchors(page, trackedAttributes, scope)
+    val touched    = CoverageRegistry.touched(page.coverageGroup)
+    val ignoredIds = ignored.map(_.stripPrefix("#"))
+    within(page, scope)
+      .filterNot(insideIgnored(_, ignoredIds))
+      .flatMap(e => Anchors.namesOf(e, trackedAttributes).map(n => Anchor(kindOf(n), n, n)))
+      .distinctBy(_.name)
       .filterNot(a => touched.contains(a.name))
       .filterNot(a => ignored.contains(a.name) || ignored.contains(a.name.stripPrefix("#")))
   }
+
+  /** Ignoring a block means ignoring what it holds: a spec that disclaims the layout's
+    * "report a technical issue" wrapper is not asking to be held to the link inside it.
+    */
+  private def insideIgnored(e: Element, ignoredIds: Set[String]): Boolean =
+    ignoredIds.nonEmpty && (Iterator(e) ++ e.parents.asScala.iterator).exists(a => ignoredIds.contains(a.id()))
 
   def report(unasserted: List[Anchor]): String = {
     val byKind = unasserted.groupBy(_.kind)

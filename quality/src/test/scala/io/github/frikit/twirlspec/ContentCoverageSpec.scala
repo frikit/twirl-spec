@@ -171,4 +171,26 @@ class ContentCoverageSpec
     }
   }
 
+  "building a failure message" should {
+
+    "not mark anything as asserted" in {
+      val page = pageIn("p")
+      page.outline
+      CoverageRegistry.touched("p") mustBe empty
+    }
+  }
+
+  "ignoring a block" should {
+
+    "ignore what the block contains" in {
+      val page = pageIn("q", """<div id="chrome"><a href="/help" id="help">Help</a></div>""")
+      ContentCoverage.unasserted(page, ignored = Set("#chrome")).map(_.name) mustBe empty
+    }
+
+    "leave the rest of the page alone" in {
+      val page = pageIn("r", """<div id="chrome"><a href="/help">Help</a></div><p id="mine">x</p>""")
+      ContentCoverage.unasserted(page, ignored = Set("#chrome")).map(_.name) mustBe List("#mine")
+    }
+  }
+
 }

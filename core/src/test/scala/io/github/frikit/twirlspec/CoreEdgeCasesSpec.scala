@@ -152,4 +152,22 @@ class CoreEdgeCasesSpec extends AnyWordSpec with Matchers with TwirlSpec {
     }
   }
 
+  "the language toggle" should {
+
+    "not count a link that declares the language the page is already in" in {
+      // a "report a problem" link commonly carries hreflang for its own language
+      pageOf("""<a href="/help" lang="en" hreflang="en">Report a problem</a>""").languageToggle mustBe empty
+    }
+
+    "count a link offering a different language" in {
+      pageOf("""<a href="/?lang=cy" hreflang="cy">Cymraeg</a>""").languageToggle.size mustBe 1
+    }
+
+    "count a language select whatever it links to" in {
+      pageOf(
+        """<nav class="hmrc-language-select"><a href="/?lang=cy">Cymraeg</a></nav>"""
+      ).languageToggle must not be empty
+    }
+  }
+
 }

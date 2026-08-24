@@ -619,6 +619,10 @@ override def coverageIgnored: Set[String] = Set("#content")         // what ever
 override def trackedAttributes: Set[String] = Set("data-journey-click")
 ```
 
+Ignoring a block ignores what it holds: disclaiming the layout's
+`#report-technical-issue` wrapper does not then hold the spec to the link
+inside it.
+
 `assertEverythingExcept("#id")` covers the one-off case, and
 `unassertedContent(page)` reports without failing.
 
