@@ -53,6 +53,7 @@ judges a page against a design system you are not using.
 | `twirl-spec-govuk` | core, wcag | 5 GOV.UK Design System conventions |
 | `twirl-spec-quality` | core | 12 rules: semantics, page weight and metadata, plus the coverage and entry-point checks |
 | `twirl-spec-aria` | core | 16 ARIA correctness rules, the static half of what an automated tool reports |
+| `twirl-spec-html` | core | 3 HTML validity rules: unclosed elements named with their line, unknown elements and attributes |
 | `twirl-spec-i18n` | core | Language parity: every language renders the same page as the base |
 | `twirl-spec-messages` | core | Message-file integrity checks |
 | `twirl-spec-all` | all of the above | One dependency that pulls in everything, and `AllChecks` |
@@ -64,6 +65,7 @@ libraryDependencies ++= Seq(
   "io.github.frikit" %% "twirl-spec-govuk"    % twirlSpecVersion % Test,  // optional
   "io.github.frikit" %% "twirl-spec-quality"  % twirlSpecVersion % Test,  // optional
   "io.github.frikit" %% "twirl-spec-aria"     % twirlSpecVersion % Test,  // optional
+  "io.github.frikit" %% "twirl-spec-html"     % twirlSpecVersion % Test,  // optional
   "io.github.frikit" %% "twirl-spec-i18n"     % twirlSpecVersion % Test,  // optional
   "io.github.frikit" %% "twirl-spec-messages" % twirlSpecVersion % Test   // optional
 )
@@ -84,6 +86,7 @@ trait ViewSpecBase extends AnyWordSpec with Matchers with TwirlSpec
   with GovukChecks    // + GOV.UK Design System conventions
   with QualityChecks  // + semantics, page weight and metadata
   with AriaChecks     // + ARIA correctness
+  with HtmlChecks     // + HTML validity
 ```
 
 Without a rule module, `display(...)` checks exactly what you asked it to and
@@ -388,7 +391,7 @@ key by default; the `…Text` variants take the exact words instead.
 | `translationDifferences` | The differences, for a spec that would rather report than fail. |
 ## The rules
 
-62 rules in eight sets across four optional modules, kept apart so a
+65 rules in nine sets across five optional modules, kept apart so a
 project is only judged against what it actually uses.
 
 | Set | Module | Rules | Covers |
@@ -398,6 +401,7 @@ project is only judged against what it actually uses.
 | `SecurityStandards` | `twirl-spec-wcag` | 3 | Ways a page can leak or be turned against its reader |
 | `GovukStandards` | `twirl-spec-govuk` | 5 | [GOV |
 | `AriaStandards` | `twirl-spec-aria` | 16 | ARIA correctness |
+| `HtmlStandards` | `twirl-spec-html` | 3 | Basic HTML validity, read from the source rather than the repaired tree, so an unclosed element is named along with the line it opened on |
 | `SemanticStandards` | `twirl-spec-quality` | 4 | Markup that parses but does not mean what it looks like |
 | `PerformanceStandards` | `twirl-spec-quality` | 4 | Page weight and rendering cost |
 | `MetadataStandards` | `twirl-spec-quality` | 4 | What a browser tab, a search result and a share preview make of the page |
@@ -489,6 +493,16 @@ ARIA correctness: whether a name is real, whether its value is allowed, and whet
 | `table-headers-resolve` | every headers attribute points at a header on the same table |
 | `definition-list-structure` | a definition list contains only terms and descriptions |
 | `landmarks-are-distinguishable` | two landmarks of the same kind are told apart by name |
+
+### `HtmlStandards`
+
+Basic HTML validity, read from the source rather than the repaired tree, so an unclosed element is named along with the line it opened on.
+
+| Rule | Checks |
+|---|---|
+| `tags-are-balanced` | every element that is opened is closed |
+| `known-elements` | every element is one the HTML specification defines |
+| `known-attributes` | every attribute is one the HTML specification defines |
 
 ### `SemanticStandards`
 

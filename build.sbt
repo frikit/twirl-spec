@@ -6,7 +6,7 @@ ThisBuild / organizationName := "frikit"
 ThisBuild / homepage := Some(url("https://github.com/frikit/twirl-spec"))
 ThisBuild / licenses := Seq("Apache-2.0" -> url("https://www.apache.org/licenses/LICENSE-2.0"))
 ThisBuild / developers := List(Developer("frikit", "Victor O", "", url("https://github.com/frikit")))
-ThisBuild / version := "0.4.3-SNAPSHOT"
+ThisBuild / version := "0.5.2-SNAPSHOT"
 ThisBuild / scalaVersion := scala2_13
 ThisBuild / versionScheme := Some("early-semver")
 ThisBuild / scalacOptions ++= Seq("-feature", "-deprecation", "-unchecked", "-release", "21")
@@ -34,7 +34,7 @@ Global / onLoad := {
 
 lazy val root = Project("twirl-spec", file("."))
   .settings(name := "twirl-spec", publish / skip := true)
-  .aggregate(core, wcag, govuk, quality, messages, i18n, aria, all)
+  .aggregate(core, wcag, govuk, quality, messages, i18n, aria, html, all)
 
 /** The page model, the expectation DSL and the ScalaTest matchers. Carries no
   * rules of its own, so it never judges a page against a design system.
@@ -109,8 +109,16 @@ lazy val aria = Project("twirl-spec-aria", file("aria"))
   .settings(libraryDependencies ++= LibDependencies.rules)
   .settings(description := "ARIA correctness rules for twirl-spec, without a browser.")
 
+/** Basic HTML validity, read from the source rather than the repaired tree. */
+lazy val html = Project("twirl-spec-html", file("html"))
+  .dependsOn(core % "compile->compile;test->test")
+  .settings(commonSettings)
+  .settings(CodeCoverageSettings())
+  .settings(libraryDependencies ++= LibDependencies.rules)
+  .settings(description := "HTML validity rules for twirl-spec.")
+
 lazy val all = Project("twirl-spec-all", file("all"))
-  .dependsOn(core % "compile->compile;test->test", wcag, govuk, quality, messages, i18n, aria)
+  .dependsOn(core % "compile->compile;test->test", wcag, govuk, quality, messages, i18n, aria, html)
   .settings(commonSettings)
   .settings(CodeCoverageSettings())
   .settings(libraryDependencies ++= LibDependencies.rules)

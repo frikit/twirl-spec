@@ -16,6 +16,7 @@
 package io.github.frikit.twirlspec
 
 import io.github.frikit.twirlspec.aria.AriaChecks
+import io.github.frikit.twirlspec.html.HtmlChecks
 import io.github.frikit.twirlspec.i18n.I18nChecks
 import io.github.frikit.twirlspec.messages.MessagesMatchers
 import io.github.frikit.twirlspec.standards.{CoverageChecks, GovukChecks, QualityChecks, WcagChecks}
@@ -35,6 +36,7 @@ trait AllChecks
     with GovukChecks
     with QualityChecks
     with AriaChecks
+    with HtmlChecks
     with CoverageChecks
     with I18nChecks
     with MessagesMatchers
