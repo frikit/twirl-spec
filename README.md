@@ -504,6 +504,31 @@ Basic HTML validity, read from the source rather than the repaired tree, so an u
 | `known-elements` | every element is one the HTML specification defines |
 | `known-attributes` | every attribute is one the HTML specification defines |
 
+### Scanning templates instead of pages
+
+`tags-are-balanced` runs against a rendered page, which is where it belongs: by
+then the template has taken one branch and the markup is either balanced or it
+is not. The same check will also read a Twirl template directly, which needs no
+application, no injector and no render:
+
+```scala
+TagBalance.checkTemplate(Files.readString(template))
+```
+
+A template is two languages at once, and only one of them writes tags, so the
+Scala is taken out first — `@if(page < total)` is a comparison, not the start of
+an element. Expressions, comments, imports, argument lists, `.field` chains,
+bare `} else if (…) {` continuations and `@name = { … }` fragment definitions
+are all blanked, keeping newlines so the line numbers still point at the source.
+
+Two things it cannot know, because they need the conditions evaluated:
+
+- markup that arrives from a helper rather than being written literally
+- an element opened in one branch and closed in another, which really is
+  unbalanced on any single render
+
+Run over a few thousand templates it reports a handful, most of them real.
+
 ### `SemanticStandards`
 
 Markup that parses but does not mean what it looks like.

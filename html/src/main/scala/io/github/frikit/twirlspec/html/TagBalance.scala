@@ -49,6 +49,15 @@ object TagBalance {
 
   private val tag = """<\s*(/?)\s*([a-zA-Z][a-zA-Z0-9:-]*)([^>]*?)(/?)\s*>""".r
 
+  /** The same check against a Twirl template rather than a rendered page.
+    *
+    * Cheap enough to run over a whole estate: no application, no render. It sees
+    * only what the template writes literally, so markup arriving from a helper is
+    * invisible, and a template that opens an element in one branch and closes it
+    * in another looks unbalanced, because on any single render it is.
+    */
+  def checkTemplate(template: String): List[Problem] = check(TwirlSource.htmlOnly(template))
+
   def check(source: String): List[Problem] = {
     val stripped = blankOutSkippedRegions(source)
     val open     = mutable.Stack.empty[Open]
