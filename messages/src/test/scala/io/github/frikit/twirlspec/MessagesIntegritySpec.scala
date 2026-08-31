@@ -78,8 +78,8 @@ class MessagesIntegritySpec extends AnyWordSpec with Matchers with TwirlSpec wit
     }
 
     "not flag a deliberate MessageFormat quoted section as broken" in {
-      // MessageFormat reads '...' as a literal section
-      // and renders correctly. Calling this an error would be wrong.
+      // MessageFormat reads '...' as a literal section, and it renders correctly.
+      // Calling that an error would be wrong.
       val found = rules(Map("a" -> "'x quoted x' by the supplier"), Map("a" -> "cy"))
       found must not contain "messages.unescaped-quote"
       found must not contain "messages.quoted-placeholder"

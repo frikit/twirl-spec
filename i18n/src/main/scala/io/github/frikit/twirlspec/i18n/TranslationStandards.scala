@@ -42,7 +42,7 @@ final case class TranslationConfig(sameTextIsFine: Set[String] = TranslationConf
 
 object TranslationConfig {
 
-  /** Left alone by most services: the platform's own name, and text that is only punctuation or digits. */
+  /** Left alone by most services: the platform's own name, and the phase banner wording. */
   val commonlyUntranslated: Set[String] = Set("GOV.UK", "BETA", "ALPHA")
 
   val default: TranslationConfig = TranslationConfig()

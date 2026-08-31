@@ -155,7 +155,7 @@ class CoreEdgeCasesSpec extends AnyWordSpec with Matchers with TwirlSpec {
   "the language toggle" should {
 
     "not count a link that declares the language the page is already in" in {
-      // a "report a problem" link commonly carries hreflang for its own language
+      // a "report a problem" link commonly carries hreflang for the page it is already in
       pageOf("""<a href="/help" lang="en" hreflang="en">Report a problem</a>""").languageToggle mustBe empty
     }
 
