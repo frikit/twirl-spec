@@ -1,5 +1,5 @@
 val scala2_13 = "2.13.18"
-val scala3    = "3.3.7" // LTS: binary-compatible with every later Scala 3 release
+val scala3    = "3.3.8" // the LTS line: a consumer on any later Scala 3 can read what this produces
 
 ThisBuild / organization := "io.github.frikit"
 ThisBuild / organizationName := "frikit"

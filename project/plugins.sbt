@@ -2,5 +2,5 @@
 // it from Maven Central, so the library resolves and builds anywhere.
 addSbtPlugin("org.playframework.twirl" % "sbt-twirl"     % "2.0.9")
 addSbtPlugin("org.scoverage"           % "sbt-scoverage" % "2.4.4")
-addSbtPlugin("com.timushev.sbt"        % "sbt-updates"   % "0.6.4")
-addSbtPlugin("org.scalameta"           % "sbt-scalafmt"  % "2.5.6")
+addSbtPlugin("com.timushev.sbt"        % "sbt-updates"   % "0.7.0")
+addSbtPlugin("org.scalameta"           % "sbt-scalafmt"  % "2.6.2")
