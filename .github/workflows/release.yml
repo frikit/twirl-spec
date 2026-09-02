@@ -1,0 +1,118 @@
+name: Release
+
+# Every push to main is a release. The commit is tagged with the next version,
+# published to Maven Central through the Sonatype Central Portal, and given a
+# GitHub Release whose notes are generated from the commits since the last one.
+#
+# The bump is a patch unless the commit message says otherwise: a message
+# containing "#minor" bumps the minor version, "#major" the major. With no tag
+# in the repository yet, the first release is v1.0.0.
+#
+# The four secrets carry the same names as in frikit/krandom, so the same values
+# serve both repositories.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Two pushes in quick succession must not both compute "next version" from the
+# same last tag, so releases queue rather than run side by side.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    uses: ./.github/workflows/ci.yml
+
+  release:
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # to push the tag and create the GitHub Release
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # dynver and the bump need every tag
+
+      - name: Check the publishing secrets are present
+        id: guard
+        env:
+          CENTRAL_PORTAL_USERNAME: ${{ secrets.CENTRAL_PORTAL_USERNAME }}
+          GPG_SIGNING_KEY: ${{ secrets.GPG_SIGNING_KEY }}
+        run: |
+          if [ -z "$CENTRAL_PORTAL_USERNAME" ] || [ -z "$GPG_SIGNING_KEY" ]; then
+            echo "::notice::Publishing secrets are not configured; verified but not released."
+            echo "release=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "release=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # sbt-ci-release wants the signing key base64-encoded; Gradle's
+      # useInMemoryPgpKeys (as in krandom) wants it raw. Accept either, so the
+      # same secret value can be pasted into both repositories.
+      - name: Put the signing key in the form sbt-ci-release expects
+        if: steps.guard.outputs.release == 'true'
+        env:
+          GPG_SIGNING_KEY: ${{ secrets.GPG_SIGNING_KEY }}
+        run: |
+          if printf '%s' "$GPG_SIGNING_KEY" | grep -q 'BEGIN PGP'; then
+            encoded="$(printf '%s' "$GPG_SIGNING_KEY" | base64 -w0)"
+            echo "signing key was armoured text; encoded it"
+          else
+            encoded="$(printf '%s' "$GPG_SIGNING_KEY" | tr -d ' \n')"
+            echo "signing key was already base64"
+          fi
+          echo "::add-mask::$encoded"
+          echo "PGP_SECRET=$encoded" >> "$GITHUB_ENV"
+
+      - uses: actions/setup-java@v5
+        if: steps.guard.outputs.release == 'true'
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: sbt
+
+      - uses: sbt/setup-sbt@v1
+        if: steps.guard.outputs.release == 'true'
+
+      - name: Work out the next version and tag it
+        if: steps.guard.outputs.release == 'true'
+        id: version
+        run: |
+          set -euo pipefail
+          last="$(git tag --list 'v*' --sort=-v:refname | head -n 1)"
+          if [ -z "$last" ]; then
+            next="v1.0.0"
+          else
+            IFS=. read -r major minor patch <<< "${last#v}"
+            message="$(git log -1 --pretty=%B)"
+            if   grep -qi '#major' <<< "$message"; then next="v$((major + 1)).0.0"
+            elif grep -qi '#minor' <<< "$message"; then next="v$major.$((minor + 1)).0"
+            else                                          next="v$major.$minor.$((patch + 1))"
+            fi
+          fi
+          echo "previous: ${last:-none}   next: $next"
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "$next" -m "Release $next"
+          git push origin "$next"
+          echo "tag=$next" >> "$GITHUB_OUTPUT"
+
+      - name: Publish to Maven Central
+        if: steps.guard.outputs.release == 'true'
+        env:
+          SONATYPE_USERNAME: ${{ secrets.CENTRAL_PORTAL_USERNAME }}
+          SONATYPE_PASSWORD: ${{ secrets.CENTRAL_PORTAL_PASSWORD }}
+          PGP_PASSPHRASE: ${{ secrets.GPG_SIGNING_PASSWORD }}
+          # PGP_SECRET comes from the step above, via GITHUB_ENV
+        run: sbt ci-release
+
+      - name: Create the GitHub Release
+        if: steps.guard.outputs.release == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ steps.version.outputs.tag }}" \
+            --title "${{ steps.version.outputs.tag }}" \
+            --generate-notes

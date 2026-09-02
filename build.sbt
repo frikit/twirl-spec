@@ -10,7 +10,9 @@ ThisBuild / developers := List(
   Developer("frikit", "Victor Osipov", "osipovvictor1994@gmail.com", url("https://github.com/frikit"))
 )
 
-ThisBuild / version := "1.0.0-SNAPSHOT"
+// The version is the git tag, via sbt-ci-release's dynver: v1.2.3 publishes 1.2.3.
+// Every push to main is tagged and released by .github/workflows/release.yml, to
+// the Sonatype Central Portal, which sbt-ci-release targets by default.
 ThisBuild / scalaVersion := scala2_13
 ThisBuild / versionScheme := Some("early-semver")
 ThisBuild / scalacOptions ++= Seq("-feature", "-deprecation", "-unchecked", "-release", "21")

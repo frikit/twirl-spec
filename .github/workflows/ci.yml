@@ -1,16 +1,19 @@
 name: CI
 
+# The checks every change has to pass. Pull requests run this directly; pushes
+# to main run it through release.yml, which publishes only if it is green.
 on:
-  push:
-    branches: [main]
   pull_request:
   workflow_dispatch:
+  workflow_call:
 
 jobs:
-  build:
+  verify:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # the version is derived from git tags
 
       - uses: actions/setup-java@v5
         with:

@@ -5,6 +5,10 @@ All notable changes to this project are recorded here. The format follows
 [Semantic Versioning](https://semver.org/) from 1.0.0 — see *Versioning* in the
 README for what a minor release may and may not do.
 
+Every push to `main` is a release, and each one has a GitHub Release with notes
+generated from its commits. This file carries the summary that a list of commits
+does not.
+
 ## [Unreleased]
 
 ### 1.0.0 — first stable release

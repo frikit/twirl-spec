@@ -26,7 +26,8 @@ With the `twirl-spec-wcag` module mixed in, that block also runs 29
 accessibility, rendering and safety rules over the page. You do not list them, switch
 them on, or maintain them.
 
-[![CI](https://github.com/frikit/twirl-spec/actions/workflows/ci.yml/badge.svg)](https://github.com/frikit/twirl-spec/actions/workflows/ci.yml)
+[![Release](https://github.com/frikit/twirl-spec/actions/workflows/release.yml/badge.svg)](https://github.com/frikit/twirl-spec/actions/workflows/release.yml)
+[![Maven Central](https://img.shields.io/maven-central/v/io.github.frikit/twirl-spec-core_3)](https://central.sonatype.com/artifact/io.github.frikit/twirl-spec-core_3)
 [![Scala 2.13 and 3](https://img.shields.io/badge/scala-2.13%20%7C%203.3-red)](build.sbt)
 [![Apache 2.0](https://img.shields.io/badge/licence-Apache%202.0-blue)](LICENSE)
 
@@ -94,24 +95,33 @@ nothing else.
 
 ## Compatibility
 
-| twirl-spec | Play | Scala | Java | Twirl | ScalaTest |
-|---|---|---|---|---|---|
-| 1.0.x | 3.0.x | 2.13.18, 3.3.8+ | 21+ | 2.0.x | 3.2.x |
+Each release is built and tested against exactly these. The POM of a given
+release is the authority for that release; this table is kept for the current
+line.
 
-**Scala.** Published for 2.13 and 3 from a single source tree. The 3.x build
-targets 3.3 LTS, which is binary-compatible with every later 3.x release, so a
-project on 3.3.8 or anything after it uses the same artifact.
+| twirl-spec | Play | Twirl | Scala | Java | ScalaTest | jsoup |
+|---|---|---|---|---|---|---|
+| 1.0.x | 3.0.11 | 2.0.9 | 2.13.18 · 3.3.8 | 21 | 3.2.20 | 1.23.2 |
 
-**Play.** `play`, `play-test` and `play-guice` are `Provided`: your project
-supplies them, and this library never moves your Play version. Compiled against
-the oldest Play in the supported range, so anything newer in the same major line
-works. **Play 2.9 and earlier are not supported** — they predate the Pekko move
-and are not tested here.
+What that means for a project on something close but not identical:
 
-**Java.** Compiled with `-release 21`, so 21 is the floor. Later JDKs are fine.
+**Play** is `Provided`: your project supplies `play`, `play-test` and
+`play-guice`, and this library never moves your Play version. Built against
+3.0.11; any 3.0.x works. **Play 2.9 and earlier are not supported** — they
+predate the Pekko move and are not tested.
 
-**ScalaTest.** A normal dependency, not `Provided`, so the version resolves
-upward against whatever your project already has.
+**Scala.** Published for 2.13 and 3 from one source tree. The Scala 3 artifact
+is built with 3.3.8, the LTS line, and Scala 3 is forward-compatible, so a
+project on 3.3.8 or anything later uses the same artifact. A project below
+3.3.8 cannot.
+
+**Java.** Compiled with `-release 21`, so 21 is the floor and later JDKs are fine.
+
+**ScalaTest** is a normal dependency, not `Provided`, so it resolves upward
+against whatever your project already has; 3.2.20 is the floor.
+
+**jsoup** is this library's own dependency and is not something your project
+needs to align with.
 
 Anything outside this table is untested rather than known-broken. If you get a
 combination working, a note in an issue is welcome.
@@ -819,6 +829,58 @@ and each time invisible locally: `.scalafmt.conf` was skipping untracked files,
 and then sbt's scalafmt cache reported success on a file it had not looked at.
 The hook clears just the scalafmt caches — not the whole `target` — so being
 careful does not cost a full recompile on every push.
+
+## Releasing
+
+Every push to `main` is a release. `release.yml` runs the same checks as a
+pull request and, if they pass, tags the commit with the next version, publishes
+every module to Maven Central through the Sonatype Central Portal, and creates a
+GitHub Release whose notes are generated from the commits since the last one.
+There are no snapshots.
+
+The bump is a patch unless the commit message asks for more: a message
+containing `#minor` bumps the minor version, `#major` the major. The first
+release, with no tag yet in the repository, is `v1.0.0`.
+
+The version is the tag, read by `sbt-ci-release` through `sbt-dynver`, so
+`build.sbt` does not carry one. Locally, `sbt version` gives a derived value such
+as `1.0.0+3-1a2b3c4d-SNAPSHOT`.
+
+### Secrets
+
+Four repository secrets, named as in `frikit/krandom` so the same values serve
+both. Until all four are present, a push is verified but not released, with a
+notice rather than a failure.
+
+| Secret | What it is |
+|---|---|
+| `CENTRAL_PORTAL_USERNAME` | the username half of a Central Portal user token |
+| `CENTRAL_PORTAL_PASSWORD` | the password half of that token |
+| `GPG_SIGNING_KEY` | the armoured private key — raw or base64, either is accepted |
+| `GPG_SIGNING_PASSWORD` | the passphrase of that key |
+
+The signing key is accepted in either form because Gradle's `useInMemoryPgpKeys`
+wants the raw armoured text and `sbt-ci-release` wants it base64-encoded; the
+workflow looks at what it was given and converts if it has to.
+
+The `io.github.frikit` namespace is already verified in the Portal for krandom,
+and a namespace covers every artifact under it.
+
+Unlike krandom's release, which uploads and waits for a manual **Publish** in the
+Portal, this one publishes as soon as the Portal has validated the upload. There
+is no human step, because there is no human in a push to `main`.
+
+To make a fresh signing key, should you ever need one:
+
+```sh
+gpg --gen-key                                                  # RSA, 4096, no expiry is fine
+gpg --list-secret-keys --keyid-format LONG                     # note the key id
+gpg --armor --export-secret-keys <KEY_ID> | pbcopy             # GPG_SIGNING_KEY, either form works
+gpg --keyserver keyserver.ubuntu.com --send-keys <KEY_ID>      # Central checks the public half
+```
+
+A release can also be started by hand from the Actions tab (`workflow_dispatch`)
+without a code change.
 
 ## Building
 
