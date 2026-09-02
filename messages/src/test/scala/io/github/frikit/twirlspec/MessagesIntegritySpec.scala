@@ -24,7 +24,7 @@ import io.github.frikit.twirlspec.messages.{MessagesIntegrity, MessagesMatchers}
 import java.io.{File, PrintWriter}
 import java.nio.file.Files
 
-class MessagesIntegritySpec extends AnyWordSpec with Matchers with TwirlSpec with MessagesMatchers {
+class MessagesIntegritySpec extends AnyWordSpec with Matchers with Bilingual with MessagesMatchers {
 
   private def api(english: Map[String, String], welsh: Map[String, String]): MessagesApi =
     new DefaultMessagesApi(
@@ -41,20 +41,67 @@ class MessagesIntegritySpec extends AnyWordSpec with Matchers with TwirlSpec wit
     }
   }
 
+  "the set of languages" should {
+
+    "not mistake Play's own framework messages for a language" in {
+      val withFramework = new DefaultMessagesApi(
+        messages = Map(
+          "default"      -> Map("a" -> "A"),
+          "default.play" -> Map("constraint.required" -> "Required"),
+          "cy"           -> Map("a" -> "A cy")
+        ),
+        langs = new DefaultLangs(Seq(Lang("en"), Lang("cy")))
+      )
+      MessagesIntegrity.translationLanguages(withFramework) mustBe List("cy")
+      MessagesIntegrity.check(withFramework).map(_.rule) must not contain "messages.translation-parity"
+    }
+
+    "say so when there is no other language to compare against" in {
+      val monolingual = new DefaultMessagesApi(
+        messages = Map("default" -> Map("a" -> "A")),
+        langs = new DefaultLangs(Seq(Lang("en")))
+      )
+      val found       = MessagesIntegrity.check(monolingual).filter(_.rule == "messages.translation-parity")
+      found.map(_.message)     mustBe List("no messages file exists for any language other than en")
+      found.flatMap(_.hint).head must include("requireTranslations = false")
+    }
+
+    "stay quiet about a single language when told translations are not required" in {
+      val monolingual = new DefaultMessagesApi(
+        messages = Map("default" -> Map("a" -> "A")),
+        langs = new DefaultLangs(Seq(Lang("en")))
+      )
+      MessagesIntegrity.check(monolingual, MessagesIntegrity.Config(requireTranslations = false)) mustBe empty
+    }
+
+    "measure every configured language against the base" in {
+      val trilingual = new DefaultMessagesApi(
+        messages = Map(
+          "default" -> Map("a" -> "A", "b" -> "B"),
+          "cy"      -> Map("a" -> "A cy", "b" -> "B cy"),
+          "fr"      -> Map("a" -> "A fr")
+        ),
+        langs = new DefaultLangs(Seq(Lang("en"), Lang("cy"), Lang("fr")))
+      )
+      val parity     = MessagesIntegrity.check(trilingual).filter(_.rule == "messages.translation-parity")
+      parity.map(_.message) mustBe List("[fr] 1 key(s) are in the en messages but not the fr ones")
+    }
+  }
+
   "key parity" should {
 
     "flag an english key with no welsh translation" in {
-      rules(Map("a" -> "A", "b" -> "B"), Map("a" -> "A cy")) must contain("messages.welsh-parity")
+      rules(Map("a" -> "A", "b" -> "B"), Map("a" -> "A cy")) must contain("messages.translation-parity")
     }
 
     "flag a welsh key with no english original" in {
-      rules(Map("a" -> "A"), Map("a" -> "A cy", "orphan" -> "amddifad")) must contain("messages.english-parity")
+      rules(Map("a" -> "A"), Map("a" -> "A cy", "orphan" -> "amddifad")) must contain("messages.base-parity")
     }
 
     "say which keys are missing" in {
       val violation = MessagesIntegrity
         .check(api(Map("a" -> "A", "missing.one" -> "x"), Map("a" -> "A cy")))
-        .find(_.rule == "messages.welsh-parity")
+        .find(_.rule == "messages.translation-parity")
       violation.flatMap(_.actual) mustBe Some("missing.one")
     }
 

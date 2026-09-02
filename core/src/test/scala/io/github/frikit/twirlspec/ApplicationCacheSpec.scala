@@ -96,7 +96,7 @@ class ApplicationCacheSpec extends AnyWordSpec with Matchers {
       val a = SharedApplication(Map.empty)
       val b = SharedApplication(Map.empty)
       a                                                       must be theSameInstanceAs b
-      a.configuration.get[Seq[String]]("play.i18n.langs")     must contain("cy")
+      a.configuration.get[Seq[String]]("play.i18n.langs")     must contain("en")
       SharedApplication.instanceCount                         must be >= 1
       SharedApplication.viewTestDefaults("metrics.enabled") mustBe false
     }

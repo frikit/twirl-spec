@@ -14,7 +14,9 @@
  * limitations under the License.
  */
 
-package io.github.frikit.twirlspec.standards
+package io.github.frikit.twirlspec.wcag
+
+import io.github.frikit.twirlspec.standards._
 
 import org.jsoup.nodes.Element
 import io.github.frikit.twirlspec.expect.Violation

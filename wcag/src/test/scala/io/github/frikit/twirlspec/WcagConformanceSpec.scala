@@ -3,7 +3,8 @@ package io.github.frikit.twirlspec
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import io.github.frikit.twirlspec.page.Page
-import io.github.frikit.twirlspec.standards.{Level, TwirlStandards, WcagStandards, WcagVersion}
+import io.github.frikit.twirlspec.standards.{Level, WcagVersion}
+import io.github.frikit.twirlspec.wcag.{TwirlStandards, WcagStandards}
 
 /** Selecting rules by conformance level and WCAG version. */
 class WcagConformanceSpec extends AnyWordSpec with Matchers with TwirlSpec {

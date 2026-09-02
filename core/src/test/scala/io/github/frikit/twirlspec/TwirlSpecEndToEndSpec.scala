@@ -23,7 +23,7 @@ import play.api.data.Forms.{mapping, text}
 import testviews.html.{checkAnswersView, dateView, nameView, radioView}
 
 /** The library used exactly as a service would use it. */
-class TwirlSpecEndToEndSpec extends AnyWordSpec with Matchers with TwirlSpec {
+class TwirlSpecEndToEndSpec extends AnyWordSpec with Matchers with Bilingual {
 
   private val nameForm: Form[(String, String)] =
     Form(mapping("firstName" -> text, "lastName" -> text)(Tuple2.apply)(t => Some((t._1, t._2))))
@@ -134,7 +134,7 @@ class TwirlSpecEndToEndSpec extends AnyWordSpec with Matchers with TwirlSpec {
       }
 
     "resolve welsh content, not english" in
-      inWelsh {
+      inLanguage(welsh) {
         val page = render(name(nameForm))
         page.title               must startWith("Beth yw eu henw?")
         page.h1.text           mustBe "Beth yw eu henw?"

@@ -10,14 +10,14 @@ import java.nio.file.Files
 
 class MessagesEdgeCasesSpec extends AnyWordSpec with Matchers with TwirlSpec {
 
-  "englishMessages" should {
+  "baseMessages" should {
 
     "merge the default and en maps when both are present" in {
       val api = new DefaultMessagesApi(
         messages = Map("default" -> Map("a" -> "A"), "en" -> Map("b" -> "B")),
         langs = new DefaultLangs(Seq(Lang("en")))
       )
-      MessagesIntegrity.englishMessages(api).keySet mustBe Set("a", "b")
+      MessagesIntegrity.baseMessages(api).keySet mustBe Set("a", "b")
     }
 
     "cope with an application that defines no default map at all" in {
@@ -25,7 +25,7 @@ class MessagesEdgeCasesSpec extends AnyWordSpec with Matchers with TwirlSpec {
         messages = Map("en" -> Map("b" -> "B")),
         langs = new DefaultLangs(Seq(Lang("en")))
       )
-      MessagesIntegrity.englishMessages(api).keySet mustBe Set("b")
+      MessagesIntegrity.baseMessages(api).keySet mustBe Set("b")
     }
 
     "cope with an application that defines no en map at all" in {
@@ -33,7 +33,7 @@ class MessagesEdgeCasesSpec extends AnyWordSpec with Matchers with TwirlSpec {
         messages = Map("default" -> Map("a" -> "A")),
         langs = new DefaultLangs(Seq(Lang("en")))
       )
-      MessagesIntegrity.englishMessages(api).keySet mustBe Set("a")
+      MessagesIntegrity.baseMessages(api).keySet mustBe Set("a")
     }
   }
 

@@ -1,6 +1,6 @@
 package io.github.frikit.twirlspec
 
-import io.github.frikit.twirlspec.standards.{CoverageChecks, EntryPoints, QualityChecks}
+import io.github.frikit.twirlspec.quality.{CoverageChecks, EntryPoints, QualityChecks}
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import play.twirl.api.Html

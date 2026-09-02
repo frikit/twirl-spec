@@ -4,7 +4,8 @@ import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import io.github.frikit.twirlspec.expect.Severity
 import io.github.frikit.twirlspec.page.Page
-import io.github.frikit.twirlspec.standards.{Rule, SecurityStandards, TwirlStandards, WcagStandards}
+import io.github.frikit.twirlspec.standards.Rule
+import io.github.frikit.twirlspec.wcag.{SecurityStandards, TwirlStandards, WcagStandards}
 
 class SafetyAndAriaSpec extends AnyWordSpec with Matchers with TwirlSpec {
 

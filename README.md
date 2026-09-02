@@ -96,11 +96,11 @@ nothing else.
 
 | twirl-spec | Play | Scala | Java | Twirl | ScalaTest |
 |---|---|---|---|---|---|
-| 0.1.x – 0.4.x | 3.0.x | 2.13.18, 3.3.7 | 21+ | 2.0.x | 3.2.x |
+| 1.0.x | 3.0.x | 2.13.18, 3.3.8+ | 21+ | 2.0.x | 3.2.x |
 
 **Scala.** Published for 2.13 and 3 from a single source tree. The 3.x build
 targets 3.3 LTS, which is binary-compatible with every later 3.x release, so a
-project on 3.4 through 3.7 uses the same artifact.
+project on 3.3.8 or anything after it uses the same artifact.
 
 **Play.** `play`, `play-test` and `play-guice` are `Provided`: your project
 supplies them, and this library never moves your Play version. Compiled against
@@ -115,6 +115,21 @@ upward against whatever your project already has.
 
 Anything outside this table is untested rather than known-broken. If you get a
 combination working, a note in an issue is welcome.
+
+## Versioning
+
+Semantic versioning from 1.0.0, with one wrinkle that matters for a library of
+checks.
+
+Within a major version the public API is stable: DSL methods and matchers, rule
+ids, package names, and the fields of every `Config`. Deprecations stand for at
+least one minor version before removal.
+
+**A minor version may add rules.** A new rule can turn a page that passed red,
+which is the point of it, but it is not what "minor" usually promises. Pin to a
+minor version if a green build matters more to you than the newest checks, and
+read the changelog before moving. Rule wording, hints and failure-message layout
+may change in any release; assert on rule ids, not on message text.
 
 ## Two ways in
 
@@ -273,6 +288,8 @@ key by default; the `…Text` variants take the exact words instead.
 | `anyText` | For "there is a heading, its wording is asserted elsewhere". |
 | `matching` | Match text against a regular expression rather than an exact string. |
 | `role` | Find an element the way an assistive technology does: by role, then by the name it announces. |
+| `normalised` | Page text has its quotes, spaces and soft hyphens normalised before comparison, and a raw `messages(...)` value has not — so `page.text must include(messages("x"))` fails on a curly apostrophe that looks identical. |
+| `messageText` | A message, resolved and normalised, ready to compare against page text. |
 | `expectations` | Bundle expectations so a service can name its own house rules once. |
 
 **Matchers**
@@ -745,10 +762,15 @@ messagesApi must beConsistentAcrossLanguages()
 Seq(new File("conf/messages"), new File("conf/messages.cy")) must haveNoDuplicateKeys
 ```
 
-Checks key parity both ways, empty values, placeholder parity, translation
-coverage, unpaired apostrophes (Play runs every message through
-`MessageFormat`, so a lone `'` swallows the rest of the sentence), and keys
-defined twice in one file — which Play resolves by silently keeping the last.
+Every language the application is configured for is measured against a base
+language, English unless `Config(baseLanguage = …)` says otherwise. Checks key
+parity both ways, empty values, placeholder parity, translation coverage,
+unpaired apostrophes (Play runs every message through `MessageFormat`, so a
+lone `'` swallows the rest of the sentence), and keys defined twice in one file
+— which Play resolves by silently keeping the last.
+
+A service with one language sets `requireTranslations = false`, or the parity
+check reports that there is nothing to compare against.
 
 ## Failure output
 

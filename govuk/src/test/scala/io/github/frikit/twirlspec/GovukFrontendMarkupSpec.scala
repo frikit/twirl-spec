@@ -3,13 +3,14 @@ package io.github.frikit.twirlspec
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import io.github.frikit.twirlspec.page.Page
-import io.github.frikit.twirlspec.standards.{GovukChecks, WcagChecks}
+import io.github.frikit.twirlspec.govuk.GovukChecks
+import io.github.frikit.twirlspec.wcag.WcagChecks
 
 import scala.io.Source
 import scala.util.Using
 
 /** twirl-spec's selectors and rules, checked against genuine govuk-frontend markup. */
-class GovukFrontendMarkupSpec extends AnyWordSpec with Matchers with TwirlSpec with WcagChecks with GovukChecks {
+class GovukFrontendMarkupSpec extends AnyWordSpec with Matchers with Bilingual with WcagChecks with GovukChecks {
 
   private def captured(name: String): String =
     Using.resource(Source.fromResource(s"captured/$name.html"))(_.mkString)

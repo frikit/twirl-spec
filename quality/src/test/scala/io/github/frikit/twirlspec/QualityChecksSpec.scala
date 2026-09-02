@@ -3,7 +3,7 @@ package io.github.frikit.twirlspec
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import io.github.frikit.twirlspec.page.Page
-import io.github.frikit.twirlspec.standards.{MetadataStandards, PerformanceStandards, QualityChecks, SemanticStandards}
+import io.github.frikit.twirlspec.quality.{MetadataStandards, PerformanceStandards, QualityChecks, SemanticStandards}
 
 /** Mixing the module in is how a project turns these rules on. */
 class QualityChecksSpec extends AnyWordSpec with Matchers with TwirlSpec with QualityChecks {

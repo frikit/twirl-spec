@@ -19,7 +19,9 @@ import io.github.frikit.twirlspec.aria.AriaChecks
 import io.github.frikit.twirlspec.html.HtmlChecks
 import io.github.frikit.twirlspec.i18n.I18nChecks
 import io.github.frikit.twirlspec.messages.MessagesMatchers
-import io.github.frikit.twirlspec.standards.{CoverageChecks, GovukChecks, QualityChecks, WcagChecks}
+import io.github.frikit.twirlspec.quality.{CoverageChecks, QualityChecks}
+import io.github.frikit.twirlspec.govuk.GovukChecks
+import io.github.frikit.twirlspec.wcag.WcagChecks
 
 /** Every rule module and the message-file matchers, in one mixin.
   *
@@ -29,7 +31,7 @@ import io.github.frikit.twirlspec.standards.{CoverageChecks, GovukChecks, Qualit
   *
   * Mix the modules in individually instead when a project wants some and not
   * others — a project not using the GOV.UK Design System has no use for
-  * [[io.github.frikit.twirlspec.standards.GovukChecks]].
+  * [[io.github.frikit.twirlspec.govuk.GovukChecks]].
   */
 trait AllChecks
     extends WcagChecks

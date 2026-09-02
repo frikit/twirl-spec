@@ -13,7 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.github.frikit.twirlspec.standards
+package io.github.frikit.twirlspec.wcag
+
+import io.github.frikit.twirlspec.standards._
 
 import io.github.frikit.twirlspec.TwirlSpecDsl
 

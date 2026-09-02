@@ -27,12 +27,15 @@ import scala.util.Using
 object MessagesIntegrity {
 
   final case class Config(
-    requireWelsh: Boolean = true,
-    /** How much of the Welsh file may be identical to the English before it is treated as untranslated. */
+    /** The language the others are measured against: Play's `default` file plus this one. */
+    baseLanguage: String = "en",
+    /** Whether every other configured language must carry every base key. Off for a single-language service. */
+    requireTranslations: Boolean = true,
+    /** How much of a translation may be identical to the base before it is treated as untranslated. */
     maxUntranslatedRatio: Double = 0.06,
     ignoreKeys: Set[String] = Set.empty,
     ignoreKeyPrefixes: Set[String] = Set.empty,
-    /** Keys whose value is a URL are expected to be identical in both files. */
+    /** Keys whose value is a URL are expected to be identical in every language. */
     urlKeySuffixes: Set[String] = Set(".url", ".href", ".link.url")
   ) {
 
@@ -83,44 +86,67 @@ object MessagesIntegrity {
     else QuoteState.Fine
   }
 
-  def englishMessages(api: MessagesApi): Map[String, String] =
-    api.messages.getOrElse("default", Map.empty) ++ api.messages.getOrElse("en", Map.empty)
+  /** The base language's messages: Play's `default` file plus the file for the base code. */
+  def baseMessages(api: MessagesApi, config: Config = Config.default): Map[String, String] =
+    api.messages.getOrElse("default", Map.empty) ++ api.messages.getOrElse(config.baseLanguage, Map.empty)
 
   def messagesFor(api: MessagesApi, langCode: String): Map[String, String] =
     api.messages.getOrElse(langCode, Map.empty)
 
+  /** Every language the api holds messages for, other than the base.
+    *
+    * Play keeps its own framework messages under `default.play`, alongside the
+    * service's `default` file. Neither is a language.
+    */
+  def translationLanguages(api: MessagesApi, config: Config = Config.default): List[String] =
+    (api.messages.keySet - config.baseLanguage).filterNot(_.startsWith("default")).toList.sorted
+
   /** Every problem across the message files. */
   def check(api: MessagesApi, config: Config = Config.default): Seq[Violation] = {
-    val english = englishMessages(api).filterNot { case (k, _) => config.ignores(k) }
-    val welsh   = messagesFor(api, "cy").filterNot { case (k, _) => config.ignores(k) }
+    val base         = baseMessages(api, config).filterNot { case (k, _) => config.ignores(k) }
+    val translations = translationLanguages(api, config).map { lang =>
+      lang -> messagesFor(api, lang).filterNot { case (k, _) => config.ignores(k) }
+    }
+
+    val noTranslations =
+      if (config.requireTranslations && translations.isEmpty)
+        Seq(
+          Violation(
+            "messages.translation-parity",
+            s"no messages file exists for any language other than ${config.baseLanguage}"
+          ).withHint("add conf/messages.<lang>, or set requireTranslations = false for a single-language service")
+        )
+      else Nil
 
     val parity =
-      if (!config.requireWelsh) Nil
-      else {
-        val missingWelsh   = (english.keySet -- welsh.keySet).toList.sorted
-        val missingEnglish = (welsh.keySet -- english.keySet).toList.sorted
+      if (!config.requireTranslations) Nil
+      else
+        translations.flatMap { case (lang, translated) =>
+          val missing = (base.keySet -- translated.keySet).toList.sorted
+          val extra   = (translated.keySet -- base.keySet).toList.sorted
 
-        (if (missingWelsh.isEmpty) Nil
-         else
-           Seq(
-             Violation(
-               "messages.welsh-parity",
-               s"${missingWelsh.size} key(s) are in conf/messages but not conf/messages.cy",
-               actual = Some(preview(missingWelsh))
-             )
-           )) ++
-          (if (missingEnglish.isEmpty) Nil
+          (if (missing.isEmpty) Nil
            else
              Seq(
                Violation(
-                 "messages.english-parity",
-                 s"${missingEnglish.size} key(s) are in conf/messages.cy but not conf/messages",
-                 actual = Some(preview(missingEnglish))
+                 "messages.translation-parity",
+                 s"[$lang] ${missing.size} key(s) are in the ${config.baseLanguage} messages but not the $lang ones",
+                 actual = Some(preview(missing))
                )
-             ))
-      }
+             )) ++
+            (if (extra.isEmpty) Nil
+             else
+               Seq(
+                 Violation(
+                   "messages.base-parity",
+                   s"[$lang] ${extra.size} key(s) are in the $lang messages but not the ${config.baseLanguage} ones",
+                   actual = Some(preview(extra))
+                 )
+               ))
+        }
 
-    val allEntries = english.toList.map(("en", _)) ++ welsh.toList.map(("cy", _))
+    val allEntries =
+      base.toList.map((config.baseLanguage, _)) ++ translations.flatMap { case (lang, m) => m.toList.map((lang, _)) }
 
     val empty = allEntries.collect {
       case (lang, (key, value)) if value.trim.isEmpty =>
@@ -158,45 +184,48 @@ object MessagesIntegrity {
     }
 
     val placeholderParity =
-      if (!config.requireWelsh) Nil
+      if (!config.requireTranslations) Nil
       else
-        english.toList.sortBy(_._1).flatMap { case (key, en) =>
-          welsh.get(key).toList.flatMap { cy =>
-            val enArgs = placeholders(en)
-            val cyArgs = placeholders(cy)
-            if (enArgs.sorted == cyArgs.sorted) Nil
-            else
-              Seq(
-                Violation(
-                  "messages.placeholder-parity",
-                  s"`$key` uses different placeholders in each language",
-                  expected = Some(s"en: ${enArgs.mkString(", ")}"),
-                  actual = Some(s"cy: ${cyArgs.mkString(", ")}")
-                ).withHint("a missing placeholder shows the citizen a blank where a value should be")
-              )
+        translations.flatMap { case (lang, translated) =>
+          base.toList.sortBy(_._1).flatMap { case (key, baseValue) =>
+            translated.get(key).toList.flatMap { value =>
+              val baseArgs = placeholders(baseValue)
+              val args     = placeholders(value)
+              if (baseArgs.sorted == args.sorted) Nil
+              else
+                Seq(
+                  Violation(
+                    "messages.placeholder-parity",
+                    s"`$key` uses different placeholders in $lang than in ${config.baseLanguage}",
+                    expected = Some(s"${config.baseLanguage}: ${baseArgs.mkString(", ")}"),
+                    actual = Some(s"$lang: ${args.mkString(", ")}")
+                  ).withHint("a missing placeholder shows the reader a blank where a value should be")
+                )
+            }
           }
         }
 
     val coverage =
-      if (!config.requireWelsh || english.isEmpty) Nil
-      else {
-        val identical = english.count { case (key, value) =>
-          welsh.get(key).contains(value) && !config.urlKeySuffixes.exists(key.endsWith)
+      if (!config.requireTranslations || base.isEmpty) Nil
+      else
+        translations.flatMap { case (lang, translated) =>
+          val identical = base.count { case (key, value) =>
+            translated.get(key).contains(value) && !config.urlKeySuffixes.exists(key.endsWith)
+          }
+          val ratio     = identical.toDouble / base.size.toDouble
+          if (ratio <= config.maxUntranslatedRatio) Nil
+          else
+            Seq(
+              Violation(
+                "messages.translation-coverage",
+                f"[$lang] ${ratio * 100}%.1f%% of messages are identical to the ${config.baseLanguage} ones",
+                expected = Some(f"at most ${config.maxUntranslatedRatio * 100}%.1f%%"),
+                actual = Some(s"$identical of ${base.size} keys")
+              ).warn
+            )
         }
-        val ratio     = identical.toDouble / english.size.toDouble
-        if (ratio <= config.maxUntranslatedRatio) Nil
-        else
-          Seq(
-            Violation(
-              "messages.translation-coverage",
-              f"${ratio * 100}%.1f%% of Welsh messages are identical to the English",
-              expected = Some(f"at most ${config.maxUntranslatedRatio * 100}%.1f%%"),
-              actual = Some(s"$identical of ${english.size} keys")
-            ).warn
-          )
-      }
 
-    parity ++ empty ++ quotes ++ placeholderParity ++ coverage
+    noTranslations ++ parity ++ empty ++ quotes ++ placeholderParity ++ coverage
   }
 
   /** Keys defined more than once in a single messages file. */

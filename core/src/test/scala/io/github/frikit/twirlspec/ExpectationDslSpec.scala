@@ -22,7 +22,7 @@ import io.github.frikit.twirlspec.expect.Expectation
 import io.github.frikit.twirlspec.page.Page
 
 /** Every expectation in the DSL, on a page that satisfies it and on one that does not. */
-class ExpectationDslSpec extends AnyWordSpec with Matchers with TwirlSpec {
+class ExpectationDslSpec extends AnyWordSpec with Matchers with Bilingual {
 
   private val fixture =
     """<!DOCTYPE html>

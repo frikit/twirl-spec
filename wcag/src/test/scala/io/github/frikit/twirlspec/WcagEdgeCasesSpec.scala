@@ -3,7 +3,8 @@ package io.github.frikit.twirlspec
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import io.github.frikit.twirlspec.page.Page
-import io.github.frikit.twirlspec.standards.{Level, TwirlStandards, WcagStandards}
+import io.github.frikit.twirlspec.standards.Level
+import io.github.frikit.twirlspec.wcag.{TwirlStandards, WcagStandards}
 
 class WcagEdgeCasesSpec extends AnyWordSpec with Matchers with TwirlSpec {
 

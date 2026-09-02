@@ -6,9 +6,12 @@ import io.github.frikit.twirlspec.aria.AriaStandards
 import io.github.frikit.twirlspec.html.HtmlStandards
 import io.github.frikit.twirlspec.page.Page
 import io.github.frikit.twirlspec.standards._
+import io.github.frikit.twirlspec.wcag.{SecurityStandards, TwirlStandards, WcagStandards}
+import io.github.frikit.twirlspec.govuk.GovukStandards
+import io.github.frikit.twirlspec.quality.{MetadataStandards, PerformanceStandards, SemanticStandards}
 
 /** One mixin has to be the same as four. */
-class AllChecksSpec extends AnyWordSpec with Matchers with TwirlSpec with AllChecks {
+class AllChecksSpec extends AnyWordSpec with Matchers with Bilingual with AllChecks {
 
   "AllChecks" should {
 

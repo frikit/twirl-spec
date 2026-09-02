@@ -170,4 +170,18 @@ class CoreEdgeCasesSpec extends AnyWordSpec with Matchers with TwirlSpec {
     }
   }
 
+  "the outline" should {
+
+    "say which choice is already made" in {
+      val outline = pageOf(
+        """<form method="post" action="/answer">
+          |<input type="radio" name="value" id="value-yes" value="yes" checked>
+          |<input type="radio" name="value" id="value-no" value="no">
+          |</form>""".stripMargin
+      ).outline
+      outline                                              must include("checked")
+      outline.linesIterator.count(_.contains("checked")) mustBe 1
+    }
+  }
+
 }

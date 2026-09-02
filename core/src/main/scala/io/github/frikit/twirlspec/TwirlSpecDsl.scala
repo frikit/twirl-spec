@@ -19,7 +19,7 @@ package io.github.frikit.twirlspec
 import play.api.i18n.{Lang, Messages, MessagesApi}
 import play.twirl.api.Html
 import io.github.frikit.twirlspec.expect._
-import io.github.frikit.twirlspec.page.Page
+import io.github.frikit.twirlspec.page.{Page, Text}
 
 /** The whole authoring surface. Declares no implicits and builds no application, so it drops into an existing spec base. */
 trait TwirlSpecDsl extends FramingExpectations with FormExpectations with ContentExpectations with TwirlMatchers {
@@ -51,6 +51,16 @@ trait TwirlSpecDsl extends FramingExpectations with FormExpectations with Conten
     * be found by role and name, it cannot be found by a screen reader either.
     */
   def role(role: String): RoleExpectation = RoleExpectation(role, None, None)
+
+  /** Page text has its quotes, spaces and soft hyphens normalised before comparison, and a raw
+    * `messages(...)` value has not — so `page.text must include(messages("x"))` fails on a curly
+    * apostrophe that looks identical. Normalise the expected side the same way.
+    */
+  def normalised(raw: String): String = Text.normalise(raw)
+
+  /** A message, resolved and normalised, ready to compare against page text. */
+  def messageText(key: String, args: Any*)(implicit messages: Messages): String =
+    Text.normalise(messages(key, args: _*))
 
   /** Bundle expectations so a service can name its own house rules once. */
   def expectations(es: Expectation*): Expectation = Expectation.all(es.toSeq)

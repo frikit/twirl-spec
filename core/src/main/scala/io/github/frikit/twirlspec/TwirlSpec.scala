@@ -44,7 +44,6 @@ trait TwirlSpec extends TwirlSpecDsl { self: Suite with Alerting =>
   implicit def messagesApi: MessagesApi = messagesApiInstance
 
   val english: Lang = Lang("en")
-  val welsh: Lang   = Lang("cy")
 
   /** Every language the application is configured for, English first. */
   def languages: Seq[Lang] = {
@@ -62,11 +61,9 @@ trait TwirlSpec extends TwirlSpecDsl { self: Suite with Alerting =>
   implicit def request: Request[AnyContentAsEmpty.type] =
     FakeRequest("GET", "/").withCookies(Cookie(messagesApiInstance.langCookieName, currentLang.code))
 
-  /** Render this block with Welsh `messages` and a Welsh request in scope. */
-  def inWelsh[A](block: => A): A = inLanguage(welsh)(block)
-
   def inEnglish[A](block: => A): A = inLanguage(english)(block)
 
+  /** Render this block with `messages` and a request for the given language in scope. */
   def inLanguage[A](lang: Lang)(block: => A): A = currentLanguage.withValue(lang)(block)
 
   /** Run the same block once per configured language. */

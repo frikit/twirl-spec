@@ -5,8 +5,12 @@ ThisBuild / organization := "io.github.frikit"
 ThisBuild / organizationName := "frikit"
 ThisBuild / homepage := Some(url("https://github.com/frikit/twirl-spec"))
 ThisBuild / licenses := Seq("Apache-2.0" -> url("https://www.apache.org/licenses/LICENSE-2.0"))
-ThisBuild / developers := List(Developer("frikit", "Victor O", "", url("https://github.com/frikit")))
-ThisBuild / version := "0.5.2-SNAPSHOT"
+
+ThisBuild / developers := List(
+  Developer("frikit", "Victor Osipov", "osipovvictor1994@gmail.com", url("https://github.com/frikit"))
+)
+
+ThisBuild / version := "1.0.0-SNAPSHOT"
 ThisBuild / scalaVersion := scala2_13
 ThisBuild / versionScheme := Some("early-semver")
 ThisBuild / scalacOptions ++= Seq("-feature", "-deprecation", "-unchecked", "-release", "21")
@@ -88,11 +92,6 @@ lazy val messages = Project("twirl-spec-messages", file("messages"))
   .settings(libraryDependencies ++= LibDependencies.messages)
   .settings(description := "Message-file integrity checks for twirl-spec.")
 
-/** Everything, for a project that would rather add one dependency than five.
-  *
-  * Carries no rules of its own; it exists to pull the others in and to offer
-  * `AllChecks`, which mixes in every rule module at once.
-  */
 /** Whether a view says the same thing in every language it is offered in. */
 lazy val i18n = Project("twirl-spec-i18n", file("i18n"))
   .dependsOn(core % "compile->compile;test->test")
@@ -117,6 +116,11 @@ lazy val html = Project("twirl-spec-html", file("html"))
   .settings(libraryDependencies ++= LibDependencies.rules)
   .settings(description := "HTML validity rules for twirl-spec.")
 
+/** Everything, for a project that would rather add one dependency than eight.
+  *
+  * Carries no rules of its own; it exists to pull the others in and to offer
+  * `AllChecks`, which mixes in every rule module at once.
+  */
 lazy val all = Project("twirl-spec-all", file("all"))
   .dependsOn(core % "compile->compile;test->test", wcag, govuk, quality, messages, i18n, aria, html)
   .settings(commonSettings)

@@ -1,7 +1,7 @@
 package io.github.frikit.twirlspec
 
 import io.github.frikit.twirlspec.page.{Anchors, CoverageRegistry, Page}
-import io.github.frikit.twirlspec.standards.{ContentCoverage, CoverageChecks, QualityChecks}
+import io.github.frikit.twirlspec.quality.{ContentCoverage, CoverageChecks, QualityChecks}
 import org.jsoup.Jsoup
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.matchers.must.Matchers

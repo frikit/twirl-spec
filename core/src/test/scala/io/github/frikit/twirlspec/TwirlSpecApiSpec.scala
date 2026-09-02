@@ -8,7 +8,7 @@ import testviews.html.nameView
 
 /** The entry points a consuming service actually calls: the render helpers, the language switching, and the matcher variants.
   */
-class TwirlSpecApiSpec extends AnyWordSpec with Matchers with TwirlSpec {
+class TwirlSpecApiSpec extends AnyWordSpec with Matchers with Bilingual {
 
   private val form = Form(mapping("firstName" -> text, "lastName" -> text)(Tuple2.apply)(t => Some((t._1, t._2))))
   private val view = inject[nameView]
@@ -28,8 +28,8 @@ class TwirlSpecApiSpec extends AnyWordSpec with Matchers with TwirlSpec {
     }
 
     "render the current language with renderPage" in {
-      renderPage(view(form)).lang          mustBe english
-      inWelsh(renderPage(view(form)).lang) mustBe welsh
+      renderPage(view(form)).lang                    mustBe english
+      inLanguage(welsh)(renderPage(view(form)).lang) mustBe welsh
     }
 
     "render every configured language at once" in {
@@ -47,15 +47,15 @@ class TwirlSpecApiSpec extends AnyWordSpec with Matchers with TwirlSpec {
 
     "switch language for a block and switch back" in {
       currentLang                    mustBe english
-      inWelsh(currentLang)           mustBe welsh
+      inLanguage(welsh)(currentLang) mustBe welsh
       inEnglish(currentLang)         mustBe english
       inLanguage(welsh)(currentLang) mustBe welsh
       currentLang                    mustBe english
     }
 
     "carry the language on the request" in {
-      request.cookies.get(messagesApi.langCookieName).map(_.value)          mustBe Some("en")
-      inWelsh(request.cookies.get(messagesApi.langCookieName).map(_.value)) mustBe Some("cy")
+      request.cookies.get(messagesApi.langCookieName).map(_.value)                    mustBe Some("en")
+      inLanguage(welsh)(request.cookies.get(messagesApi.langCookieName).map(_.value)) mustBe Some("cy")
     }
   }
 
@@ -87,5 +87,18 @@ class TwirlSpecApiSpec extends AnyWordSpec with Matchers with TwirlSpec {
   }
 
   private def messagesIn(lang: play.api.i18n.Lang) = messagesApi.preferred(Seq(lang))
+
+  "normalised and messageText" should {
+
+    "make a message comparable with page text" in {
+      // page text is normalised on the way in; a raw message value is not, so a curly quote never matches a straight one
+      normalised("it\u2019s\u00a0here")   mustBe "it's here"
+      messageText("whatIsYourName.title") mustBe normalised(messages("whatIsYourName.title"))
+    }
+
+    "resolve arguments before normalising" in {
+      messageText("whatIsYourName.heading") mustBe normalised(messages("whatIsYourName.heading"))
+    }
+  }
 
 }

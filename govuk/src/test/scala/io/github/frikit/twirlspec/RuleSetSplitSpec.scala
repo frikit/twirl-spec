@@ -3,7 +3,9 @@ package io.github.frikit.twirlspec
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import io.github.frikit.twirlspec.page.Page
-import io.github.frikit.twirlspec.standards.{GovukStandards, Rule, TwirlStandards, WcagStandards}
+import io.github.frikit.twirlspec.govuk.GovukStandards
+import io.github.frikit.twirlspec.standards.Rule
+import io.github.frikit.twirlspec.wcag.{TwirlStandards, WcagStandards}
 
 /** The rule sets have to be genuinely separable, not separate in name only. */
 class RuleSetSplitSpec extends AnyWordSpec with Matchers with TwirlSpec {

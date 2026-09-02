@@ -23,7 +23,7 @@ import play.api.data.Forms.{mapping, text}
 import testviews.html.nameView
 
 /** What a developer sees when a view test goes red. */
-class FailureReportingSpec extends AnyWordSpec with Matchers with TwirlSpec {
+class FailureReportingSpec extends AnyWordSpec with Matchers with Bilingual {
 
   private val form = Form(mapping("firstName" -> text, "lastName" -> text)(Tuple2.apply)(t => Some((t._1, t._2))))
   private val page = render(inject[nameView].apply(form))
@@ -65,7 +65,7 @@ class FailureReportingSpec extends AnyWordSpec with Matchers with TwirlSpec {
     }
 
     "name the missing key in the right language" in
-      inWelsh {
+      inLanguage(welsh) {
         val welshPage = render(inject[nameView].apply(form))
         val message   = checkPage(welshPage, Seq(title("untranslated.missing"))).message
         message must include("not defined for lang `cy`")

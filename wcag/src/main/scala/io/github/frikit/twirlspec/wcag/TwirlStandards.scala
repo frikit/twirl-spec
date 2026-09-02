@@ -14,7 +14,9 @@
  * limitations under the License.
  */
 
-package io.github.frikit.twirlspec.standards
+package io.github.frikit.twirlspec.wcag
+
+import io.github.frikit.twirlspec.standards._
 
 import io.github.frikit.twirlspec.expect.Violation
 import io.github.frikit.twirlspec.page.{Page, Text}

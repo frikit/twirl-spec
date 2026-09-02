@@ -8,7 +8,7 @@ import java.io.{File, PrintWriter}
 import java.nio.file.Files
 
 /** The message-file matchers as a consuming spec would use them. */
-class MessagesMatchersSpec extends AnyWordSpec with Matchers with TwirlSpec with MessagesMatchers {
+class MessagesMatchersSpec extends AnyWordSpec with Matchers with Bilingual with MessagesMatchers {
 
   "the message file matchers" should {
 
@@ -38,14 +38,14 @@ class MessagesMatchersSpec extends AnyWordSpec with Matchers with TwirlSpec with
         messages = Map("default" -> Map("skip.me" -> "x", "a" -> "A"), "cy" -> Map("a" -> "A cy")),
         langs = new play.api.i18n.DefaultLangs(Seq(english, welsh))
       )
-      MessagesIntegrity.check(api).map(_.rule) must contain("messages.welsh-parity")
+      MessagesIntegrity.check(api).map(_.rule) must contain("messages.translation-parity")
       MessagesIntegrity
         .check(api, MessagesIntegrity.Config(ignoreKeyPrefixes = Set("skip.")))
-        .map(_.rule)                                                                 must not contain "messages.welsh-parity"
+        .map(_.rule)                                                                        must not contain "messages.translation-parity"
       MessagesIntegrity
         .check(api, MessagesIntegrity.Config(ignoreKeys = Set("skip.me")))
-        .map(_.rule)                                                                 must not contain "messages.welsh-parity"
-      MessagesIntegrity.check(api, MessagesIntegrity.Config(requireWelsh = false)) mustBe empty
+        .map(_.rule)                                                                        must not contain "messages.translation-parity"
+      MessagesIntegrity.check(api, MessagesIntegrity.Config(requireTranslations = false)) mustBe empty
     }
 
     "read a missing file as no findings" in {

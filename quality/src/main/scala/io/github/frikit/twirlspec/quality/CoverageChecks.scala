@@ -13,7 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.github.frikit.twirlspec.standards
+package io.github.frikit.twirlspec.quality
+
+import io.github.frikit.twirlspec.standards._
 
 import io.github.frikit.twirlspec.TwirlSpecDsl
 import io.github.frikit.twirlspec.page.Page
@@ -54,7 +56,7 @@ trait CoverageChecks { self: TwirlSpecDsl =>
           ContentCoverage.unasserted(page, ignored.toSet ++ coverageIgnored, trackedAttributes, coverageScope)
         MatchResult(
           missing.isEmpty,
-          ContentCoverage.report(missing) + "\n\n" + page.outline,
+          if (missing.isEmpty) "" else ContentCoverage.report(missing) + "\n\n" + page.outline,
           "every part of the page was asserted, but was expected not to be"
         )
       }

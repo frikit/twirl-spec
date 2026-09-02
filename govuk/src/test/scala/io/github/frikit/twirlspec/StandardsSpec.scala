@@ -20,7 +20,8 @@ import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import io.github.frikit.twirlspec.expect.{Severity, Violation}
 import io.github.frikit.twirlspec.page.Page
-import io.github.frikit.twirlspec.standards.{GovukStandards, TwirlStandards, WcagStandards}
+import io.github.frikit.twirlspec.govuk.GovukStandards
+import io.github.frikit.twirlspec.wcag.{TwirlStandards, WcagStandards}
 
 /** Every standards rule, proved to fire when it should and — just as importantly — to stay quiet on correct markup.
   */

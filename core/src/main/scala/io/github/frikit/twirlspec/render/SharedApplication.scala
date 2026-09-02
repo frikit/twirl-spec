@@ -22,11 +22,11 @@ import play.api.inject.guice.GuiceApplicationBuilder
 /** One Play application per distinct configuration, shared by every spec in the JVM. */
 object SharedApplication {
 
-  /** Configuration every view test wants: no metrics, no auditing, both langs. */
+  /** Configuration every view test wants: no metrics, no auditing, no CSP nonce. Languages are the service's to declare. */
   val viewTestDefaults: Map[String, Any] = Map(
     "metrics.enabled"                -> false,
     "auditing.enabled"               -> false,
-    "play.i18n.langs"                -> Seq("en", "cy"),
+    "play.i18n.langs"                -> Seq("en"),
     "play.filters.csp.nonce.enabled" -> false
   )
 

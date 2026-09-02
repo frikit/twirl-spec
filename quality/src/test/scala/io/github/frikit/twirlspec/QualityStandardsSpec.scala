@@ -5,6 +5,7 @@ import org.scalatest.wordspec.AnyWordSpec
 import io.github.frikit.twirlspec.expect.Severity
 import io.github.frikit.twirlspec.page.Page
 import io.github.frikit.twirlspec.standards._
+import io.github.frikit.twirlspec.quality.{MetadataStandards, PerformanceStandards, SemanticStandards}
 
 class QualityStandardsSpec extends AnyWordSpec with Matchers with TwirlSpec {
 

@@ -3,10 +3,11 @@ package io.github.frikit.twirlspec
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import io.github.frikit.twirlspec.page.Page
-import io.github.frikit.twirlspec.standards.{Rule, TwirlStandards}
+import io.github.frikit.twirlspec.standards.Rule
+import io.github.frikit.twirlspec.wcag.TwirlStandards
 
 /** Markup a browser has to repair. */
-class WellFormedHtmlSpec extends AnyWordSpec with Matchers with TwirlSpec {
+class WellFormedHtmlSpec extends AnyWordSpec with Matchers with Bilingual {
 
   private def fired(html: String): Seq[String] =
     Rule.expectation(TwirlStandards.all).check(Page.fromString(html, english, messages)).map(_.rule)

@@ -66,9 +66,10 @@ trait TwirlMatchers { self: TwirlSpecDsl =>
 
         if (ok && reportWarnings && report.warnings.nonEmpty) surface(report)
 
+        // The message walks the whole page to build the outline, so it is only built for a failure.
         MatchResult(
           ok,
-          report.message,
+          if (ok) "" else report.message,
           s"$subject satisfied every check, but was expected not to"
         )
       }
