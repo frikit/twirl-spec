@@ -834,9 +834,10 @@ careful does not cost a full recompile on every push.
 
 Every push to `main` is a release. `release.yml` runs the same checks as a
 pull request and, if they pass, tags the commit with the next version, publishes
-every module to Maven Central through the Sonatype Central Portal, and creates a
-GitHub Release whose notes are generated from the commits since the last one.
-There are no snapshots.
+every module to Maven Central through the Sonatype Central Portal, and only then
+pushes the tag and creates a GitHub Release whose notes are generated from the
+commits since the last one. A publish that fails leaves no tag behind, so the
+next attempt gets the same version. There are no snapshots.
 
 The bump is a patch unless the commit message asks for more: a message
 containing `#minor` bumps the minor version, `#major` the major. The first
@@ -844,7 +845,9 @@ release, with no tag yet in the repository, is `v1.0.0`.
 
 The version is the tag, read by `sbt-ci-release` through `sbt-dynver`, so
 `build.sbt` does not carry one. Locally, `sbt version` gives a derived value such
-as `1.0.0+3-1a2b3c4d-SNAPSHOT`.
+as `1.0.0+3-1a2b3c4d-SNAPSHOT`. `sbt-ci-release` also wants to see the tag in
+`GITHUB_REF` before it will publish a stable release, and the runner sets that to
+the branch, so the workflow hands the sbt process the tag it has just made.
 
 ### Secrets
 

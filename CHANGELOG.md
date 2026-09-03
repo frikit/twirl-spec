@@ -11,13 +11,14 @@ does not.
 
 ## [Unreleased]
 
-### 1.0.0 — first stable release
+## [1.0.0] - 2026-09-03
 
-Nothing before 1.0.0 was published, so this section describes the library as it
-ships rather than a delta. For anyone who built a 0.x snapshot locally, the
-changes since then that would break a spec are listed under *Changed*.
+The first stable release. Nothing before it was published, so this section
+describes the library as it ships rather than a delta. For anyone who built a
+0.x snapshot locally, the changes since then that would break a spec are listed
+under *Changed*.
 
-#### Added
+### Added
 
 - `twirl-spec-core` — the page model, the expectation DSL and the ScalaTest
   matchers, with no rules of its own.
@@ -42,7 +43,7 @@ changes since then that would break a spec are listed under *Changed*.
 - `normalised` and `messageText` on the DSL, so page text and a message value
   compare the same way.
 
-#### Changed
+### Changed
 
 - **Packages.** Rule sets moved out of `io.github.frikit.twirlspec.standards`
   into the package of the module that owns them: `.wcag`, `.govuk`, `.quality`.
@@ -62,4 +63,5 @@ changes since then that would break a spec are listed under *Changed*.
 - Scala 3 artifacts are built with 3.3.8; sbt 1.13.0; Play 3.0.11;
   jsoup 1.23.2; scalafmt 3.11.5.
 
-[Unreleased]: https://github.com/frikit/twirl-spec/compare/main...HEAD
+[Unreleased]: https://github.com/frikit/twirl-spec/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/frikit/twirl-spec/releases/tag/v1.0.0

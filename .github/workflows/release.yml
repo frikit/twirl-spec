@@ -35,13 +35,18 @@ jobs:
         with:
           fetch-depth: 0 # dynver and the bump need every tag
 
+      # All four, not some: a half-configured repository would otherwise fail deep
+      # inside sbt with a message about something else.
       - name: Check the publishing secrets are present
         id: guard
         env:
           CENTRAL_PORTAL_USERNAME: ${{ secrets.CENTRAL_PORTAL_USERNAME }}
+          CENTRAL_PORTAL_PASSWORD: ${{ secrets.CENTRAL_PORTAL_PASSWORD }}
           GPG_SIGNING_KEY: ${{ secrets.GPG_SIGNING_KEY }}
+          GPG_SIGNING_PASSWORD: ${{ secrets.GPG_SIGNING_PASSWORD }}
         run: |
-          if [ -z "$CENTRAL_PORTAL_USERNAME" ] || [ -z "$GPG_SIGNING_KEY" ]; then
+          if [ -z "$CENTRAL_PORTAL_USERNAME" ] || [ -z "$CENTRAL_PORTAL_PASSWORD" ] ||
+             [ -z "$GPG_SIGNING_KEY" ] || [ -z "$GPG_SIGNING_PASSWORD" ]; then
             echo "::notice::Publishing secrets are not configured; verified but not released."
             echo "release=false" >> "$GITHUB_OUTPUT"
           else
@@ -76,6 +81,9 @@ jobs:
       - uses: sbt/setup-sbt@v1
         if: steps.guard.outputs.release == 'true'
 
+      # The tag is made here but pushed only after publishing has succeeded, so a
+      # failed publish leaves nothing behind and the next attempt computes the same
+      # version again.
       - name: Work out the next version and tag it
         if: steps.guard.outputs.release == 'true'
         id: version
@@ -96,9 +104,13 @@ jobs:
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git tag -a "$next" -m "Release $next"
-          git push origin "$next"
           echo "tag=$next" >> "$GITHUB_OUTPUT"
 
+      # sbt-ci-release publishes a stable release only when GITHUB_REF names a tag.
+      # The runner sets it to the branch, because the tag above was made in this
+      # job rather than pushed, so the sbt process is handed the tag instead. The
+      # plugin exits 0 when it decides there is nothing to publish; that is an
+      # error here, not a green run.
       - name: Publish to Maven Central
         if: steps.guard.outputs.release == 'true'
         env:
@@ -106,13 +118,21 @@ jobs:
           SONATYPE_PASSWORD: ${{ secrets.CENTRAL_PORTAL_PASSWORD }}
           PGP_PASSPHRASE: ${{ secrets.GPG_SIGNING_PASSWORD }}
           # PGP_SECRET comes from the step above, via GITHUB_ENV
-        run: sbt ci-release
+          RELEASE_TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          set -euo pipefail
+          GITHUB_REF="refs/tags/$RELEASE_TAG" sbt ci-release | tee ci-release.log
+          if grep -q 'doing nothing' ci-release.log; then
+            echo "::error::sbt ci-release decided not to publish; its reason is in the output above"
+            exit 1
+          fi
 
-      - name: Create the GitHub Release
+      - name: Push the tag and create the GitHub Release
         if: steps.guard.outputs.release == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.version.outputs.tag }}
         run: |
-          gh release create "${{ steps.version.outputs.tag }}" \
-            --title "${{ steps.version.outputs.tag }}" \
-            --generate-notes
+          set -euo pipefail
+          git push origin "$RELEASE_TAG"
+          gh release create "$RELEASE_TAG" --title "$RELEASE_TAG" --generate-notes
