@@ -843,6 +843,11 @@ The bump is a patch unless the commit message asks for more: a message
 containing `#minor` bumps the minor version, `#major` the major. The first
 release, with no tag yet in the repository, is `v1.0.0`.
 
+A commit message containing `[skip release]` is verified but not published, for
+a change to the workflows or the documentation that no user could depend on. A
+version on Maven Central can never be withdrawn or altered, so it is worth not
+spending one on a change that alters no artifact.
+
 The version is the tag, read by `sbt-ci-release` through `sbt-dynver`, so
 `build.sbt` does not carry one. Locally, `sbt version` gives a derived value such
 as `1.0.0+3-1a2b3c4d-SNAPSHOT`. `sbt-ci-release` also wants to see the tag in

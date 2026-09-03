@@ -35,9 +35,14 @@ jobs:
         with:
           fetch-depth: 0 # dynver and the bump need every tag
 
-      # All four, not some: a half-configured repository would otherwise fail deep
-      # inside sbt with a message about something else.
-      - name: Check the publishing secrets are present
+      # Two reasons not to release: the repository is not set up for it, or the
+      # commit says it changes nothing a user could depend on. A version on Maven
+      # Central can never be taken back or altered, so a workflow or documentation
+      # change should not have to spend one.
+      #
+      # All four secrets are required, not some: a half-configured repository
+      # would otherwise fail deep inside sbt with a message about something else.
+      - name: Decide whether to release
         id: guard
         env:
           CENTRAL_PORTAL_USERNAME: ${{ secrets.CENTRAL_PORTAL_USERNAME }}
@@ -45,8 +50,12 @@ jobs:
           GPG_SIGNING_KEY: ${{ secrets.GPG_SIGNING_KEY }}
           GPG_SIGNING_PASSWORD: ${{ secrets.GPG_SIGNING_PASSWORD }}
         run: |
-          if [ -z "$CENTRAL_PORTAL_USERNAME" ] || [ -z "$CENTRAL_PORTAL_PASSWORD" ] ||
-             [ -z "$GPG_SIGNING_KEY" ] || [ -z "$GPG_SIGNING_PASSWORD" ]; then
+          if [ "$GITHUB_EVENT_NAME" = "push" ] &&
+             git log -1 --pretty=%B | grep -qiF '[skip release]'; then
+            echo "::notice::The commit asks for no release; verified only."
+            echo "release=false" >> "$GITHUB_OUTPUT"
+          elif [ -z "$CENTRAL_PORTAL_USERNAME" ] || [ -z "$CENTRAL_PORTAL_PASSWORD" ] ||
+               [ -z "$GPG_SIGNING_KEY" ] || [ -z "$GPG_SIGNING_PASSWORD" ]; then
             echo "::notice::Publishing secrets are not configured; verified but not released."
             echo "release=false" >> "$GITHUB_OUTPUT"
           else
