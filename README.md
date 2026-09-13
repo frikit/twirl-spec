@@ -28,7 +28,7 @@ them on, or maintain them.
 
 [![Release](https://github.com/frikit/twirl-spec/actions/workflows/release.yml/badge.svg)](https://github.com/frikit/twirl-spec/actions/workflows/release.yml)
 [![Maven Central](https://img.shields.io/maven-central/v/io.github.frikit/twirl-spec-core_3)](https://central.sonatype.com/artifact/io.github.frikit/twirl-spec-core_3)
-[![Scala 2.13 and 3](https://img.shields.io/badge/scala-2.13%20%7C%203.3-red)](build.sbt)
+[![Scala 3.3 LTS](https://img.shields.io/badge/scala-3.3%20LTS-red)](build.sbt)
 [![Apache 2.0](https://img.shields.io/badge/licence-Apache%202.0-blue)](LICENSE)
 
 ## Why
@@ -101,19 +101,19 @@ line.
 
 | twirl-spec | Play | Twirl | Scala | Java | ScalaTest | jsoup |
 |---|---|---|---|---|---|---|
-| 1.0.x | 3.0.11 | 2.0.9 | 2.13.18 · 3.3.8 | 21 | 3.2.20 | 1.23.2 |
+| 2.0.x | 3.0.0 | 2.0.1 | 3.3.8 | 21 | 3.2.20 | 1.23.2 |
 
 What that means for a project on something close but not identical:
 
 **Play** is `Provided`: your project supplies `play`, `play-test` and
 `play-guice`, and this library never moves your Play version. Built against
-3.0.11; any 3.0.x works. **Play 2.9 and earlier are not supported** — they
-predate the Pekko move and are not tested.
+3.0.0, the first 3.0 release, so any 3.0.x works without an upgrade. **Play 2.9
+and earlier are not supported** — they predate the Pekko move and are not
+tested.
 
-**Scala.** Published for 2.13 and 3 from one source tree. The Scala 3 artifact
-is built with 3.3.8, the LTS line, and Scala 3 is forward-compatible, so a
-project on 3.3.8 or anything later uses the same artifact. A project below
-3.3.8 cannot.
+**Scala.** Published for Scala 3 only, built with 3.3.8, the LTS line. Scala 3
+is forward-compatible, so a project on 3.3.8 or anything later uses the
+artifact. A project below 3.3.8, or on Scala 2.13, cannot.
 
 **Java.** Compiled with `-release 21`, so 21 is the floor and later JDKs are fine.
 
@@ -286,13 +286,16 @@ everything without complaint. Expectations that are plural by nature —
 ### Reference
 
 Every expectation and matcher the DSL exposes. Expectations take a message
-key by default; the `…Text` variants take the exact words instead.
+key by default; the `…Text` variants take the exact words instead. The builders
+on a returned expectation, such as `labelled` on `textInput` or
+`withChangeLinkTo` on `summaryRow`, are shown in the tour above rather than
+listed again here.
 
 **Rendering**
 
 | | |
 |---|---|
-| `render` | The whole authoring surface. |
+| `render` | Parse rendered HTML into a page that can be asked questions. |
 | `renderIn` | Render the same view in a given language. |
 | `literal` | Text expectations take message keys by default; wrap a string in `literal` when you really do mean the exact words. |
 | `anyText` | For "there is a heading, its wording is asserted elsewhere". |
@@ -302,11 +305,26 @@ key by default; the `…Text` variants take the exact words instead.
 | `messageText` | A message, resolved and normalised, ready to compare against page text. |
 | `expectations` | Bundle expectations so a service can name its own house rules once. |
 
+**Application and languages** (`TwirlSpec` only)
+
+| | |
+|---|---|
+| `applicationConfig` | Extra configuration for this suite's application, over the view-test defaults. |
+| `app` | The shared application for that configuration. |
+| `inject` | An instance from the application's injector, usually a view. |
+| `languages` | Every language the application is configured for, English first. |
+| `currentLang` | The language the current block is running in. |
+| `inLanguage` | Run a block with `messages` and a request for the given language in scope. |
+| `inEnglish` | `inLanguage(english)`. |
+| `inEachLanguage` | Run the same block once per configured language. |
+| `renderPage` | Render a view in the current language; `render` with the language made explicit. |
+| `renderInEachLanguage` | Render the same view in every configured language, for `translateConsistently`. |
+
 **Matchers**
 
 | | |
 |---|---|
-| `standardsRules` | ScalaTest matchers over a rendered page. |
+| `standardsRules` | Which rules run alongside every `display(...)`: none in the core, and each rule module adds its own. |
 | `failOnWarnings` | Whether warnings fail the test. |
 | `reportWarnings` | Whether passing tests still surface their warnings in the test output. |
 | `display` | The page shows all of this, and holds to the GOV.UK standards. |
@@ -320,7 +338,7 @@ key by default; the `…Text` variants take the exact words instead.
 
 | | |
 |---|---|
-| `title` | Expectations about the frame of a GOV.UK page: what it is called, what it is headed, and the furniture the layout is responsible for. |
+| `title` | The browser title, ignoring the " - Service name - GOV.UK" suffix the layout appends and the translated "Error:" prefix an error state adds. |
 | `titleText` | The browser title, given as the exact words rather than a message key. |
 | `exactTitle` | The browser title in full, including service name and " - GOV.UK". |
 | `heading` | The single `<h1>`. |
@@ -336,13 +354,12 @@ key by default; the `…Text` variants take the exact words instead.
 | `phaseBanner` | The alpha or beta phase banner is present, with the phase it names. |
 | `subheading` | An `h2` with the given message key. |
 | `headingAtLevel` | A heading at a given level says this. |
-| `to` | Back link check, optionally pinned to a target URL. |
 
 **Content**
 
 | | |
 |---|---|
-| `content` | Expectations about the words on the page and the components carrying them. |
+| `content` | The resolved message appears somewhere in the page's visible text. |
 | `contentText` | Somewhere in the page body, given as the exact words rather than a message key. |
 | `noContent` | The resolved message appears nowhere in the page's visible text. |
 | `paragraph` | The message appears inside a paragraph. |
@@ -369,16 +386,24 @@ key by default; the `…Text` variants take the exact words instead.
 | `noCssSelector` | Nothing matches this selector. |
 | `elementCount` | Exactly this many elements match. |
 | `elementHasClass` | The element with this id carries this class. |
-| `named` | A link, by text and/or id, optionally pinned to a URL. |
-| `namedText` | The accessible name, given as the exact words rather than a message key. |
-| `namedMatching` | The accessible name matches this pattern. |
-| `occurring` | Exactly this many elements carry the role. |
 
 **Forms**
 
 | | |
 |---|---|
-| `formPostsTo` | Expectations about form controls and the error states they can be in. |
+| `textInput` | A text input, by name or id; its label, hint, value, autocomplete and type come through the builders. |
+| `textArea` | As `textInput`, for a `<textarea>`. |
+| `dropdown` | A `<select>`, with its label and options. |
+| `radioGroup` | A radio group: its legend, options, hint and what is selected. |
+| `checkboxGroup` | As `radioGroup`, for checkboxes. |
+| `dateInput` | The GOV.UK date input: three fields under one legend. |
+| `fileUpload` | A file input is present. |
+| `hiddenInput` | A hidden input carries this value. |
+| `submitButton` | The submit control says this, `site.continue` by default. |
+| `submitButtonText` | The submit control, given as the exact words rather than a message key. |
+| `hasSubmitButton` | A submit control is present, whatever it says. |
+| `button` | The button with this id says this. |
+| `formPostsTo` | The form is a POST to this action. |
 | `formGetsFrom` | The form is a GET to this action. |
 | `formValues` | Every named control holds these values, as a browser would submit them. |
 | `disabled` | The control is disabled, on itself or through an enclosing fieldset. |
@@ -392,14 +417,13 @@ key by default; the `…Text` variants take the exact words instead.
 | `errorSummary` | The error summary lists exactly these `field -> message key` entries, in order, and every entry links to an element that exists on the page. |
 | `errorSummaryContaining` | The error summary mentions this field, whatever else it lists. |
 | `fieldError` | The inline error message rendered against a specific field. |
-| `labelledByLegend` | A text input (or textarea), its label, hint, value and autocomplete. |
-| `hintIssues` | A radio or checkbox group: its legend, its options and what is selected. |
+| `labelledByLegend` | For the rare text input that is legitimately labelled by a legend rather than a label. |
 
 **Coverage and entry points**
 
 | | |
 |---|---|
-| `trackedAttributes` | Two checks about the spec rather than the page. |
+| `trackedAttributes` | Attributes that mark an element as worth asserting, beyond ids and links. |
 | `coverageScope` | Which part of the page a spec answers for. |
 | `coverageIgnored` | Ids, links or tracking values every page in this project inherits from its layout. |
 | `assertEverything` | Every id, link and tracked element on the page was asserted by some test in this spec. |
@@ -411,11 +435,12 @@ key by default; the `…Text` variants take the exact words instead.
 
 | | |
 |---|---|
-| `translationConfig` | Compares the same view rendered in several languages. |
+| `translationConfig` | What a page may legitimately keep the same between languages. |
 | `translateConsistently` | Every language renders the same page as the base language, differing only in words. |
 | `translateConsistentlyExcept` | As `translateConsistently`, without the named rules. |
 | `basedOn` | Measure the other languages against this one rather than against the first page given. |
 | `translationDifferences` | The differences, for a spec that would rather report than fail. |
+
 ## The rules
 
 65 rules in nine sets across five optional modules, kept apart so a
@@ -426,7 +451,7 @@ project is only judged against what it actually uses.
 | `WcagStandards` | `twirl-spec-wcag` | 22 | Accessibility |
 | `TwirlStandards` | `twirl-spec-wcag` | 4 | Play rendering mistakes |
 | `SecurityStandards` | `twirl-spec-wcag` | 3 | Ways a page can leak or be turned against its reader |
-| `GovukStandards` | `twirl-spec-govuk` | 5 | [GOV |
+| `GovukStandards` | `twirl-spec-govuk` | 5 | GOV.UK Design System error conventions |
 | `AriaStandards` | `twirl-spec-aria` | 16 | ARIA correctness |
 | `HtmlStandards` | `twirl-spec-html` | 3 | Basic HTML validity, read from the source rather than the repaired tree, so an unclosed element is named along with the line it opened on |
 | `SemanticStandards` | `twirl-spec-quality` | 4 | Markup that parses but does not mean what it looks like |
@@ -588,6 +613,7 @@ What a browser tab, a search result and a share preview make of the page.
 | `not-noindex` | the page is not accidentally hidden from search *(warning)* |
 | `has-meta-description` | the page describes itself for a search result *(warning)* |
 | `title-is-concise` | the title survives being truncated *(warning)* |
+
 ### Selecting by conformance level and WCAG version
 
 Every accessibility rule carries the success criterion it enforces — number,
@@ -613,20 +639,18 @@ Criteria currently covered:
 | Criterion | Level | Since | Rules |
 |---|---|---|---|
 | 1.1.1 Non-text Content | A | 2.0 | `image-alt` |
-| 1.3.1 Info and Relationships | A | 2.0 | `main-landmark`, `heading-order`, `grouped-choices`, `table-header-scope` |
-| 1.3.5 Identify Input Purpose | AA | 2.1 | `input-purpose-autocomplete` |
+| 1.3.1 Info and Relationships | A | 2.0 | `main-landmark`, `heading-order`, `grouped-choices`, `table-header-scope`, `aria-references-resolve`, `single-main` |
+| 1.4.4 Resize Text | AA | 2.0 | `zoom-not-blocked` |
 | 2.4.2 Page Titled | A | 2.0 | `title-present` |
+| 2.4.3 Focus Order | A | 2.0 | `no-positive-tabindex` |
 | 2.4.4 Link Purpose (In Context) | A | 2.0 | `link-has-name` |
 | 2.4.6 Headings and Labels | AA | 2.0 | `no-empty-headings` |
 | 2.4.9 Link Purpose (Link Only) | AAA | 2.0 | `link-text-is-meaningful` |
 | 3.1.1 Language of Page | A | 2.0 | `html-lang` |
 | 3.2.5 Change on Request | AAA | 2.0 | `new-tab-is-announced` |
-| 3.3.2 Labels or Instructions | A | 2.0 | `labelled-controls` |
-| 1.3.1 Info and Relationships | A | 2.0 | `aria-references-resolve`, `single-main` |
-| 1.4.4 Resize Text | AA | 2.0 | `zoom-not-blocked` |
-| 2.4.3 Focus Order | A | 2.0 | `no-positive-tabindex` |
-| 3.3.2 Labels or Instructions | A | 2.0 | `label-for-resolves` |
+| 3.3.2 Labels or Instructions | A | 2.0 | `labelled-controls`, `label-for-resolves` |
 | 4.1.2 Name, Role, Value | A | 2.0 | `unique-ids`, `submit-has-name`, `no-aria-hidden-focusable` |
+| 1.3.5 Identify Input Purpose | AA | 2.1 | `input-purpose-autocomplete` |
 
 This is a useful subset, not full WCAG coverage. A static check over rendered
 markup cannot see colour contrast, focus order, motion or anything that depends
@@ -817,100 +841,14 @@ own while building a view, and stable enough to commit as a structural snapshot.
 whole JVM. Views are stateless and only read from the application, so building
 one per view — a common pattern — costs a great deal and buys nothing.
 
-## The pre-push hook
+Its defaults also switch off `metrics.enabled` and `auditing.enabled`, which are
+settings of the HMRC bootstrap library; a plain Play application ignores them.
 
-`.githooks/pre-push` runs the same formatting check and cross-version tests that
-CI runs, and `build.sbt` points `core.hooksPath` at it on load, so a fresh clone
-gets it by running sbt once rather than by remembering a setup step. It takes a
-few seconds; `git push --no-verify` skips it.
+## Contributing
 
-It exists because formatting broke CI twice, each time for a different reason
-and each time invisible locally: `.scalafmt.conf` was skipping untracked files,
-and then sbt's scalafmt cache reported success on a file it had not looked at.
-The hook clears just the scalafmt caches — not the whole `target` — so being
-careful does not cost a full recompile on every push.
-
-## Releasing
-
-Every push to `main` is a release. `release.yml` runs the same checks as a
-pull request and, if they pass, tags the commit with the next version, publishes
-every module to Maven Central through the Sonatype Central Portal, and only then
-pushes the tag and creates a GitHub Release whose notes are generated from the
-commits since the last one. A publish that fails leaves no tag behind, so the
-next attempt gets the same version. There are no snapshots.
-
-The bump is a patch unless the commit message asks for more: a message
-containing `#minor` bumps the minor version, `#major` the major. The first
-release, with no tag yet in the repository, is `v1.0.0`.
-
-A commit message containing `[skip release]` is verified but not published, for
-a change to the workflows or the documentation that no user could depend on. A
-version on Maven Central can never be withdrawn or altered, so it is worth not
-spending one on a change that alters no artifact.
-
-The version is the tag, read by `sbt-ci-release` through `sbt-dynver`, so
-`build.sbt` does not carry one. Locally, `sbt version` gives a derived value such
-as `1.0.0+3-1a2b3c4d-SNAPSHOT`. `sbt-ci-release` also wants to see the tag in
-`GITHUB_REF` before it will publish a stable release, and the runner sets that to
-the branch, so the workflow hands the sbt process the tag it has just made.
-
-### Secrets
-
-Four repository secrets, named as in `frikit/krandom` so the same values serve
-both. Until all four are present, a push is verified but not released, with a
-notice rather than a failure.
-
-| Secret | What it is |
-|---|---|
-| `CENTRAL_PORTAL_USERNAME` | the username half of a Central Portal user token |
-| `CENTRAL_PORTAL_PASSWORD` | the password half of that token |
-| `GPG_SIGNING_KEY` | the armoured private key — raw or base64, either is accepted |
-| `GPG_SIGNING_PASSWORD` | the passphrase of that key |
-
-The signing key is accepted in either form because Gradle's `useInMemoryPgpKeys`
-wants the raw armoured text and `sbt-ci-release` wants it base64-encoded; the
-workflow looks at what it was given and converts if it has to.
-
-The `io.github.frikit` namespace is already verified in the Portal for krandom,
-and a namespace covers every artifact under it.
-
-Unlike krandom's release, which uploads and waits for a manual **Publish** in the
-Portal, this one publishes as soon as the Portal has validated the upload. There
-is no human step, because there is no human in a push to `main`.
-
-To make a fresh signing key, should you ever need one:
-
-```sh
-gpg --gen-key                                                  # RSA, 4096, no expiry is fine
-gpg --list-secret-keys --keyid-format LONG                     # note the key id
-gpg --armor --export-secret-keys <KEY_ID> | pbcopy             # GPG_SIGNING_KEY, either form works
-gpg --keyserver keyserver.ubuntu.com --send-keys <KEY_ID>      # Central checks the public half
-```
-
-A release can also be started by hand from the Actions tab (`workflow_dispatch`)
-without a code change.
-
-## Building
-
-```sh
-./run_all_tests.sh
-```
-
-Formats, cross-compiles both Scala versions, tests every module, and measures
-coverage against a 100% statement and branch gate.
-
-Every module is fully covered, with no `$COVERAGE-OFF$` exclusions anywhere in
-the source. That is a deliberate constraint rather than a trophy: a new branch
-has to arrive with a test, be excluded with a marker and a stated reason, or
-lower the gate in a commit someone can see. Getting there also deleted three
-pieces of unreachable code — a `getOrElse` on a key Play always defines, a
-not-found branch in a helper only called for values already found, and a
-`catch` that the tests written to justify it showed had never caught
-anything.
-
-`src/test/resources/captured/` holds markup captured verbatim from a real GOV.UK
-Design System implementation, so the Design System rules are checked against
-genuine output without this library depending on any component package.
+`./run_all_tests.sh` formats, tests and holds the build to the coverage gate. [CONTRIBUTING.md](CONTRIBUTING.md) covers the pre-push hook,
+the licence headers, how the rule tables above are kept true, dependency
+updates, and how a push to `main` becomes a release.
 
 ## Licence
 

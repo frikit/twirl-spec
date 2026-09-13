@@ -11,6 +11,43 @@ does not.
 
 ## [Unreleased]
 
+### Added
+
+- `page.errorSummaryDanglingLinks`: the error summary entries whose link lands
+  on no element. The `errorSummary` expectation and the `error-summary-targets`
+  rule both read it, rather than each working it out.
+
+### Changed
+
+- `renderPage` and `renderInEachLanguage` group coverage by the spec, as
+  `render` already did, so `assertEverything` counts assertions made through
+  them.
+- `submitButton()` records only the button it resolves to as asserted, rather
+  than every button on the page.
+- `CoverageChecks` and `I18nChecks` extend `TwirlSpecDsl` like the other check
+  traits, instead of requiring it through a self-type. Nothing changes for a
+  spec that already mixes in `TwirlSpec` or `TwirlSpecDsl`.
+- Every rule set is built once rather than on each `display(...)`.
+- Built against Play 3.0.0 rather than 3.0.11, so a consumer on any 3.0.x
+  resolves it without an upgrade.
+- `new HtmlStandards(...)` takes its attribute prefixes explicitly; the
+  `HtmlStandards` object remains the set with none.
+
+### Removed
+
+- The Scala 2.13 artifacts. The library is built for Scala 3 only, on the 3.3
+  LTS line, and a consumer on 2.13 can no longer resolve it.
+
+### Fixed
+
+- The README reference described eleven members with the doc comment of the
+  trait or class enclosing them, listed a private helper, left out the form
+  control expectations, and cut the GOV.UK row of the rule-set table short.
+  The rule tables are now held to the code by `ReadmeSpec`.
+- The modules' test tasks no longer run concurrently in one JVM while sharing
+  an application that one suite stops. CI also no longer tests Scala 2.13
+  twice.
+
 ## [1.0.0] - 2026-09-03
 
 The first stable release. Nothing before it was published, so this section
