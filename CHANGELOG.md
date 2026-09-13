@@ -5,9 +5,10 @@ All notable changes to this project are recorded here. The format follows
 [Semantic Versioning](https://semver.org/) from 1.0.0 — see *Versioning* in the
 README for what a minor release may and may not do.
 
-Every push to `main` is a release, and each one has a GitHub Release with notes
-generated from its commits. This file carries the summary that a list of commits
-does not.
+Every push to `main` is a release, and each one has a GitHub Release whose
+notes are its section here. Every release on the current major line is
+recorded in full; earlier lines are kept to one entry each, so the file stays
+readable.
 
 ## [Unreleased]
 
@@ -68,58 +69,20 @@ otherwise source-compatible with 1.0.x.
   an application that one suite stops. CI also no longer tests Scala 2.13
   twice.
 
-## [1.0.0] - 2026-09-03
+## [1.x]
 
-The first stable release. Nothing before it was published, so this section
-describes the library as it ships rather than a delta. For anyone who built a
-0.x snapshot locally, the changes since then that would break a spec are listed
-under *Changed*.
+One release, 1.0.0 on 2026-09-03: the first version published, cross-built for
+Scala 2.13 and 3 against Play 3.0.11. It shipped the nine modules 2.x still
+has: the page model, expectation DSL and matchers in `twirl-spec-core`; the
+WCAG, rendering and safety rules in `twirl-spec-wcag`; the GOV.UK error
+conventions in `twirl-spec-govuk`; ARIA correctness in `twirl-spec-aria`; HTML
+validity in `twirl-spec-html`; semantics, page weight, metadata, coverage and
+the Twirl entry points in `twirl-spec-quality`; language parity in
+`twirl-spec-i18n`; message-file integrity in `twirl-spec-messages`; and all of
+them in `twirl-spec-all`. The renames a service built against a 0.x snapshot
+would meet are listed in [the adoption guide](docs/adopting.md).
 
-### Added
-
-- `twirl-spec-core` — the page model, the expectation DSL and the ScalaTest
-  matchers, with no rules of its own.
-- `twirl-spec-wcag` — 29 rules: 21 each tied to a WCAG success criterion, one
-  structural convention, four for Twirl rendering mistakes, three for safety.
-- `twirl-spec-govuk` — five GOV.UK Design System error conventions.
-- `twirl-spec-aria` — 16 ARIA correctness rules, the static half of what an
-  automated accessibility tool reports, needing no browser.
-- `twirl-spec-html` — basic HTML validity: an unclosed element is named with
-  the line it opened on; unknown elements and attributes. `TagBalance.checkTemplate`
-  reads a Twirl template directly, with the Scala taken out first.
-- `twirl-spec-quality` — semantics, page weight and metadata rules, plus
-  `assertEverything`, which fails when a page shows something no test asserted,
-  and `entryPointsAgree`, which reaches the `render`, `f` and `ref` Twirl
-  generates beside `apply`.
-- `twirl-spec-i18n` — the same view rendered in several languages compared
-  against a base: structure, links, controls, headings, and whether anything
-  was translated at all.
-- `twirl-spec-messages` — message-file integrity, every configured language
-  measured against a base.
-- `twirl-spec-all` — everything in one dependency, and `AllChecks`.
-- `normalised` and `messageText` on the DSL, so page text and a message value
-  compare the same way.
-
-### Changed
-
-- **Packages.** Rule sets moved out of `io.github.frikit.twirlspec.standards`
-  into the package of the module that owns them: `.wcag`, `.govuk`, `.quality`.
-  `.standards` keeps `Rule`, `RuleSet`, `Criterion`, `Level` and `WcagVersion`.
-- **Languages are configuration, not API.** `TwirlSpec.welsh` and `inWelsh`
-  are gone; use `inLanguage(Lang("cy"))`. The default application configures
-  `play.i18n.langs = ["en"]`; a bilingual service declares its languages
-  through `applicationConfig`.
-- **Messages module generalised** from English-and-Welsh to base-and-others.
-  `Config.requireWelsh` is now `requireTranslations`, `Config.baseLanguage`
-  is new (default `"en"`), `englishMessages` is now `baseMessages`, and the
-  rule ids `messages.welsh-parity` and `messages.english-parity` are now
-  `messages.translation-parity` and `messages.base-parity`.
-- Failure messages are built only when a check fails. They include the page
-  outline, which walks the whole document, and that work was being done on
-  every passing assertion.
-- Scala 3 artifacts are built with 3.3.8; sbt 1.13.0; Play 3.0.11;
-  jsoup 1.23.2; scalafmt 3.11.5.
-
-[Unreleased]: https://github.com/frikit/twirl-spec/compare/v2.0.0...HEAD
+[Unreleased]: https://github.com/frikit/twirl-spec/compare/v2.0.1...HEAD
+[2.0.1]: https://github.com/frikit/twirl-spec/compare/v2.0.0...v2.0.1
 [2.0.0]: https://github.com/frikit/twirl-spec/compare/v1.0.0...v2.0.0
-[1.0.0]: https://github.com/frikit/twirl-spec/releases/tag/v1.0.0
+[1.x]: https://github.com/frikit/twirl-spec/releases/tag/v1.0.0

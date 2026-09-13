@@ -83,9 +83,14 @@ careful does not cost a full recompile on every push.
 Every push to `main` is a release. `release.yml` runs the same checks as a
 pull request and, if they pass, tags the commit with the next version, publishes
 every module to Maven Central through the Sonatype Central Portal, and only then
-pushes the tag and creates a GitHub Release whose notes are generated from the
-commits since the last one. A publish that fails leaves no tag behind, so the
-next attempt gets the same version. There are no snapshots.
+pushes the tag and creates a GitHub Release. Its notes are the version's
+section of `CHANGELOG.md`, so a change arrives with its changelog entry; when
+the changelog has no section for the version, GitHub's generated notes are used
+instead. A publish that fails leaves no tag behind, so the next attempt gets
+the same version. There are no snapshots.
+
+The changelog records every release on the current major line in full and
+keeps each earlier line to one entry, so the history stays readable.
 
 The bump is a patch unless the commit message asks for more: a message
 containing `#minor` bumps the minor version, `#major` the major. The first
