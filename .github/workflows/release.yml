@@ -143,5 +143,18 @@ jobs:
           RELEASE_TAG: ${{ steps.version.outputs.tag }}
         run: |
           set -euo pipefail
-          git push origin "$RELEASE_TAG"
-          gh release create "$RELEASE_TAG" --title "$RELEASE_TAG" --generate-notes
+          # --no-verify: the pre-push hook would otherwise run the whole suite
+          # again here, after publishing, when the checks have already passed.
+          git push --no-verify origin "$RELEASE_TAG"
+          # The artifacts are on Central by now, so a passing hiccup in GitHub's
+          # API must not leave the version without its release page. v2.0.0 met
+          # an HTTP 500 at exactly this point.
+          for attempt in 1 2 3; do
+            if gh release view "$RELEASE_TAG" >/dev/null 2>&1 ||
+               gh release create "$RELEASE_TAG" --title "$RELEASE_TAG" --generate-notes; then
+              exit 0
+            fi
+            echo "creating the release failed (attempt $attempt of 3)"
+            sleep 30
+          done
+          exit 1

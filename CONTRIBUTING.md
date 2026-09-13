@@ -58,12 +58,12 @@ the table to paste in.
 ## Dependencies
 
 Scala Steward runs on Mondays through `.github/workflows/scala-steward.yml` and
-opens a pull request per update; Dependabot does not understand sbt. With the
-workflow's own token, GitHub does not start CI on the pull requests the workflow
-opens, and the repository must allow Actions to create pull requests (Settings,
-Actions, General). A fine-grained personal access token with contents and
-pull-requests write access, stored as the `SCALA_STEWARD_TOKEN` secret, lifts
-the first limitation.
+opens a pull request per update; Dependabot does not understand sbt. The
+repository allows Actions to create pull requests, a setting under Settings,
+Actions, General that the workflow needs. With the workflow's own token, GitHub
+does not start CI on the pull requests it opens; a fine-grained personal access
+token with contents and pull-requests write access, stored as the
+`SCALA_STEWARD_TOKEN` secret, lifts that.
 
 ## The pre-push hook
 

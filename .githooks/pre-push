@@ -11,6 +11,19 @@
 set -uo pipefail
 cd "$(git rev-parse --show-toplevel)" || exit 1
 
+# git lists what is being pushed on stdin, one "<local ref> <local sha>
+# <remote ref> <remote sha>" per line, with an all-zero local sha for a
+# deletion. A push that only deletes a branch or tag has nothing to check.
+zero=0000000000000000000000000000000000000000
+pushing_commits=false
+while read -r _ local_sha _ _; do
+  [ "$local_sha" != "$zero" ] && pushing_commits=true
+done
+if ! $pushing_commits; then
+  echo "pre-push: nothing to check"
+  exit 0
+fi
+
 echo "pre-push: checking formatting, licence headers and tests (skip with --no-verify)"
 
 # Drop only the scalafmt caches, so a check cannot pass on a stale result. This
