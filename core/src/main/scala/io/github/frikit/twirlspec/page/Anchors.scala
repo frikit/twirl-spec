@@ -26,8 +26,14 @@ import org.jsoup.nodes.Element
   */
 object Anchors {
 
+  /** Attributes that make an element worth asserting on their own: analytics
+    * markers, by default.
+    */
   val defaultTrackedAttributes: Set[String] = Set("data-journey-click")
 
+  /** The names this element is known by for coverage: its id, its link, and any
+    * tracked attribute it carries.
+    */
   def namesOf(
       e: Element,
       tracked: Set[String] = defaultTrackedAttributes
@@ -41,8 +47,12 @@ object Anchors {
     idName ::: link ::: tracking
   }
 
+  /** Whether the element is a link with a destination. */
   def isLink(e: Element): Boolean = e.tagName == "a" && e.hasAttr("href")
 
+  /** The coverage name of a link: its text, or its destination when it has no
+    * text.
+    */
   def linkName(e: Element): String = {
     val text = e.text().trim
     if (text.nonEmpty) s"""link "$text"""" else s"link ${e.attr("href")}"

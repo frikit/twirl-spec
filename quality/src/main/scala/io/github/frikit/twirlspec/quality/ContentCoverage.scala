@@ -33,6 +33,8 @@ object ContentCoverage {
     */
   final case class Anchor(kind: String, name: String, path: String)
 
+  /** Attributes that mark an element as worth asserting, beyond ids and links.
+    */
   val defaultTrackedAttributes: Set[String] = Anchors.defaultTrackedAttributes
 
   /** A view spec answers for the page's own content, not for the header, footer
@@ -40,6 +42,7 @@ object ContentCoverage {
     */
   val defaultScope: String = "main, #main-content"
 
+  /** Everything on the page, within the scope, that a spec ought to assert. */
   def anchors(
       page: Page,
       trackedAttributes: Set[String] = defaultTrackedAttributes,
@@ -98,6 +101,7 @@ object ContentCoverage {
       a => ignoredIds.contains(a.id())
     )
 
+  /** The unasserted anchors as a readable list, grouped by kind. */
   def report(unasserted: List[Anchor]): String = {
     val byKind = unasserted.groupBy(_.kind)
     val lines = List("id", "link", "tracking").flatMap { kind =>

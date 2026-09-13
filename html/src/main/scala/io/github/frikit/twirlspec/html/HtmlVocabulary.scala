@@ -413,6 +413,7 @@ object HtmlVocabulary {
     "preserveaspectratio"
   )
 
+  /** Whether the HTML specification defines an element with this name. */
   def isKnownElement(name: String): Boolean =
     elements.contains(name.toLowerCase)
 

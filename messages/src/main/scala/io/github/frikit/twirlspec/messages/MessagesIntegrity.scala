@@ -26,33 +26,46 @@ import scala.util.Using
 /** Checks over a service's message files. */
 object MessagesIntegrity {
 
+  /** What the checks measure against, and what they leave alone.
+    *
+    * @param baseLanguage
+    *   the language the others are measured against: Play's `default` file plus
+    *   this one
+    * @param requireTranslations
+    *   whether every other configured language must carry every base key; off
+    *   for a single-language service
+    * @param maxUntranslatedRatio
+    *   how much of a translation may be identical to the base before it is
+    *   treated as untranslated
+    * @param ignoreKeys
+    *   keys left out of every check
+    * @param ignoreKeyPrefixes
+    *   prefixes of keys left out of every check
+    * @param urlKeySuffixes
+    *   suffixes of keys whose value is a URL, expected to read the same in
+    *   every language and so not counted as untranslated
+    */
   final case class Config(
-      /** The language the others are measured against: Play's `default` file
-        * plus this one.
-        */
       baseLanguage: String = "en",
-      /** Whether every other configured language must carry every base key. Off
-        * for a single-language service.
-        */
       requireTranslations: Boolean = true,
-      /** How much of a translation may be identical to the base before it is
-        * treated as untranslated.
-        */
       maxUntranslatedRatio: Double = 0.06,
       ignoreKeys: Set[String] = Set.empty,
       ignoreKeyPrefixes: Set[String] = Set.empty,
-      /** Keys whose value is a URL are expected to be identical in every
-        * language.
-        */
       urlKeySuffixes: Set[String] = Set(".url", ".href", ".link.url")
   ) {
 
+    /** Whether a key is left out of every check. */
     def ignores(key: String): Boolean =
       ignoreKeys.contains(key) || ignoreKeyPrefixes.exists(key.startsWith)
 
   }
 
+  /** The default configuration. */
   object Config {
+
+    /** The default: English as the base, translations required, and up to 6% of
+      * values allowed to be identical.
+      */
     val default: Config = Config()
   }
 
@@ -112,6 +125,7 @@ object MessagesIntegrity {
       Map.empty
     )
 
+  /** The messages of one language, empty when the api holds none for it. */
   def messagesFor(api: MessagesApi, langCode: String): Map[String, String] =
     api.messages.getOrElse(langCode, Map.empty)
 

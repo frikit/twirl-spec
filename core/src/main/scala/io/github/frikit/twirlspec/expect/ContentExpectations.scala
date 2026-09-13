@@ -367,9 +367,13 @@ final case class LinkExpectation(
     id: Option[String]
 ) extends Expectation {
 
+  /** The link points at this URL. */
   def to(url: String): LinkExpectation = copy(href = Some(url))
+
+  /** Find the link by this id instead of by its text. */
   def withId(elementId: String): LinkExpectation = copy(id = Some(elementId))
 
+  /** What the link says, from a message key, for a link found by id. */
   def saying(key: String, args: Any*): LinkExpectation =
     copy(text = Expected.Key(key, args.toSeq))
 
@@ -440,11 +444,14 @@ final case class SummaryRowExpectation(
     actionTexts: Option[List[Expected]] = None
 ) extends Expectation {
 
+  /** The row's value reads exactly like this. */
   def withValue(v: String): SummaryRowExpectation = copy(value = Some(v))
 
+  /** One of the row's actions links to this URL. */
   def withChangeLinkTo(url: String): SummaryRowExpectation =
     copy(changeHref = Some(url))
 
+  /** The row's action links say these things, each from a message key. */
   def withActions(keys: String*): SummaryRowExpectation =
     copy(actionTexts = Some(keys.toList.map(k => Expected.Key(k): Expected)))
 

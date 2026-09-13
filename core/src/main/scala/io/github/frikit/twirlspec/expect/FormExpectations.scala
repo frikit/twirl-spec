@@ -25,27 +25,43 @@ import scala.jdk.CollectionConverters._
 /** Expectations about form controls and the error states they can be in. */
 trait FormExpectations {
 
+  /** A text input found by name or id; chain the builders for its label, hint,
+    * value, autocomplete and type.
+    */
   def textInput(name: String): TextInputExpectation = TextInputExpectation(name)
 
+  /** A textarea found by name or id, with the same builders as [[textInput]].
+    */
   def textArea(name: String): TextInputExpectation =
     TextInputExpectation(name, tag = "textarea")
 
+  /** A `<select>` found by name or id, with builders for its label and options.
+    */
   def dropdown(name: String): DropdownExpectation = DropdownExpectation(name)
 
+  /** The radio buttons sharing this name, `value` by default as Play's form
+    * helpers name them.
+    */
   def radioGroup(name: String = "value"): ChoiceGroupExpectation =
     ChoiceGroupExpectation(name, kind = "radio")
 
+  /** The checkboxes sharing this name, `value` by default. */
   def checkboxGroup(name: String = "value"): ChoiceGroupExpectation =
     ChoiceGroupExpectation(name, kind = "checkbox")
 
+  /** A GOV.UK date input, three fields under one legend, named `value` by
+    * default.
+    */
   def dateInput(name: String = "value"): DateInputExpectation =
     DateInputExpectation(name)
 
+  /** A file input with this name or id is present. */
   def fileUpload(name: String): Expectation =
     Expectation(s"fileUpload($name)") { page =>
       present(s"fileUpload($name)", page.fileUpload(name))
     }
 
+  /** A hidden input with this name carries this value. */
   def hiddenInput(name: String, value: String): Expectation =
     Expectation(s"hiddenInput($name)") { page =>
       val sel = page.css(s"""input[type=hidden][name="$name"]""")
@@ -58,16 +74,20 @@ trait FormExpectations {
       }
     }
 
+  /** The submit control says this, `site.continue` by default. */
   def submitButton(key: String = "site.continue"): Expectation =
     buttonWith("submitButton", Expected.Key(key), None)
 
+  /** The submit control says exactly these words. */
   def submitButtonText(literal: String): Expectation =
     buttonWith("submitButton", Expected.Literal(literal), None)
 
+  /** A submit control is present, whatever it says. */
   val hasSubmitButton: Expectation = Expectation("submitButton") { page =>
     present("submitButton", page.submitButton)
   }
 
+  /** The button with this id says this. */
   def button(id: String, key: String): Expectation =
     buttonWith(s"button($id)", Expected.Key(key), Some(id))
 
@@ -316,23 +336,32 @@ final case class TextInputExpectation(
     labelRequired: Boolean = true
 ) extends Expectation {
 
+  /** The label's text, from a message key. */
   def labelled(key: String, args: Any*): TextInputExpectation =
     copy(label = Some(Expected.Key(key, args.toSeq)))
 
+  /** The label's exact words. */
   def labelledText(literal: String): TextInputExpectation =
     copy(label = Some(Expected.Literal(literal)))
 
+  /** The hint's text, from a message key, and that the hint is announced with
+    * the field.
+    */
   def hinted(key: String, args: Any*): TextInputExpectation =
     copy(hint = Some(Expected.Key(key, args.toSeq)))
 
+  /** The hint's exact words, and that the hint is announced with the field. */
   def hintedText(literal: String): TextInputExpectation =
     copy(hint = Some(Expected.Literal(literal)))
 
+  /** The value the control was rendered with. */
   def withValue(v: String): TextInputExpectation = copy(value = Some(v))
 
+  /** The autocomplete token the control declares. */
   def withAutocomplete(a: String): TextInputExpectation =
     copy(autocomplete = Some(a))
 
+  /** The input's type attribute. */
   def ofType(t: String): TextInputExpectation = copy(inputType = Some(t))
 
   /** For the rare control that is legitimately labelled by a legend instead. */
@@ -408,16 +437,20 @@ final case class ChoiceGroupExpectation(
     exhaustive: Boolean = true
 ) extends Expectation {
 
+  /** Exactly these options, as `value -> label key` pairs, every label checked.
+    */
   def withOptions(opts: (String, String)*): ChoiceGroupExpectation =
     copy(options = Some(opts.toList.map { case (v, k) =>
       (v, Expected.Key(k): Expected)
     }))
 
+  /** Exactly these option values, whatever their labels say. */
   def withOptionValues(values: String*): ChoiceGroupExpectation =
     copy(options =
       Some(values.toList.map(v => (v, Expected.Anything: Expected)))
     )
 
+  /** This option, with this label key, among possibly others. */
   def containingOption(value: String, key: String): ChoiceGroupExpectation =
     copy(
       options =
@@ -425,15 +458,20 @@ final case class ChoiceGroupExpectation(
       exhaustive = false
     )
 
+  /** The fieldset's legend, from a message key. */
   def legendIs(key: String, args: Any*): ChoiceGroupExpectation =
     copy(legend = Some(Expected.Key(key, args.toSeq)))
 
+  /** The group's hint, from a message key, and that the fieldset announces it.
+    */
   def hinted(key: String, args: Any*): ChoiceGroupExpectation =
     copy(hint = Some(Expected.Key(key, args.toSeq)))
 
+  /** Exactly these values are checked. */
   def selectedIs(values: String*): ChoiceGroupExpectation =
     copy(selected = Some(values.toSet))
 
+  /** No option is checked. */
   def nothingSelected: ChoiceGroupExpectation = copy(selected = Some(Set.empty))
 
   private val rule = s"${kind}Group($name)"
@@ -532,12 +570,15 @@ final case class DropdownExpectation(
     optionCount: Option[Int] = None
 ) extends Expectation {
 
+  /** The label's text, from a message key. */
   def labelled(key: String, args: Any*): DropdownExpectation =
     copy(label = Some(Expected.Key(key, args.toSeq)))
 
+  /** These option values are present, among possibly others. */
   def withOptionValues(values: String*): DropdownExpectation =
     copy(optionValues = Some(values.toList))
 
+  /** Exactly this many options. */
   def withOptionCount(n: Int): DropdownExpectation = copy(optionCount = Some(n))
 
   private val rule = s"dropdown($name)"
@@ -592,12 +633,17 @@ final case class DateInputExpectation(
     parts: List[String] = List("day", "month", "year")
 ) extends Expectation {
 
+  /** The legend above the three fields, from a message key. */
   def legendIs(key: String, args: Any*): DateInputExpectation =
     copy(legend = Some(Expected.Key(key, args.toSeq)))
 
+  /** The hint under the legend, from a message key, and that the fieldset
+    * announces it.
+    */
   def hinted(key: String, args: Any*): DateInputExpectation =
     copy(hint = Some(Expected.Key(key, args.toSeq)))
 
+  /** The parts to expect, `day`, `month` and `year` by default. */
   def withParts(p: String*): DateInputExpectation = copy(parts = p.toList)
 
   private val rule = s"dateInput($name)"
@@ -654,6 +700,7 @@ final case class DateInputExpectation(
 
 }
 
+/** How the parts of a date input are found. */
 object DateInputExpectation {
 
   /** The id a date part actually rendered with, trying each convention. */

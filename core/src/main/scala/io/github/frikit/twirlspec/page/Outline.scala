@@ -25,6 +25,9 @@ object Outline {
 
   private val Gutter = 13 // widest label is "lang toggle" plus separation
 
+  /** The outline of a page: its framing, headings, forms, components and
+    * errors, a line each.
+    */
   def of(page: Page): String = {
     val sections = Seq(
       framing(page),

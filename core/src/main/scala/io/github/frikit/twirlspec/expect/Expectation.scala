@@ -27,6 +27,7 @@ trait Expectation { self =>
   /** Empty means satisfied. */
   def check(page: Page): Seq[Violation]
 
+  /** Both this expectation and another, as one. */
   def and(other: Expectation): Expectation = Expectation.all(Seq(self, other))
 
   /** Downgrade every violation this expectation produces to a warning. */
@@ -44,16 +45,24 @@ trait Expectation { self =>
 
 }
 
+/** Ways to build an expectation without naming a class. */
 object Expectation {
 
+  /** An expectation from a name and a function from a page to the violations
+    * found.
+    */
   def apply(name: String)(f: Page => Seq[Violation]): Expectation =
     new Expectation {
       def description: String = name
       def check(page: Page): Seq[Violation] = f(page)
     }
 
+  /** An expectation that always passes, for a house rule with nothing to add
+    * yet.
+    */
   val satisfied: Expectation = apply("(nothing)")(_ => Nil)
 
+  /** Every expectation given, as one whose violations are theirs, in order. */
   def all(expectations: Seq[Expectation]): Expectation = new Expectation {
     def description: String = expectations.map(_.description).mkString(", ")
     def check(page: Page): Seq[Violation] = expectations.flatMap(_.check(page))
@@ -68,11 +77,14 @@ final case class CheckReport(
     subject: String
 ) {
 
+  /** The violations that fail the page. */
   def errors: Seq[Violation] = violations.filter(_.severity == Severity.Error)
 
+  /** The violations reported without failing the page. */
   def warnings: Seq[Violation] =
     violations.filter(_.severity == Severity.Warning)
 
+  /** Whether the page passed: no errors, whatever the warnings. */
   def passed: Boolean = errors.isEmpty
 
   /** The message a developer reads when their view test goes red. */

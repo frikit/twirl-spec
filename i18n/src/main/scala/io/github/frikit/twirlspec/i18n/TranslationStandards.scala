@@ -31,6 +31,9 @@ final case class TranslationRule(
     severity: Severity = Severity.Error
 )(run: (Page, Page) => Seq[Violation]) {
 
+  /** The violations this rule finds comparing a translated page with the base
+    * one, each a warning when the rule is.
+    */
   def check(base: Page, other: Page): Seq[Violation] =
     run(base, other).map(v => if (severity == Severity.Warning) v.warn else v)
 
@@ -46,6 +49,7 @@ final case class TranslationConfig(
     sameTextIsFine: Set[String] = TranslationConfig.commonlyUntranslated
 )
 
+/** The default configuration, and what it leaves untranslated. */
 object TranslationConfig {
 
   /** Left alone by most services: the platform's own name, and the phase banner
@@ -53,6 +57,7 @@ object TranslationConfig {
     */
   val commonlyUntranslated: Set[String] = Set("GOV.UK", "BETA", "ALPHA")
 
+  /** The default: only what almost every service leaves untranslated. */
   val default: TranslationConfig = TranslationConfig()
 }
 
@@ -68,6 +73,9 @@ object TranslationConfig {
   */
 object TranslationStandards {
 
+  /** Every language-parity rule, honouring what the configuration allows to
+    * stay the same.
+    */
   def all(
       config: TranslationConfig = TranslationConfig.default
   ): Seq[TranslationRule] = Seq(

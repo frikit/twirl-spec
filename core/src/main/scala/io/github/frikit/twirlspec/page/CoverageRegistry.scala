@@ -29,6 +29,7 @@ object CoverageRegistry {
 
   private val touchedBySource = TrieMap.empty[String, mutable.Set[String]]
 
+  /** Remember that an assertion for this spec touched these anchors. */
   def record(sourceKey: String, paths: Iterable[String]): Unit =
     if (paths.nonEmpty) {
       val set =
@@ -36,11 +37,13 @@ object CoverageRegistry {
       set.synchronized(set ++= paths)
     }
 
+  /** Every anchor an assertion for this spec has touched so far. */
   def touched(sourceKey: String): Set[String] =
     touchedBySource
       .get(sourceKey)
       .map(s => s.synchronized(s.toSet))
       .getOrElse(Set.empty)
 
+  /** Forget everything, for a spec that measures itself from a clean slate. */
   def reset(): Unit = touchedBySource.clear()
 }

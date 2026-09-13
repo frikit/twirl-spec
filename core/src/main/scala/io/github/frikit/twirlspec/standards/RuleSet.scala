@@ -24,9 +24,11 @@ trait RuleSet {
   /** Every rule in this set, at its natural severity. */
   def all: Seq[Rule]
 
+  /** Every rule but the ones with these ids. */
   def allExcept(ids: String*): Seq[Rule] =
     all.filterNot(r => ids.toSet.contains(r.id))
 
+  /** Only the rules with these ids. */
   def only(ids: String*): Seq[Rule] = all.filter(r => ids.toSet.contains(r.id))
 
   /** This set, or any subset of it, as one expectation. */

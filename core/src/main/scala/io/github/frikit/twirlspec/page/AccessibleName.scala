@@ -29,6 +29,7 @@ import scala.jdk.CollectionConverters._
   */
 object AccessibleName {
 
+  /** The accessible name of an element in this document. */
   def of(document: Document, e: Element): String = {
     val fromLabelledBy = e
       .attr("aria-labelledby")

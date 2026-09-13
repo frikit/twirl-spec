@@ -34,6 +34,9 @@ trait FramingExpectations {
   /** The browser title, given as the exact words rather than a message key. */
   def titleText(literal: String): Expectation = title(Expected.Literal(literal))
 
+  /** The browser title against any expected value, ignoring the layout's suffix
+    * and an error prefix.
+    */
   def title(expected: Expected): Expectation = Expectation("title") { page =>
     compare(
       "title",
@@ -60,6 +63,9 @@ trait FramingExpectations {
     Expected.Literal(literal)
   )
 
+  /** The single `<h1>` against any expected value, ignoring a caption rendered
+    * inside it.
+    */
   def heading(expected: Expected): Expectation = Expectation("heading") {
     page =>
       val h1 = page.h1
@@ -86,6 +92,7 @@ trait FramingExpectations {
     Expected.Literal(literal)
   )
 
+  /** The caption against any expected value. */
   def caption(expected: Expected): Expectation = Expectation("caption") {
     page =>
       present("caption", page.caption) match {

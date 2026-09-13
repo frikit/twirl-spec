@@ -25,9 +25,13 @@ import java.io.File
 /** Matchers over a service's message files. */
 trait MessagesMatchers {
 
+  /** The configuration the matchers use; override it once on a spec base. */
   def messagesIntegrityConfig: MessagesIntegrity.Config =
     MessagesIntegrity.Config.default
 
+  /** Every configured language is measured against the base: key parity both
+    * ways, empty values, placeholders, quoting and how much is translated.
+    */
   def beConsistentAcrossLanguages(
       config: MessagesIntegrity.Config = messagesIntegrityConfig
   ): Matcher[MessagesApi] =
@@ -38,6 +42,7 @@ trait MessagesMatchers {
       }
     }
 
+  /** No key is defined twice within any one of these files. */
   val haveNoDuplicateKeys: Matcher[Seq[File]] = new Matcher[Seq[File]] {
     def apply(files: Seq[File]): MatchResult =
       report(MessagesIntegrity.duplicateKeys(files), "message files")

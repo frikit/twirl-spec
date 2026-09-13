@@ -23,12 +23,20 @@ import io.github.frikit.twirlspec.page.Page
   * literal string.
   */
 sealed trait Expected {
+
+  /** How this expected value appears in a failure message. */
   def describe: String
+
+  /** The text to compare against on this page, or the violation to report when
+    * it cannot be resolved.
+    */
   def resolve(page: Page): Either[Violation, String]
 }
 
+/** The forms an expected value can take. */
 object Expected {
 
+  /** A message key, with any arguments, resolved in the page's language. */
   final case class Key(key: String, args: Seq[Any] = Nil) extends Expected {
 
     def describe: String = if (args.isEmpty) s"messages($key)"
@@ -52,6 +60,7 @@ object Expected {
 
   }
 
+  /** The exact words, normalised the way page text is. */
   final case class Literal(value: String) extends Expected {
     def describe: String = s""""$value""""
 
@@ -61,6 +70,7 @@ object Expected {
 
   }
 
+  /** A regular expression the text must match somewhere. */
   final case class Pattern(regex: scala.util.matching.Regex) extends Expected {
     def describe: String = s"matching /$regex/"
     def resolve(page: Page): Either[Violation, String] = Right(regex.toString)

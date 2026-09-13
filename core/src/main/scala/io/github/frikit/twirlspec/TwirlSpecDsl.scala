@@ -34,6 +34,9 @@ trait TwirlSpecDsl
   def render(html: Html)(implicit messages: Messages): Page =
     Page(html).belongingTo(getClass.getName)
 
+  /** Parse rendered HTML into a page for an explicit language and its messages,
+    * rather than the implicit ones.
+    */
   def render(html: Html, lang: Lang, messages: Messages): Page =
     Page(html, lang, messages).belongingTo(getClass.getName)
 

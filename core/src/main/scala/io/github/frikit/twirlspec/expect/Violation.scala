@@ -19,8 +19,13 @@ package io.github.frikit.twirlspec.expect
 /** Severity of a single failed check. */
 sealed abstract class Severity(val label: String, val order: Int)
 
+/** The two severities a violation can have. */
 object Severity {
+
+  /** Fails the page. */
   case object Error extends Severity("error", 0)
+
+  /** Reported, but fails the page only when `failOnWarnings` is on. */
   case object Warning extends Severity("warning", 1)
 }
 
@@ -35,10 +40,13 @@ final case class Violation(
     hint: Option[String] = None
 ) {
 
+  /** The same violation, located at this element or line. */
   def at(location: String): Violation = copy(where = Some(location))
 
+  /** The same violation as a warning. */
   def warn: Violation = copy(severity = Severity.Warning)
 
+  /** The same violation with advice on the fix. */
   def withHint(h: String): Violation = copy(hint = Some(h))
 
   /** Multi-line rendering used inside ScalaTest failure messages. */
@@ -55,6 +63,7 @@ final case class Violation(
 
 }
 
+/** Ways to build the common violations. */
 object Violation {
   private val Cross = "x"
 
@@ -63,6 +72,7 @@ object Violation {
     "\"" + truncated.replace("\n", "\\n") + "\""
   }
 
+  /** A violation with only a rule and a message. */
   def apply(rule: String, message: String): Violation =
     new Violation(rule, message, None, None, None, Severity.Error, None)
 

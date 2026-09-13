@@ -70,8 +70,12 @@ object Roles {
     (inherited ++ explicit).distinct
   }
 
+  /** A CSS selector for everything carrying this role, implicitly or
+    * explicitly.
+    */
   def selectorFor(role: String): String =
     implicitly.get(role).fold(s"[role=$role]")(sel => s"$sel, [role=$role]")
 
+  /** The roles resolved implicitly from HTML elements. */
   def knownRoles: Set[String] = implicitly.keySet
 }

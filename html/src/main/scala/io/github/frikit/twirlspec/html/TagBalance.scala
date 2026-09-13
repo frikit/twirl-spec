@@ -29,16 +29,21 @@ import scala.collection.mutable
   */
 object TagBalance {
 
+  /** Something wrong with the balance of tags, with the line it was found on.
+    */
   sealed trait Problem { def line: Int; def message: String }
 
+  /** An element opened and never closed. */
   final case class Unclosed(name: String, line: Int) extends Problem {
     def message = s"<$name> opened on line $line was never closed"
   }
 
+  /** A closing tag with nothing open to close. */
   final case class StrayClose(name: String, line: Int) extends Problem {
     def message = s"</$name> on line $line closes nothing that was open"
   }
 
+  /** A closing tag that closed more than it named, so two elements overlap. */
   final case class MisNested(
       name: String,
       line: Int,
@@ -67,6 +72,9 @@ object TagBalance {
     TwirlSource.htmlOnly(template)
   )
 
+  /** The problems in a piece of rendered markup, in line order, with comments,
+    * doctypes and raw-text elements ignored.
+    */
   def check(source: String): List[Problem] = {
     val stripped = blankOutSkippedRegions(source)
     val open = mutable.Stack.empty[Open]

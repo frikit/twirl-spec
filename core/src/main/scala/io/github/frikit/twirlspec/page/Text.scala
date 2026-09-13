@@ -51,6 +51,7 @@ object Text {
     */
   def same(a: String, b: String): Boolean = normalise(a) == normalise(b)
 
+  /** Whether one piece of text contains another, after both are normalised. */
   def containsText(haystack: String, needle: String): Boolean =
     normalise(haystack).contains(normalise(needle))
 

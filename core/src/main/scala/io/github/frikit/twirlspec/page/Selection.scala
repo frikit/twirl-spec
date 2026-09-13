@@ -20,19 +20,34 @@ import org.jsoup.nodes.Element
 
 import scala.jdk.CollectionConverters._
 
-/** A named set of elements pulled out of a page. */
+/** A named set of elements pulled out of a page.
+  *
+  * @param name
+  *   what the selection is called in failure messages
+  * @param selector
+  *   the CSS selector that produced it, also for failure messages
+  * @param elements
+  *   the matches, in document order
+  */
 final class Selection private (
     val name: String,
     val selector: String,
     val elements: List[Element]
 ) {
 
+  /** Whether nothing matched. */
   def isEmpty: Boolean = elements.isEmpty
+
+  /** Whether anything matched. */
   def nonEmpty: Boolean = elements.nonEmpty
+
+  /** How many elements matched. */
   def size: Int = elements.size
 
+  /** The first match, if there is one. */
   def headOption: Option[Element] = elements.headOption
 
+  /** The match at this position in document order. */
   def apply(i: Int): Element = elements(i)
 
   /** Combined, normalised text of every matched element. */
@@ -44,19 +59,25 @@ final class Selection private (
   /** Inner HTML of the first match. */
   def html: String = headOption.map(_.html()).getOrElse("")
 
+  /** The first match's value for this attribute, when it has one. */
   def attr(attribute: String): Option[String] =
     headOption.map(_.attr(attribute)).filter(_.nonEmpty)
 
+  /** Every match's value for this attribute, empty ones left out. */
   def attrs(attribute: String): List[String] =
     elements.map(_.attr(attribute)).filter(_.nonEmpty)
 
+  /** The first match's id, if it has one. */
   def id: Option[String] = attr("id")
 
+  /** Every match's id. */
   def ids: List[String] = attrs("id")
 
+  /** The first match's classes. */
   def classes: Set[String] =
     headOption.map(_.classNames().asScala.toSet).getOrElse(Set.empty)
 
+  /** Whether any match carries this class. */
   def hasClass(c: String): Boolean = elements.exists(_.hasClass(c))
 
   /** Narrow this selection with a further CSS selector. */
@@ -67,9 +88,11 @@ final class Selection private (
       elements.flatMap(_.select(css).asScala.toList)
     )
 
+  /** Only the matches satisfying a predicate. */
   def filter(p: Element => Boolean): Selection =
     new Selection(name, selector, elements.filter(p))
 
+  /** Only the matches whose text contains this, after normalisation. */
   def containing(needle: String): Selection =
     filter(e => Text.containsText(e.text(), needle))
 
@@ -79,8 +102,10 @@ final class Selection private (
 
 }
 
+/** Ways to build a selection. */
 object Selection {
 
+  /** A selection from a name, the selector that produced it and its matches. */
   def apply(
       name: String,
       selector: String,
@@ -88,6 +113,7 @@ object Selection {
   ): Selection =
     new Selection(name, selector, elements)
 
+  /** A selection that matched nothing. */
   def empty(name: String, selector: String): Selection =
     new Selection(name, selector, Nil)
 

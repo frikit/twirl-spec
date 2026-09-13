@@ -22,11 +22,19 @@ import io.github.frikit.twirlspec.page.Page
 /** The WCAG conformance level a success criterion belongs to. */
 sealed abstract class Level(val name: String, val order: Int)
 
+/** The three conformance levels. */
 object Level {
+
+  /** Level A, the minimum. */
   case object A extends Level("A", 0)
+
+  /** Level AA, what public sector bodies are held to. */
   case object AA extends Level("AA", 1)
+
+  /** Level AAA. */
   case object AAA extends Level("AAA", 2)
 
+  /** Every level, lowest first. */
   val all: Seq[Level] = Seq(A, AA, AAA)
 
   /** Every level up to and including this one, which is what conformance means:
@@ -38,11 +46,19 @@ object Level {
 /** The WCAG version a success criterion first appeared in. */
 sealed abstract class WcagVersion(val name: String, val order: Int)
 
+/** The WCAG versions a criterion can date from. */
 object WcagVersion {
+
+  /** WCAG 2.0. */
   case object V2_0 extends WcagVersion("2.0", 0)
+
+  /** WCAG 2.1. */
   case object V2_1 extends WcagVersion("2.1", 1)
+
+  /** WCAG 2.2. */
   case object V2_2 extends WcagVersion("2.2", 2)
 
+  /** Every version, oldest first. */
   val all: Seq[WcagVersion] = Seq(V2_0, V2_1, V2_2)
 
   /** Every version up to and including this one. */
@@ -66,7 +82,22 @@ final case class Criterion(
 
 }
 
-/** One named rule. */
+/** One named rule.
+  *
+  * @param id
+  *   the stable id a spec excludes or selects the rule by
+  * @param description
+  *   what the rule checks, as a phrase
+  * @param pageLevel
+  *   whether the rule applies only to a whole page, so a fragment rendered
+  *   without a layout is not judged on what only a layout provides
+  * @param severity
+  *   whether a finding fails the page or is only reported
+  * @param criterion
+  *   the WCAG success criterion the rule enforces, if it enforces one
+  * @param run
+  *   the check itself; an empty result means the page passed
+  */
 final class Rule(
     val id: String,
     val description: String,
@@ -76,6 +107,9 @@ final class Rule(
     run: Page => Seq[Violation]
 ) {
 
+  /** The violations this rule finds on a page: none for a page-level rule on a
+    * fragment, and each one a warning when the rule is.
+    */
   def check(page: Page): Seq[Violation] =
     if (pageLevel && !Rule.isFullPage(page)) Nil
     else {
@@ -83,7 +117,14 @@ final class Rule(
       if (severity == Severity.Warning) found.map(_.warn) else found
     }
 
+  /** The conformance level of the criterion this rule enforces, if it enforces
+    * one.
+    */
   def level: Option[Level] = criterion.map(_.level)
+
+  /** The WCAG version the criterion this rule enforces dates from, if it
+    * enforces one.
+    */
   def wcagVersion: Option[WcagVersion] = criterion.map(_.since)
 
   override def toString: String =
@@ -91,6 +132,7 @@ final class Rule(
 
 }
 
+/** Ways to build and combine rules. */
 object Rule {
 
   /** A set of rules as one expectation. */
@@ -100,9 +142,15 @@ object Rule {
       page.withRecordingPaused(rules.flatMap(_.check(page)))
   }
 
+  /** The severity of a rule that reports without failing the page. */
   val Warning: Severity = Severity.Warning
+
+  /** The severity of a rule that fails the page. */
   val Blocking: Severity = Severity.Error
 
+  /** A rule from its id, description and check; blocking, applying to fragments
+    * too, and tied to no criterion unless said otherwise.
+    */
   def apply(
       id: String,
       description: String,

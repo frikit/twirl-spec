@@ -33,6 +33,9 @@ package io.github.frikit.twirlspec.html
   */
 object TwirlSource {
 
+  /** The template with every Scala expression blanked to spaces, newlines kept,
+    * so line numbers still point at the source.
+    */
   def htmlOnly(template: String): String = {
     val out = template.toCharArray
     var i = 0

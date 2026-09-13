@@ -36,14 +36,27 @@ trait TwirlSpec extends TwirlSpecDsl { self: Suite with Alerting =>
   /** Extra configuration for this suite's application. */
   def applicationConfig: Map[String, Any] = Map.empty
 
+  /** The application this suite renders with, shared across the JVM with every
+    * suite that uses the same [[applicationConfig]].
+    */
   lazy val app: Application = SharedApplication(applicationConfig)
 
+  /** An instance from the application's injector: `inject[MyView]` is how a
+    * spec gets the view it tests.
+    */
   def inject[A](implicit tag: ClassTag[A]): A = app.injector.instanceOf[A]
 
+  /** The application's `MessagesApi`, held as a stable value for the implicits
+    * below.
+    */
   lazy val messagesApiInstance: MessagesApi = inject[MessagesApi]
 
+  /** The application's `MessagesApi`, implicitly, for `renderIn` and the
+    * message-file matchers.
+    */
   implicit def messagesApi: MessagesApi = messagesApiInstance
 
+  /** The English `Lang`, the base language for everything here. */
   val english: Lang = Lang("en")
 
   /** Every language the application is configured for, English first. */
@@ -56,16 +69,26 @@ trait TwirlSpec extends TwirlSpecDsl { self: Suite with Alerting =>
 
   private val currentLanguage = new DynamicVariable[Lang](english)
 
+  /** The language the current block runs in: [[english]] unless inside
+    * [[inLanguage]].
+    */
   def currentLang: Lang = currentLanguage.value
 
+  /** `Messages` for the current language, implicitly, so a view can be applied
+    * directly.
+    */
   implicit def messages: Messages =
     messagesApiInstance.preferred(Seq(currentLang))
 
+  /** A GET request carrying the language cookie for the current language,
+    * implicitly, for a view that takes one.
+    */
   implicit def request: Request[AnyContentAsEmpty.type] =
     FakeRequest("GET", "/").withCookies(
       Cookie(messagesApiInstance.langCookieName, currentLang.code)
     )
 
+  /** Run a block in English, whatever language the enclosing block is in. */
   def inEnglish[A](block: => A): A = inLanguage(english)(block)
 
   /** Render this block with `messages` and a request for the given language in

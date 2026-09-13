@@ -37,7 +37,9 @@ trait TwirlMatchers { self: TwirlSpecDsl =>
   /** Whether passing tests still surface their warnings in the test output. */
   def reportWarnings: Boolean = true
 
-  /** The page shows all of this, and holds to the GOV.UK standards. */
+  /** The page shows all of this, and holds to every rule `standardsRules`
+    * resolves to: none in the core, and each check trait's own once mixed in.
+    */
   def display(expectations: Expectation*): Matcher[Page] =
     matcherFor(expectations.toSeq :+ Rule.expectation(standardsRules), "page")
 
