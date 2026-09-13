@@ -11,6 +11,11 @@ does not.
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-09-13
+
+A major version because the Scala 2.13 artifacts are gone; the library is
+otherwise source-compatible with 1.0.x.
+
 ### Added
 
 - `page.errorSummaryDanglingLinks`: the error summary entries whose link lands
@@ -100,5 +105,6 @@ under *Changed*.
 - Scala 3 artifacts are built with 3.3.8; sbt 1.13.0; Play 3.0.11;
   jsoup 1.23.2; scalafmt 3.11.5.
 
-[Unreleased]: https://github.com/frikit/twirl-spec/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/frikit/twirl-spec/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/frikit/twirl-spec/compare/v1.0.0...v2.0.0
 [1.0.0]: https://github.com/frikit/twirl-spec/releases/tag/v1.0.0
