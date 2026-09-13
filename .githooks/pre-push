@@ -11,18 +11,19 @@
 set -uo pipefail
 cd "$(git rev-parse --show-toplevel)" || exit 1
 
-echo "pre-push: checking formatting and tests (skip with --no-verify)"
+echo "pre-push: checking formatting, licence headers and tests (skip with --no-verify)"
 
 # Drop only the scalafmt caches, so a check cannot pass on a stale result. This
 # leaves compiled classes alone; `clean` here would make every push expensive.
 find . -type d -path '*/target/streams/*/scalafmt' -prune -exec rm -rf {} + 2>/dev/null
 
-if ! sbt -batch --no-colors scalafmtCheckAll scalafmtSbtCheck +test; then
+if ! sbt -batch --no-colors scalafmtCheckAll scalafmtSbtCheck headerCheckAll test; then
   cat >&2 <<'MSG'
 
 pre-push: failed.
 
   formatting   sbt scalafmtSbt scalafmtAll
+  headers      sbt headerCreateAll
   everything   ./run_all_tests.sh
 
 MSG

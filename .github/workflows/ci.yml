@@ -15,7 +15,7 @@ jobs:
         with:
           fetch-depth: 0 # the version is derived from git tags
 
-      - uses: actions/setup-java@v5
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '21'
@@ -23,18 +23,15 @@ jobs:
 
       - uses: sbt/setup-sbt@v1
 
-      - name: Check formatting
-        run: sbt scalafmtCheckAll scalafmtSbtCheck
+      - name: Check formatting and licence headers
+        run: sbt scalafmtCheckAll scalafmtSbtCheck headerCheckAll
 
-      - name: Test on every supported Scala version
-        run: sbt +test
-
-      - name: Coverage
+      - name: Test, against the coverage gate
         run: sbt coverage test coverageOff coverageReport
 
       - name: Upload coverage reports
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: scoverage-reports
           path: '*/target/scala-*/scoverage-report'
