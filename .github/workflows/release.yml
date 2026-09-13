@@ -114,6 +114,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git tag -a "$next" -m "Release $next"
           echo "tag=$next" >> "$GITHUB_OUTPUT"
+          echo "previous=${last:-}" >> "$GITHUB_OUTPUT"
 
       # sbt-ci-release publishes a stable release only when GITHUB_REF names a tag.
       # The runner sets it to the branch, because the tag above was made in this
@@ -141,17 +142,40 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ steps.version.outputs.tag }}
+          PREVIOUS_TAG: ${{ steps.version.outputs.previous }}
         run: |
           set -euo pipefail
           # --no-verify: the pre-push hook would otherwise run the whole suite
           # again here, after publishing, when the checks have already passed.
           git push --no-verify origin "$RELEASE_TAG"
+
+          # The notes are the changelog's section for this version when it has
+          # one. GitHub's generated notes list pull requests, and a push straight
+          # to main has none, so they would be a bare compare link.
+          version="${RELEASE_TAG#v}"
+          awk -v v="$version" '
+            index($0, "## [" v "]") == 1 { on = 1; next }
+            /^## \[/ { if (on) exit }
+            on && (started || !/^$/) { started = 1; print }
+          ' CHANGELOG.md > release-notes.md
+          if [ -s release-notes.md ]; then
+            printf '\n**Full Changelog**: https://github.com/%s/compare/%s...%s\n' \
+              "$GITHUB_REPOSITORY" "${PREVIOUS_TAG:-$RELEASE_TAG}" "$RELEASE_TAG" >> release-notes.md
+            notes=(--notes-file release-notes.md)
+          else
+            notes=(--generate-notes)
+          fi
+
           # The artifacts are on Central by now, so a passing hiccup in GitHub's
-          # API must not leave the version without its release page. v2.0.0 met
-          # an HTTP 500 at exactly this point.
+          # API must not leave the version without its release page: v2.0.0 met
+          # an HTTP 500 at exactly this point, and that attempt left a draft.
           for attempt in 1 2 3; do
-            if gh release view "$RELEASE_TAG" >/dev/null 2>&1 ||
-               gh release create "$RELEASE_TAG" --title "$RELEASE_TAG" --generate-notes; then
+            state="$(gh release view "$RELEASE_TAG" --json isDraft --jq .isDraft 2>/dev/null || echo missing)"
+            case "$state" in
+              false) exit 0 ;;
+              true)  gh release delete "$RELEASE_TAG" --yes || true ;;
+            esac
+            if gh release create "$RELEASE_TAG" --title "$RELEASE_TAG" "${notes[@]}"; then
               exit 0
             fi
             echo "creating the release failed (attempt $attempt of 3)"
