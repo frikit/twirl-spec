@@ -1,5 +1,5 @@
 /*
- * Copyright 2026 Victor Osipov
+ * Copyright 2026 frikiT
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,12 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package io.github.frikit.twirlspec.quality
 
 import io.github.frikit.twirlspec.standards._
 
 import io.github.frikit.twirlspec.expect.Violation
-import io.github.frikit.twirlspec.page.{Page, Text}
 import io.github.frikit.twirlspec.standards.Rule.Warning
 
 import scala.jdk.CollectionConverters._
@@ -33,32 +33,50 @@ object PerformanceStandards extends RuleSet {
   /** Beyond this, an inline data URI or style block is worth extracting. */
   private val InlineBudgetBytes = 10000
 
-  def all: Seq[Rule] = rules
-
-  private def rules: Seq[Rule] = Seq(
-    Rule("images-have-dimensions", "images reserve their space before they load", severity = Warning) { page =>
+  lazy val all: Seq[Rule] = Seq(
+    Rule(
+      "images-have-dimensions",
+      "images reserve their space before they load",
+      severity = Warning
+    ) { page =>
       page.images.elements
         .filterNot(e => e.hasAttr("width") && e.hasAttr("height"))
         .map(e =>
           Violation(
             "images-have-dimensions",
             "an image declares no width and height",
-            actual = Some(Option(e.attr("src")).filter(_.nonEmpty).getOrElse("(no src)"))
-          ).warn.withHint("without them the page reflows as the image arrives, moving what someone is reading")
+            actual = Some(
+              Option(e.attr("src")).filter(_.nonEmpty).getOrElse("(no src)")
+            )
+          ).warn.withHint(
+            "without them the page reflows as the image arrives, moving what someone is reading"
+          )
         )
     },
-    Rule("scripts-are-deferred", "scripts in the head do not block rendering", severity = Warning) { page =>
+    Rule(
+      "scripts-are-deferred",
+      "scripts in the head do not block rendering",
+      severity = Warning
+    ) { page =>
       page.document
         .select("head script[src]")
         .asScala
         .toList
         .filterNot(e => e.hasAttr("defer") || e.hasAttr("async") || e.attr("type") == "module")
         .map(e =>
-          Violation("scripts-are-deferred", "a script in the head blocks rendering", actual = Some(e.attr("src"))).warn
+          Violation(
+            "scripts-are-deferred",
+            "a script in the head blocks rendering",
+            actual = Some(e.attr("src"))
+          ).warn
             .withHint("add defer, or move it to the end of the body")
         )
     },
-    Rule("no-oversized-data-uri", "large assets are files, not attributes", severity = Warning) { page =>
+    Rule(
+      "no-oversized-data-uri",
+      "large assets are files, not attributes",
+      severity = Warning
+    ) { page =>
       page.document
         .select("[src^=data:], [href^=data:]")
         .asScala
@@ -70,10 +88,16 @@ object PerformanceStandards extends RuleSet {
             "no-oversized-data-uri",
             s"a <${e.tagName()}> inlines ${size / 1000}kB as a data URI",
             expected = Some(s"under ${InlineBudgetBytes / 1000}kB")
-          ).warn.withHint("an inlined asset cannot be cached separately and is paid for on every page load")
+          ).warn.withHint(
+            "an inlined asset cannot be cached separately and is paid for on every page load"
+          )
         }
     },
-    Rule("no-large-inline-style", "styling lives in a stylesheet", severity = Warning) { page =>
+    Rule(
+      "no-large-inline-style",
+      "styling lives in a stylesheet",
+      severity = Warning
+    ) { page =>
       page.document
         .select("style")
         .asScala

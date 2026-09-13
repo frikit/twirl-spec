@@ -1,5 +1,5 @@
 /*
- * Copyright 2026 Victor Osipov
+ * Copyright 2026 frikiT
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package io.github.frikit.twirlspec.i18n
 
 import io.github.frikit.twirlspec.expect.{Severity, Violation}
@@ -21,7 +22,9 @@ import play.api.i18n.Lang
 
 import scala.jdk.CollectionConverters._
 
-/** One check comparing a translated page against the language it was translated from. */
+/** One check comparing a translated page against the language it was translated
+  * from.
+  */
 final case class TranslationRule(
   id: String,
   description: String,
@@ -35,14 +38,19 @@ final case class TranslationRule(
 
 /** What a page is allowed to differ by between languages.
   *
-  * @param sameTextIsFine text that legitimately reads the same in every language:
-  *                       product names, units, anything not worth translating
+  * @param sameTextIsFine
+  *   text that legitimately reads the same in every language: product names,
+  *   units, anything not worth translating
   */
-final case class TranslationConfig(sameTextIsFine: Set[String] = TranslationConfig.commonlyUntranslated)
+final case class TranslationConfig(
+  sameTextIsFine: Set[String] = TranslationConfig.commonlyUntranslated
+)
 
 object TranslationConfig {
 
-  /** Left alone by most services: the platform's own name, and the phase banner wording. */
+  /** Left alone by most services: the platform's own name, and the phase banner
+    * wording.
+    */
   val commonlyUntranslated: Set[String] = Set("GOV.UK", "BETA", "ALPHA")
 
   val default: TranslationConfig = TranslationConfig()
@@ -60,10 +68,16 @@ object TranslationConfig {
   */
 object TranslationStandards {
 
-  def all(config: TranslationConfig = TranslationConfig.default): Seq[TranslationRule] = Seq(
-    TranslationRule("i18n-lang-attribute", "the page declares the language it was rendered in") { (_, other) =>
+  def all(
+    config: TranslationConfig = TranslationConfig.default
+  ): Seq[TranslationRule] = Seq(
+    TranslationRule(
+      "i18n-lang-attribute",
+      "the page declares the language it was rendered in"
+    ) { (_, other) =>
       other.htmlLang match {
-        case Some(declared) if declared.toLowerCase.startsWith(other.lang.code.toLowerCase) => Nil
+        case Some(declared) if declared.toLowerCase.startsWith(other.lang.code.toLowerCase) =>
+          Nil
         case declared                                                                       =>
           Seq(
             Violation(
@@ -71,20 +85,52 @@ object TranslationStandards {
               s"rendered in ${other.lang.code} but the page declares ${declared.getOrElse("no language")}",
               expected = Some(other.lang.code),
               actual = declared
-            ).withHint("WCAG 3.1.1 — a screen reader picks its voice from this attribute")
+            ).withHint(
+              "WCAG 3.1.1 — a screen reader picks its voice from this attribute"
+            )
           )
       }
     },
-    TranslationRule("i18n-same-ids", "every language renders the same elements") { (base, other) =>
-      missingAndExtra("i18n-same-ids", "element", idsOf(base), idsOf(other), other.lang)
+    TranslationRule(
+      "i18n-same-ids",
+      "every language renders the same elements"
+    ) { (base, other) =>
+      missingAndExtra(
+        "i18n-same-ids",
+        "element",
+        idsOf(base),
+        idsOf(other),
+        other.lang
+      )
     },
-    TranslationRule("i18n-same-links", "every language links to the same places") { (base, other) =>
-      missingAndExtra("i18n-same-links", "link target", hrefsOf(base), hrefsOf(other), other.lang)
+    TranslationRule(
+      "i18n-same-links",
+      "every language links to the same places"
+    ) { (base, other) =>
+      missingAndExtra(
+        "i18n-same-links",
+        "link target",
+        hrefsOf(base),
+        hrefsOf(other),
+        other.lang
+      )
     },
-    TranslationRule("i18n-same-controls", "every language collects the same fields") { (base, other) =>
-      missingAndExtra("i18n-same-controls", "form control", controlsOf(base), controlsOf(other), other.lang)
+    TranslationRule(
+      "i18n-same-controls",
+      "every language collects the same fields"
+    ) { (base, other) =>
+      missingAndExtra(
+        "i18n-same-controls",
+        "form control",
+        controlsOf(base),
+        controlsOf(other),
+        other.lang
+      )
     },
-    TranslationRule("i18n-same-headings", "every language has the same heading structure") { (base, other) =>
+    TranslationRule(
+      "i18n-same-headings",
+      "every language has the same heading structure"
+    ) { (base, other) =>
       val baseLevels  = base.headings.map(_._1)
       val otherLevels = other.headings.map(_._1)
       if (baseLevels == otherLevels) Nil
@@ -95,12 +141,18 @@ object TranslationStandards {
             s"the heading levels in ${other.lang.code} do not follow the base language",
             expected = Some(baseLevels.mkString("h", ", h", "")),
             actual = Some(otherLevels.mkString("h", ", h", ""))
-          ).withHint("a translation that drops or adds a heading changes how the page is navigated")
+          ).withHint(
+            "a translation that drops or adds a heading changes how the page is navigated"
+          )
         )
     },
-    TranslationRule("i18n-nothing-lost", "no text present in the base language goes missing") { (base, other) =>
+    TranslationRule(
+      "i18n-nothing-lost",
+      "no text present in the base language goes missing"
+    ) { (base, other) =>
+      val otherText = textByIdOf(other)
       textByIdOf(base).toSeq.sortBy(_._1).flatMap { case (id, baseText) =>
-        textByIdOf(other).get(id) match {
+        otherText.get(id) match {
           case Some(text) if text.trim.nonEmpty => Nil
           case _ if baseText.trim.isEmpty       => Nil
           case _                                =>
@@ -115,24 +167,34 @@ object TranslationStandards {
         }
       }
     },
-    TranslationRule("i18n-actually-translated", "the page is translated, not copied", Severity.Warning) {
-      (base, other) =>
-        val baseText  = textByIdOf(base)
-        val otherText = textByIdOf(other)
-        val copied    = baseText.toSeq.sortBy(_._1).collect {
-          case (id, text) if otherText.get(id).contains(text) && worthTranslating(text, config) => id -> text
-        }
-        copied.map { case (id, text) =>
-          Violation(
-            "i18n-actually-translated",
-            s"#$id reads the same in ${other.lang.code} as in the base language",
-            actual = Some(text)
-          ).withHint("either it is untranslated, or add it to sameTextIsFine")
-        }
+    TranslationRule(
+      "i18n-actually-translated",
+      "the page is translated, not copied",
+      Severity.Warning
+    ) { (base, other) =>
+      val baseText  = textByIdOf(base)
+      val otherText = textByIdOf(other)
+      val copied    = baseText.toSeq.sortBy(_._1).collect {
+        case (id, text)
+            if otherText
+              .get(id)
+              .contains(text) && worthTranslating(text, config) =>
+          id -> text
+      }
+      copied.map { case (id, text) =>
+        Violation(
+          "i18n-actually-translated",
+          s"#$id reads the same in ${other.lang.code} as in the base language",
+          actual = Some(text)
+        ).withHint("either it is untranslated, or add it to sameTextIsFine")
+      }
     }
   )
 
-  private def worthTranslating(text: String, config: TranslationConfig): Boolean = {
+  private def worthTranslating(
+    text: String,
+    config: TranslationConfig
+  ): Boolean = {
     val trimmed = text.trim
     trimmed.length > 3 &&
     trimmed.exists(_.isLetter) &&
@@ -188,5 +250,7 @@ object TranslationStandards {
     gone ++ added
   }
 
-  private def plural(what: String, n: Int): String = if (n == 1) s"1 $what" else s"$n ${what}s"
+  private def plural(what: String, n: Int): String =
+    if (n == 1) s"1 $what" else s"$n ${what}s"
+
 }

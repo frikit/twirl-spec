@@ -1,5 +1,5 @@
 /*
- * Copyright 2026 Victor Osipov
+ * Copyright 2026 frikiT
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,23 +17,26 @@
 package io.github.frikit.twirlspec.govuk
 
 import io.github.frikit.twirlspec.standards._
-import io.github.frikit.twirlspec.wcag.WcagStandards
 
-import io.github.frikit.twirlspec.expect.Violation
-import io.github.frikit.twirlspec.page.{Page, Text}
+import io.github.frikit.twirlspec.expect.{Matching, Violation}
+import io.github.frikit.twirlspec.page.Text
 import io.github.frikit.twirlspec.standards.Rule.Warning
 
 import scala.jdk.CollectionConverters._
 
-/** Conventions of the GOV.UK Design System, on top of [[WcagStandards]]. */
+/** Conventions of the GOV.UK Design System, on top of
+  * [[io.github.frikit.twirlspec.wcag.WcagStandards]].
+  */
 object GovukStandards extends RuleSet {
 
-  def all: Seq[Rule] = rules
-
-  private def rules: Seq[Rule] = Seq(
-    Rule("error-title-prefix", "an error state prefixes the browser title", pageLevel = true) { page =>
+  lazy val all: Seq[Rule] = Seq(
+    Rule(
+      "error-title-prefix",
+      "an error state prefixes the browser title",
+      pageLevel = true
+    ) { page =>
       val hasErrors = page.errorSummary.nonEmpty
-      val prefixes  = (page.message("error.browser.title.prefix").toSeq ++ Seq("Error:", "Gwall:")).map(Text.normalise)
+      val prefixes  = Matching.errorTitlePrefixes(page)
       val prefixed  = prefixes.exists(p => page.title.startsWith(p))
       if (hasErrors && !prefixed)
         Seq(
@@ -54,7 +57,10 @@ object GovukStandards extends RuleSet {
         )
       else Nil
     },
-    Rule("error-aria-describedby", "an inline error is announced with its field") { page =>
+    Rule(
+      "error-aria-describedby",
+      "an inline error is announced with its field"
+    ) { page =>
       page.document
         .select(".govuk-error-message[id]")
         .asScala
@@ -79,14 +85,22 @@ object GovukStandards extends RuleSet {
                 Violation(
                   "error-aria-describedby",
                   s"""field "$fieldId" does not reference its error message""",
-                  expected = Some(s"aria-describedby containing `$errorId`, on the field or its fieldset"),
-                  actual = Some(if (describedBy.isEmpty) "(no aria-describedby)" else describedBy.mkString(" | "))
+                  expected = Some(
+                    s"aria-describedby containing `$errorId`, on the field or its fieldset"
+                  ),
+                  actual = Some(
+                    if (describedBy.isEmpty) "(no aria-describedby)"
+                    else describedBy.mkString(" | ")
+                  )
                 ).withHint("WCAG 3.3.1")
               )
           }
         }
     },
-    Rule("error-hidden-prefix", "an inline error carries a visually hidden prefix") { page =>
+    Rule(
+      "error-hidden-prefix",
+      "an inline error carries a visually hidden prefix"
+    ) { page =>
       page.document
         .select(".govuk-error-message")
         .asScala
@@ -97,22 +111,32 @@ object GovukStandards extends RuleSet {
             "error-hidden-prefix",
             "an inline error has no visually hidden prefix",
             actual = Some(Text.preview(e.text(), 90))
-          ).withHint("""govukErrorMessage renders <span class="govuk-visually-hidden">Error:</span>""")
+          ).withHint(
+            """govukErrorMessage renders <span class="govuk-visually-hidden">Error:</span>"""
+          )
         }
     },
-    Rule("error-summary-targets", "every error summary link lands on an element") { page =>
-      page.errorSummaryLinks.filter { case (target, _) => target.nonEmpty && page.byId(target).isEmpty }.map {
-        case (target, text) =>
-          Violation(
-            "error-summary-targets",
-            s"error summary links to #$target but nothing on the page has that id",
-            actual = Some(text)
-          ).withHint("WCAG 2.4.3 — the link must move focus to the field")
+    Rule(
+      "error-summary-targets",
+      "every error summary link lands on an element"
+    ) { page =>
+      page.errorSummaryDanglingLinks.map { case (target, text) =>
+        Violation(
+          "error-summary-targets",
+          s"error summary links to #$target but nothing on the page has that id",
+          actual = Some(text)
+        ).withHint("WCAG 2.4.3 — the link must move focus to the field")
       }
     },
-    Rule("error-summary-focusable", "the error summary can take focus", severity = Warning) { page =>
+    Rule(
+      "error-summary-focusable",
+      "the error summary can take focus",
+      severity = Warning
+    ) { page =>
       page.errorSummary.headOption.toSeq.flatMap { e =>
-        val focusable = e.hasAttr("tabindex") || e.attr("data-module").contains("govuk-error-summary")
+        val focusable = e.hasAttr("tabindex") || e
+          .attr("data-module")
+          .contains("govuk-error-summary")
         if (focusable) Nil
         else
           Seq(

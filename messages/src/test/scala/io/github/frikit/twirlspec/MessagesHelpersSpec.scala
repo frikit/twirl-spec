@@ -18,7 +18,6 @@ package io.github.frikit.twirlspec
 
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
-import io.github.frikit.twirlspec.page.Page
 import io.github.frikit.twirlspec.messages.MessagesIntegrity
 
 /** Edge cases of the message-file helpers. */
@@ -26,8 +25,13 @@ class MessagesHelpersSpec extends AnyWordSpec with Matchers with Bilingual {
 
   "message file helpers" should {
     "expose each language's map" in {
-      MessagesIntegrity.baseMessages(messagesApi)        must contain key "service.name"
-      MessagesIntegrity.messagesFor(messagesApi, "cy")   must contain key "service.name"
+      MessagesIntegrity.baseMessages(
+        messagesApi
+      )                                                  must contain key "service.name"
+      MessagesIntegrity.messagesFor(
+        messagesApi,
+        "cy"
+      )                                                  must contain key "service.name"
       MessagesIntegrity.messagesFor(messagesApi, "fr") mustBe empty
     }
 
@@ -37,7 +41,9 @@ class MessagesHelpersSpec extends AnyWordSpec with Matchers with Bilingual {
         messages = Map("default" -> english, "cy" -> Map("k1" -> "v1")),
         langs = new play.api.i18n.DefaultLangs(Seq(this.english, welsh))
       )
-      val v       = MessagesIntegrity.check(api).find(_.rule == "messages.translation-parity")
+      val v       = MessagesIntegrity
+        .check(api)
+        .find(_.rule == "messages.translation-parity")
       v.flatMap(_.actual).getOrElse("") must include("more)")
     }
   }

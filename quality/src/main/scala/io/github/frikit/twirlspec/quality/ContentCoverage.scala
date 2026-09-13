@@ -16,8 +16,6 @@
 
 package io.github.frikit.twirlspec.quality
 
-import io.github.frikit.twirlspec.standards._
-
 import io.github.frikit.twirlspec.page.{Anchors, CoverageRegistry, Page}
 import org.jsoup.nodes.Element
 
@@ -31,7 +29,8 @@ import scala.jdk.CollectionConverters._
   */
 object ContentCoverage {
 
-  /** Something a reader can see or act on, so something a spec ought to assert. */
+  /** Something a reader can see or act on, so something a spec ought to assert.
+    */
   final case class Anchor(kind: String, name: String, path: String)
 
   val defaultTrackedAttributes: Set[String] = Anchors.defaultTrackedAttributes
@@ -50,7 +49,9 @@ object ContentCoverage {
       .flatMap(e => Anchors.namesOf(e, trackedAttributes).map(n => Anchor(kindOf(n), n, n)))
       .distinctBy(_.name)
 
-  /** Everything inside the scope, but not the container itself — a spec does not assert the wrapper it was handed. */
+  /** Everything inside the scope, but not the container itself — a spec does
+    * not assert the wrapper it was handed.
+    */
   private def within(page: Page, scope: String): List[Element] = {
     val scoped = page.document.select(scope)
     if (scoped.isEmpty) page.document.getAllElements.asScala.toList
@@ -61,7 +62,9 @@ object ContentCoverage {
   }
 
   private def kindOf(name: String): String =
-    if (name.startsWith("#")) "id" else if (name.startsWith("link ")) "link" else "tracking"
+    if (name.startsWith("#")) "id"
+    else if (name.startsWith("link ")) "link"
+    else "tracking"
 
   /** The anchors on this page that no assertion has touched. */
   def unasserted(
@@ -80,8 +83,9 @@ object ContentCoverage {
       .filterNot(a => ignored.contains(a.name) || ignored.contains(a.name.stripPrefix("#")))
   }
 
-  /** Ignoring a block means ignoring what it holds: a spec that disclaims the layout's
-    * "report a technical issue" wrapper is not asking to be held to the link inside it.
+  /** Ignoring a block means ignoring what it holds: a spec that disclaims the
+    * layout's "report a technical issue" wrapper is not asking to be held to
+    * the link inside it.
     */
   private def insideIgnored(e: Element, ignoredIds: Set[String]): Boolean =
     ignoredIds.nonEmpty && (Iterator(e) ++ e.parents.asScala.iterator).exists(a => ignoredIds.contains(a.id()))
@@ -93,7 +97,8 @@ object ContentCoverage {
         s"  $kind (${as.size}): ${as.map(_.name).mkString(", ")}"
       }
     }
-    (s"${unasserted.size} things on this page were never asserted:" :: lines).mkString("\n")
+    (s"${unasserted.size} things on this page were never asserted:" :: lines)
+      .mkString("\n")
   }
 
 }

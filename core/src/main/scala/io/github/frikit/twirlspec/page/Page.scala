@@ -1,5 +1,5 @@
 /*
- * Copyright 2026 Victor Osipov
+ * Copyright 2026 frikiT
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,7 +40,9 @@ final class Page(
 
   // ------------------------------------------------------------- coverage
 
-  /** Which spec this page belongs to, so several renders of one view share a coverage record. */
+  /** Which spec this page belongs to, so several renders of one view share a
+    * coverage record.
+    */
   private var group: String = Integer.toHexString(source.hashCode)
 
   private[twirlspec] def coverageGroup: String = group
@@ -52,7 +54,9 @@ final class Page(
 
   private var recording: Boolean = true
 
-  /** Standards rules sweep the whole document, so what they touch says nothing about what the spec asserted. */
+  /** Standards rules sweep the whole document, so what they touch says nothing
+    * about what the spec asserted.
+    */
   private[twirlspec] def withRecordingPaused[A](f: => A): A = {
     val was = recording
     recording = false
@@ -61,7 +65,8 @@ final class Page(
   }
 
   private[twirlspec] def record(elements: List[Element]): Unit =
-    if (recording && elements.nonEmpty) CoverageRegistry.record(group, elements.flatMap(e => Anchors.namesOf(e)))
+    if (recording && elements.nonEmpty)
+      CoverageRegistry.record(group, elements.flatMap(e => Anchors.namesOf(e)))
 
   def css(selector: String): Selection = named(selector, selector)
 
@@ -83,13 +88,19 @@ final class Page(
     Selection(
       s"""role=$role name="$name"""",
       Roles.selectorFor(role),
-      Roles.matching(document, role).filter(e => Text.same(AccessibleName.of(document, e), name))
+      Roles
+        .matching(document, role)
+        .filter(e => Text.same(AccessibleName.of(document, e), name))
     )
 
-  /** Position in document order, for asserting one thing comes before another. */
-  def positionOf(e: org.jsoup.nodes.Element): Int = document.getAllElements.indexOf(e)
+  /** Position in document order, for asserting one thing comes before another.
+    */
+  def positionOf(e: org.jsoup.nodes.Element): Int =
+    document.getAllElements.indexOf(e)
 
-  /** Disabled as a browser sees it: on the control, or inherited from a fieldset. */
+  /** Disabled as a browser sees it: on the control, or inherited from a
+    * fieldset.
+    */
   def isDisabled(e: org.jsoup.nodes.Element): Boolean =
     e.hasAttr("disabled") || Option(e.closest("fieldset[disabled]")).isDefined
 
@@ -107,7 +118,9 @@ final class Page(
   /** Current value of every named control, as a browser would submit it. */
   def formValues: Map[String, String] = {
     val simple = document
-      .select("input:not([type=checkbox]):not([type=radio]):not([type=submit]):not([type=button]), textarea, select")
+      .select(
+        "input:not([type=checkbox]):not([type=radio]):not([type=submit]):not([type=button]), textarea, select"
+      )
       .asScala
       .toList
       .filter(_.attr("name").nonEmpty)
@@ -115,7 +128,11 @@ final class Page(
         val v =
           if (e.tagName() == "textarea") Text.normalise(e.text())
           else if (e.tagName() == "select")
-            e.select("option[selected]").asScala.headOption.map(_.attr("value")).getOrElse("")
+            e.select("option[selected]")
+              .asScala
+              .headOption
+              .map(_.attr("value"))
+              .getOrElse("")
           else e.attr("value")
         e.attr("name") -> v
       }
@@ -129,7 +146,8 @@ final class Page(
   }
 
   /** The name an assistive technology would announce for an element. */
-  def accessibleName(e: org.jsoup.nodes.Element): String = AccessibleName.of(document, e)
+  def accessibleName(e: org.jsoup.nodes.Element): String =
+    AccessibleName.of(document, e)
 
   def byId(elementId: String): Selection =
     named(s"#$elementId", Page.idSelector(elementId))
@@ -165,46 +183,72 @@ final class Page(
 
   def phaseBanner: Selection = named("phase banner", ".govuk-phase-banner")
 
-  /** A switcher offers another language, so a link declaring the one it is already in does not count —
-    * a "report a technical issue" link carrying `hreflang="en"` on an English page is not a toggle.
+  /** A switcher offers another language, so a link declaring the one it is
+    * already in does not count — a "report a technical issue" link carrying
+    * `hreflang="en"` on an English page is not a toggle.
     */
   def languageToggle: Selection = {
-    val selector = ".hmrc-language-select, nav[aria-label='Language switcher'], a[hreflang]"
+    val selector =
+      ".hmrc-language-select, nav[aria-label='Language switcher'], a[hreflang]"
     val elements = document.select(selector).asScala.toList.filter { e =>
-      !e.hasAttr("hreflang") || !e.attr("hreflang").toLowerCase.startsWith(lang.code.toLowerCase)
+      !e.hasAttr("hreflang") || !e
+        .attr("hreflang")
+        .toLowerCase
+        .startsWith(lang.code.toLowerCase)
     }
     record(elements)
     Selection("language toggle", selector, elements)
   }
 
-  /** `govukBackLink` renders `.govuk-back-link`; services that set their own id use `back` or `back-link`. */
-  def backLink: Selection = named("back link", ".govuk-back-link, #back-link, #back")
+  /** `govukBackLink` renders `.govuk-back-link`; services that set their own id
+    * use `back` or `back-link`.
+    */
+  def backLink: Selection =
+    named("back link", ".govuk-back-link, #back-link, #back")
 
   def breadcrumbs: Selection = named("breadcrumbs", ".govuk-breadcrumbs")
 
   def main: Selection = named("main content", "main, #main-content")
 
-  def timeoutDialog: Selection = named("timeout dialog", "[data-module=hmrc-timeout-dialog]")
+  def timeoutDialog: Selection =
+    named("timeout dialog", "[data-module=hmrc-timeout-dialog]")
 
-  def signOutLink: Selection = named("sign out link", "#sign-out, .hmrc-sign-out-nav__link")
+  def signOutLink: Selection =
+    named("sign out link", "#sign-out, .hmrc-sign-out-nav__link")
 
   // ------------------------------------------------------------------- errors
 
   def errorSummary: Selection = named("error summary", ".govuk-error-summary")
 
-  def errorSummaryTitle: Selection = named("error summary title", ".govuk-error-summary__title")
+  def errorSummaryTitle: Selection =
+    named("error summary title", ".govuk-error-summary__title")
 
-  /** (href target without the leading '#', link text) for each error summary entry. */
+  /** (href target without the leading '#', link text) for each error summary
+    * entry.
+    */
   def errorSummaryLinks: List[(String, String)] =
     document
-      .select(".govuk-error-summary a[href], .govuk-error-summary__list a[href]")
+      .select(
+        ".govuk-error-summary a[href], .govuk-error-summary__list a[href]"
+      )
       .asScala
       .toList
       .map(e => (e.attr("href").stripPrefix("#"), Text.normalise(e.text())))
 
+  /** The error summary entries whose link lands on nothing: a link to
+    * `#firstName` when the input is `id="value"` leaves a keyboard user
+    * stranded.
+    */
+  def errorSummaryDanglingLinks: List[(String, String)] =
+    errorSummaryLinks.filter { case (target, _) =>
+      target.nonEmpty && byId(target).isEmpty
+    }
+
   def errorMessages: Selection = named("error message", ".govuk-error-message")
 
-  /** Inline error text keyed by the field it belongs to, with the visually hidden "Error:" prefix stripped. */
+  /** Inline error text keyed by the field it belongs to, with the visually
+    * hidden "Error:" prefix stripped.
+    */
   def fieldErrors: Map[String, String] =
     document
       .select(".govuk-error-message")
@@ -212,7 +256,12 @@ final class Page(
       .toList
       .map { e =>
         val field  = e.id().stripSuffix("-error")
-        val hidden = e.select(".govuk-visually-hidden").asScala.toList.map(_.text()).mkString
+        val hidden = e
+          .select(".govuk-visually-hidden")
+          .asScala
+          .toList
+          .map(_.text())
+          .mkString
         field -> Text.normalise(e.text().replace(hidden, ""))
       }
       .toMap
@@ -232,7 +281,9 @@ final class Page(
   def formControl(nameOrId: String): Selection =
     named(
       s"control($nameOrId)",
-      Seq("input", "select", "textarea").map(Page.control(_, nameOrId)).mkString(", ")
+      Seq("input", "select", "textarea")
+        .map(Page.control(_, nameOrId))
+        .mkString(", ")
     )
 
   def textarea(nameOrId: String): Selection =
@@ -245,7 +296,10 @@ final class Page(
     named(s"radios($fieldName)", s"""input[type=radio][name="$fieldName"]""")
 
   def checkboxes(fieldName: String): Selection =
-    named(s"checkboxes($fieldName)", s"""input[type=checkbox][name="$fieldName"]""")
+    named(
+      s"checkboxes($fieldName)",
+      s"""input[type=checkbox][name="$fieldName"]"""
+    )
 
   def dateInput(fieldName: String): Selection =
     named(
@@ -257,12 +311,17 @@ final class Page(
     )
 
   def fileUpload(nameOrId: String): Selection =
-    named(s"file upload($nameOrId)", s"""input[type=file][name="$nameOrId"], input[type=file][id="$nameOrId"]""")
+    named(
+      s"file upload($nameOrId)",
+      s"""input[type=file][name="$nameOrId"], input[type=file][id="$nameOrId"]"""
+    )
 
   /** Every control on the page that a user can type into or choose from. */
   def formControls: List[Element] =
     document
-      .select("input:not([type=hidden]):not([type=submit]):not([type=button]), select, textarea")
+      .select(
+        "input:not([type=hidden]):not([type=submit]):not([type=button]), select, textarea"
+      )
       .asScala
       .toList
 
@@ -274,11 +333,15 @@ final class Page(
   def fieldsets: Selection = named("fieldset", "fieldset")
 
   def hint(fieldId: String): Selection =
-    named(s"hint for $fieldId", s"""[id="$fieldId-hint"], [id="$fieldId"] .govuk-hint""")
+    named(
+      s"hint for $fieldId",
+      s"""[id="$fieldId-hint"], [id="$fieldId"] .govuk-hint"""
+    )
 
   def hints: Selection = named("hint", ".govuk-hint")
 
-  def buttons: Selection = named("button", ".govuk-button, button, input[type=submit]")
+  def buttons: Selection =
+    named("button", ".govuk-button, button, input[type=submit]")
 
   /** The control that submits the form. */
   def submitButton: Selection = {
@@ -288,7 +351,9 @@ final class Page(
       "form .govuk-button:not(a)",
       ".govuk-button:not(a)"
     )
-    candidates
+    // One candidate at a time: `named` records what it matches as asserted, and trying every
+    // selector would record every button on the page rather than the one this resolves to.
+    candidates.iterator
       .map(selector => named("submit button", selector))
       .find(_.nonEmpty)
       .getOrElse(Selection.empty("submit button", candidates.mkString(", ")))
@@ -307,35 +372,50 @@ final class Page(
       .map { row =>
         val k = Text.normalise(row.select(".govuk-summary-list__key").text())
         val v = Text.normalise(row.select(".govuk-summary-list__value").text())
-        val a = row.select(".govuk-summary-list__actions a").asScala.toList.map(e => Text.normalise(e.text()))
+        val a = row
+          .select(".govuk-summary-list__actions a")
+          .asScala
+          .toList
+          .map(e => Text.normalise(e.text()))
         (k, v, a)
       }
 
-  def warningText: Selection  = named("warning text", ".govuk-warning-text__text")
-  def insetText: Selection    = named("inset text", ".govuk-inset-text")
-  def panel: Selection        = named("panel", ".govuk-panel")
-  def details: Selection      = named("details", ".govuk-details, details")
-  def tabs: Selection         = named("tabs", ".govuk-tabs")
-  def accordion: Selection    = named("accordion", ".govuk-accordion")
-  def tables: Selection       = named("table", "table")
-  def pagination: Selection   = named("pagination", ".govuk-pagination, .hmrc-pagination")
+  def warningText: Selection =
+    named("warning text", ".govuk-warning-text__text")
+
+  def insetText: Selection = named("inset text", ".govuk-inset-text")
+  def panel: Selection     = named("panel", ".govuk-panel")
+  def details: Selection   = named("details", ".govuk-details, details")
+  def tabs: Selection      = named("tabs", ".govuk-tabs")
+  def accordion: Selection = named("accordion", ".govuk-accordion")
+  def tables: Selection    = named("table", "table")
+
+  def pagination: Selection =
+    named("pagination", ".govuk-pagination, .hmrc-pagination")
+
   def tags: Selection         = named("tag", ".govuk-tag")
   def bulletList: Selection   = named("bullet list", ".govuk-list--bullet")
   def numberedList: Selection = named("numbered list", ".govuk-list--number")
   def addToAList: Selection   = named("add to a list", ".hmrc-add-to-a-list")
-  def paragraphs: Selection   = named("paragraph", "p.govuk-body, p.govuk-body-l, p.govuk-body-s, main p")
-  def links: Selection        = named("link", "a[href]")
-  def images: Selection       = named("image", "img")
 
-  def notificationBanner: Selection = named("notification banner", ".govuk-notification-banner")
+  def paragraphs: Selection =
+    named("paragraph", "p.govuk-body, p.govuk-body-l, p.govuk-body-s, main p")
+
+  def links: Selection  = named("link", "a[href]")
+  def images: Selection = named("image", "img")
+
+  def notificationBanner: Selection =
+    named("notification banner", ".govuk-notification-banner")
 
   // ----------------------------------------------------------------- messages
 
   /** Resolve a message key in this page's language. */
   def message(key: String, args: Seq[Any] = Nil): Option[String] =
-    if (messages.isDefinedAt(key)) Some(Text.normalise(messages(key, args: _*))) else None
+    if (messages.isDefinedAt(key)) Some(Text.normalise(messages(key, args: _*)))
+    else None
 
-  /** Resolve a key, falling back to the key itself (Play's default behaviour). */
+  /** Resolve a key, falling back to the key itself (Play's default behaviour).
+    */
   def messageOrKey(key: String, args: Seq[Any] = Nil): String =
     message(key, args).getOrElse(key)
 
@@ -343,23 +423,30 @@ final class Page(
 
   def text: String = Text.normalise(document.text())
 
-  def contains(needle: String): Boolean = Text.containsText(document.text(), needle)
+  def contains(needle: String): Boolean =
+    Text.containsText(document.text(), needle)
 
   /** The page's structural skeleton, for review and snapshotting. */
-  /** Building this touches most of the page, and a failure message is not an assertion, so it must not count as coverage. */
+  /** Building this touches most of the page, and a failure message is not an
+    * assertion, so it must not count as coverage.
+    */
   def outline: String = withRecordingPaused(Outline.of(this))
 
   def withLang(newLang: Lang, newMessages: Messages): Page =
     new Page(document, newLang, newMessages, source, parseErrors)
 
-  override def toString: String = s"Page(lang=${lang.code}, title=${Text.preview(title, 60)})"
+  override def toString: String =
+    s"Page(lang=${lang.code}, title=${Text.preview(title, 60)})"
+
 }
 
 object Page {
 
-  /** `[id="x"]` rather than `#x`: GOV.UK date and address fields carry ids like `value.day`, which a CSS id selector reads as a class.
+  /** `[id="x"]` rather than `#x`: GOV.UK date and address fields carry ids like
+    * `value.day`, which a CSS id selector reads as a class.
     */
-  private[twirlspec] def idSelector(elementId: String): String = s"""[id="$elementId"]"""
+  private[twirlspec] def idSelector(elementId: String): String =
+    s"""[id="$elementId"]"""
 
   private[twirlspec] def control(tag: String, nameOrId: String): String =
     s"""$tag[name="$nameOrId"], $tag[id="$nameOrId"]"""

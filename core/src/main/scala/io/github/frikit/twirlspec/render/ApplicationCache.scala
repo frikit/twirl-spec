@@ -17,15 +17,17 @@
 package io.github.frikit.twirlspec.render
 
 import play.api.Application
-import play.api.inject.guice.GuiceApplicationBuilder
 
 import java.util.concurrent.ConcurrentHashMap
 import scala.jdk.CollectionConverters._
 
 /** A cache of Play applications keyed by configuration. */
-final private[twirlspec] class ApplicationCache(build: Map[String, Any] => Application) {
+final private[twirlspec] class ApplicationCache(
+  build: Map[String, Any] => Application
+) {
 
-  private val applications = new ConcurrentHashMap[Map[String, Any], Application]()
+  private val applications =
+    new ConcurrentHashMap[Map[String, Any], Application]()
 
   /** The application for this configuration, building it on first use. */
   def apply(configuration: Map[String, Any]): Application =
@@ -38,8 +40,11 @@ final private[twirlspec] class ApplicationCache(build: Map[String, Any] => Appli
 
   def instanceCount: Int = applications.size()
 
-  /** Stop every cached application. No try/catch: Play already absorbs a double stop and a failing stop hook. */
-  def stopAll(): Unit = applications.values().asScala.foreach(play.api.Play.stop)
+  /** Stop every cached application. No try/catch: Play already absorbs a double
+    * stop and a failing stop hook.
+    */
+  def stopAll(): Unit =
+    applications.values().asScala.foreach(play.api.Play.stop)
 
   /** Stop everything and forget it. */
   def reset(): Unit = {

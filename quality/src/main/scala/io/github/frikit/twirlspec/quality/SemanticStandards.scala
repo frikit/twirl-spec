@@ -1,5 +1,5 @@
 /*
- * Copyright 2026 Victor Osipov
+ * Copyright 2026 frikiT
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,12 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package io.github.frikit.twirlspec.quality
 
 import io.github.frikit.twirlspec.standards._
 
 import io.github.frikit.twirlspec.expect.Violation
-import io.github.frikit.twirlspec.page.{Page, Text}
+import io.github.frikit.twirlspec.page.Text
 import io.github.frikit.twirlspec.standards.Rule.Warning
 
 import scala.jdk.CollectionConverters._
@@ -26,11 +27,10 @@ import scala.jdk.CollectionConverters._
 /** Markup that works but says the wrong thing about its own structure. */
 object SemanticStandards extends RuleSet {
 
-  private val Interactive = "a[href], button, input:not([type=hidden]), select, textarea"
+  private val Interactive =
+    "a[href], button, input:not([type=hidden]), select, textarea"
 
-  def all: Seq[Rule] = rules
-
-  private def rules: Seq[Rule] = Seq(
+  lazy val all: Seq[Rule] = Seq(
     Rule("no-nested-interactive", "no control contains another control") { page =>
       page.document
         .select(Interactive)
@@ -44,7 +44,9 @@ object SemanticStandards extends RuleSet {
             "no-nested-interactive",
             s"a <${e.tagName()}> contains another control",
             actual = Some(Text.preview(e.outerHtml(), 100))
-          ).withHint("keyboard and pointer disagree about what was activated, and screen readers announce both")
+          ).withHint(
+            "keyboard and pointer disagree about what was activated, and screen readers announce both"
+          )
         )
     },
     Rule("lists-contain-list-items", "a list contains only list items") { page =>
@@ -54,28 +56,51 @@ object SemanticStandards extends RuleSet {
         .toList
         .filterNot(e => Set("script", "template")(e.tagName()))
         .map(e =>
-          Violation("lists-contain-list-items", s"a <${e.parent().tagName()}> has a <${e.tagName()}> child")
-            .withHint("only <li> may be a direct child, or the list loses its length and position announcements")
+          Violation(
+            "lists-contain-list-items",
+            s"a <${e.parent().tagName()}> has a <${e.tagName()}> child"
+          )
+            .withHint(
+              "only <li> may be a direct child, or the list loses its length and position announcements"
+            )
         )
     },
-    Rule("no-presentational-markup", "meaning is carried by markup, not by looks", severity = Warning) { page =>
+    Rule(
+      "no-presentational-markup",
+      "meaning is carried by markup, not by looks",
+      severity = Warning
+    ) { page =>
       page.document
         .select("b, i, u, big, center, font, tt")
         .asScala
         .toList
         .map(e =>
-          Violation("no-presentational-markup", s"a <${e.tagName()}> carries emphasis by appearance alone").warn
-            .withHint("<strong> and <em> say what is meant; <b> and <i> only say how it looks")
+          Violation(
+            "no-presentational-markup",
+            s"a <${e.tagName()}> carries emphasis by appearance alone"
+          ).warn
+            .withHint(
+              "<strong> and <em> say what is meant; <b> and <i> only say how it looks"
+            )
         )
     },
-    Rule("no-br-for-layout", "spacing comes from styling, not from line breaks", severity = Warning) { page =>
+    Rule(
+      "no-br-for-layout",
+      "spacing comes from styling, not from line breaks",
+      severity = Warning
+    ) { page =>
       page.document
         .select("br + br")
         .asScala
         .toList
         .map(_ =>
-          Violation("no-br-for-layout", "consecutive <br> elements are being used for spacing").warn
-            .withHint("a screen reader announces nothing for them; use separate elements and styling")
+          Violation(
+            "no-br-for-layout",
+            "consecutive <br> elements are being used for spacing"
+          ).warn
+            .withHint(
+              "a screen reader announces nothing for them; use separate elements and styling"
+            )
         )
     }
   )

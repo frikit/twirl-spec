@@ -19,12 +19,12 @@ package io.github.frikit.twirlspec
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import play.api.i18n.{DefaultLangs, DefaultMessagesApi, Lang}
-import io.github.frikit.twirlspec.messages.MessagesIntegrity
+import io.github.frikit.twirlspec.messages.{MessagesIntegrity, MessagesMatchers}
 
 import java.io.PrintWriter
 import java.nio.file.Files
 
-class MessagesEdgeCasesSpec extends AnyWordSpec with Matchers with TwirlSpec {
+class MessagesEdgeCasesSpec extends AnyWordSpec with Matchers with TwirlSpec with MessagesMatchers {
 
   "baseMessages" should {
 
@@ -58,12 +58,43 @@ class MessagesEdgeCasesSpec extends AnyWordSpec with Matchers with TwirlSpec {
     "order its findings, so a diff of two runs is stable" in {
       val file = Files.createTempFile("messages", "").toFile
       val out  = new PrintWriter(file, "UTF-8")
-      try out.write("zebra = one\napple = two\nzebra = three\napple = four\nmiddle = five\n")
+      try
+        out.write(
+          "zebra = one\napple = two\nzebra = three\napple = four\nmiddle = five\n"
+        )
       finally out.close()
 
       val found = MessagesIntegrity.duplicateKeys(Seq(file))
       found.map(_.message.split("`")(1)) mustBe Seq("apple", "zebra")
       file.delete()
+    }
+  }
+
+  "the matcher" should {
+
+    "carry warnings in its message even when nothing fails" in {
+      val api    = new DefaultMessagesApi(
+        messages = Map("en" -> Map("k" -> "a 'quoted' word")),
+        langs = new DefaultLangs(Seq(Lang("en")))
+      )
+      val result = beConsistentAcrossLanguages(
+        MessagesIntegrity.Config(requireTranslations = false)
+      )(api)
+      result.matches      mustBe true
+      result.failureMessage must include("warnings:")
+    }
+
+    "render every error it found" in {
+      val api    = new DefaultMessagesApi(
+        messages = Map("en" -> Map("k" -> "", "j" -> "  ")),
+        langs = new DefaultLangs(Seq(Lang("en")))
+      )
+      val result = beConsistentAcrossLanguages(
+        MessagesIntegrity.Config(requireTranslations = false)
+      )(api)
+      result.matches      mustBe false
+      result.failureMessage must include("failed 2 check(s)")
+      result.failureMessage must include("`k` has an empty value")
     }
   }
 

@@ -21,7 +21,6 @@ import org.scalatest.wordspec.AnyWordSpec
 import io.github.frikit.twirlspec.aria.AriaStandards
 import io.github.frikit.twirlspec.html.HtmlStandards
 import io.github.frikit.twirlspec.page.Page
-import io.github.frikit.twirlspec.standards._
 import io.github.frikit.twirlspec.wcag.{SecurityStandards, TwirlStandards, WcagStandards}
 import io.github.frikit.twirlspec.govuk.GovukStandards
 import io.github.frikit.twirlspec.quality.{MetadataStandards, PerformanceStandards, SemanticStandards}

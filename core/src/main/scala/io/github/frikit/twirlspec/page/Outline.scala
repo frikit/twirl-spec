@@ -42,13 +42,16 @@ object Outline {
 
   private def framing(page: Page): Seq[String] = {
     val rows = Seq(
-      Option(page.title).filter(_.nonEmpty).map(t => field("title", Text.preview(t))),
+      Option(page.title)
+        .filter(_.nonEmpty)
+        .map(t => field("title", Text.preview(t))),
       page.htmlLang.map(l => field("lang", l)),
       page.serviceName.headOption.map(_ => field("service", page.serviceName.text)),
       page.h1.headOption.map(_ => field("h1", page.h1.text)),
       page.caption.headOption.map(_ => field("caption", page.caption.text)),
       page.backLink.attr("href").map(h => field("back link", h)),
-      if (page.languageToggle.nonEmpty) Some(field("lang toggle", "present")) else None
+      if (page.languageToggle.nonEmpty) Some(field("lang toggle", "present"))
+      else None
     ).flatten
     if (rows.isEmpty) Nil else "page" +: rows
   }
@@ -67,8 +70,12 @@ object Outline {
     if (formElements.isEmpty) Nil
     else
       formElements.flatMap { form =>
-        val method = Option(form.attr("method")).filter(_.nonEmpty).map(_.toUpperCase).getOrElse("GET")
-        val action = Option(form.attr("action")).filter(_.nonEmpty).getOrElse("(none)")
+        val method = Option(form.attr("method"))
+          .filter(_.nonEmpty)
+          .map(_.toUpperCase)
+          .getOrElse("GET")
+        val action =
+          Option(form.attr("action")).filter(_.nonEmpty).getOrElse("(none)")
         val header = s"form $method $action"
 
         val controls = form
@@ -84,20 +91,31 @@ object Outline {
   private def describeControl(page: Page, e: Element): String = {
     val tag     = e.tagName()
     val kind    = if (tag == "input") e.attr("type") else tag
-    val name    = Option(e.attr("name")).filter(_.nonEmpty).orElse(Option(e.id()).filter(_.nonEmpty)).getOrElse("?")
+    val name    = Option(e.attr("name"))
+      .filter(_.nonEmpty)
+      .orElse(Option(e.id()).filter(_.nonEmpty))
+      .getOrElse("?")
     val id      = e.id()
-    val label   = if (id.nonEmpty) Text.preview(page.labelFor(id).text, 45) else ""
+    val label   =
+      if (id.nonEmpty) Text.preview(page.labelFor(id).text, 45) else ""
     val hint    = if (id.nonEmpty) Text.preview(page.hint(id).text, 40) else ""
     val checked = if (e.hasAttr("checked")) " checked" else ""
-    val value   = Option(e.attr("value")).filter(_.nonEmpty).map(v => s" value=${Text.preview(v, 25)}").getOrElse("")
+    val value   = Option(e.attr("value"))
+      .filter(_.nonEmpty)
+      .map(v => s" value=${Text.preview(v, 25)}")
+      .getOrElse("")
 
-    val text = if (kind == "submit" || tag == "button") s""" "${Text.preview(e.text(), 40)}"""" else ""
+    val text =
+      if (kind == "submit" || tag == "button")
+        s""" "${Text.preview(e.text(), 40)}""""
+      else ""
     val bits = Seq(
       if (label.nonEmpty) s"""label "$label"""" else "",
       if (hint.nonEmpty) s"""hint "$hint"""" else ""
     ).filter(_.nonEmpty).mkString("  ")
 
-    s"  ${kind.padTo(9, ' ')}${name.padTo(22, ' ')}$bits$text$value$checked".replaceAll("\\s+$", "")
+    s"  ${kind.padTo(9, ' ')}${name.padTo(22, ' ')}$bits$text$value$checked"
+      .replaceAll("\\s+$", "")
   }
 
   private def components(page: Page): Seq[String] = {
@@ -117,7 +135,7 @@ object Outline {
     ).filter(_._2 > 0)
 
     if (present.isEmpty) Nil
-    else "components" +: present.map { case (n, c) => field(n, if (c == 1) "1" else s"$c") }
+    else "components" +: present.map { case (n, c) => field(n, c.toString) }
   }
 
   private def errors(page: Page): Seq[String] =
@@ -126,7 +144,9 @@ object Outline {
       val summary = page.errorSummaryLinks.map { case (target, txt) =>
         s"  summary -> #$target  ${Text.preview(txt, 70)}"
       }
-      val inline  = page.fieldErrors.toList.sortBy(_._1).map { case (f, m) => s"  inline  $f: ${Text.preview(m, 70)}" }
+      val inline  = page.fieldErrors.toList.sortBy(_._1).map { case (f, m) =>
+        s"  inline  $f: ${Text.preview(m, 70)}"
+      }
       "errors" +: (summary ++ inline)
     }
 

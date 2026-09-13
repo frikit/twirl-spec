@@ -42,7 +42,9 @@ class WcagEdgeCasesSpec extends AnyWordSpec with Matchers with TwirlSpec {
       val aaa = WcagStandards.atLevel(Level.AAA).map(_.id)
       aaa                                       must contain("link-text-is-meaningful")
       aaa                                       must not contain "labelled-controls" // Level A
-      WcagStandards.atLevel(Level.AA).map(_.id) must contain("no-empty-headings")
+      WcagStandards.atLevel(Level.AA).map(_.id) must contain(
+        "no-empty-headings"
+      )
     }
   }
 
@@ -85,7 +87,16 @@ class WcagEdgeCasesSpec extends AnyWordSpec with Matchers with TwirlSpec {
     "quote the text around a leaked value that starts the page" in {
       // snippetAround has to cope with a marker at index 0, where there is no
       // preceding context to show.
-      fired("<p>Some(Ada) is the first thing on the page</p>") must contain("no-scala-leakage")
+      fired("<p>Some(Ada) is the first thing on the page</p>") must contain(
+        "no-scala-leakage"
+      )
+    }
+
+    "name a personal field by its id when it has no name" in {
+      fired(
+        """<label for="email">Email</label><input id="email" type="text">"""
+      ) must
+        contain("input-purpose-autocomplete")
     }
   }
 

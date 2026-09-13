@@ -1,5 +1,5 @@
 /*
- * Copyright 2026 Victor Osipov
+ * Copyright 2026 frikiT
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,7 +28,8 @@ import io.github.frikit.twirlspec.render.SharedApplication
 import scala.reflect.ClassTag
 import scala.util.DynamicVariable
 
-/** The batteries-included entry point: an application, the implicits a Twirl view needs, and language switching, on top of the [[TwirlSpecDsl]] surface.
+/** The batteries-included entry point: an application, the implicits a Twirl
+  * view needs, and language switching, on top of the [[TwirlSpecDsl]] surface.
   */
 trait TwirlSpec extends TwirlSpecDsl { self: Suite with Alerting =>
 
@@ -48,7 +49,8 @@ trait TwirlSpec extends TwirlSpecDsl { self: Suite with Alerting =>
   /** Every language the application is configured for, English first. */
   def languages: Seq[Lang] = {
     // Play's reference.conf always defines this, so there is no fallback to write.
-    val configured = app.configuration.get[Seq[String]]("play.i18n.langs").map(Lang(_))
+    val configured =
+      app.configuration.get[Seq[String]]("play.i18n.langs").map(Lang(_))
     configured.sortBy(l => if (l.code == "en") 0 else 1)
   }
 
@@ -56,25 +58,34 @@ trait TwirlSpec extends TwirlSpecDsl { self: Suite with Alerting =>
 
   def currentLang: Lang = currentLanguage.value
 
-  implicit def messages: Messages = messagesApiInstance.preferred(Seq(currentLang))
+  implicit def messages: Messages =
+    messagesApiInstance.preferred(Seq(currentLang))
 
   implicit def request: Request[AnyContentAsEmpty.type] =
-    FakeRequest("GET", "/").withCookies(Cookie(messagesApiInstance.langCookieName, currentLang.code))
+    FakeRequest("GET", "/").withCookies(
+      Cookie(messagesApiInstance.langCookieName, currentLang.code)
+    )
 
   def inEnglish[A](block: => A): A = inLanguage(english)(block)
 
-  /** Render this block with `messages` and a request for the given language in scope. */
-  def inLanguage[A](lang: Lang)(block: => A): A = currentLanguage.withValue(lang)(block)
+  /** Render this block with `messages` and a request for the given language in
+    * scope.
+    */
+  def inLanguage[A](lang: Lang)(block: => A): A =
+    currentLanguage.withValue(lang)(block)
 
   /** Run the same block once per configured language. */
-  def inEachLanguage(block: Lang => Unit): Unit = languages.foreach(lang => inLanguage(lang)(block(lang)))
+  def inEachLanguage(block: Lang => Unit): Unit =
+    languages.foreach(lang => inLanguage(lang)(block(lang)))
 
-  /** Render a view in the current language. */
-  def renderPage(html: => Html): Page = Page(html, currentLang, messages)
+  /** Render a view in the current language: `render`, with the language made
+    * explicit.
+    */
+  def renderPage(html: => Html): Page = render(html, currentLang, messages)
 
   /** Render the same view in every configured language. */
   def renderInEachLanguage(html: => Html): Seq[Page] =
-    languages.map(lang => inLanguage(lang)(Page(html, lang, messages)))
+    languages.map(lang => inLanguage(lang)(render(html, lang, messages)))
 
   override protected def alertHook(message: String): Unit = alert(message)
 }
