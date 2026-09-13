@@ -11,6 +11,21 @@ does not.
 
 ## [Unreleased]
 
+## [2.0.1] - 2026-09-13
+
+### Added
+
+- Scaladoc on every public member, so the published javadoc jars and an
+  IDE's quick documentation say what each accessor and builder does.
+- A `docs` folder: getting started, writing view specs, rules and standards,
+  languages and message files, coverage and entry points, failure messages,
+  adopting the library in an existing service, and troubleshooting.
+
+### Fixed
+
+- The `display` matcher was described as holding a page to "the GOV.UK
+  standards"; it holds it to whatever `standardsRules` resolves to.
+
 ## [2.0.0] - 2026-09-13
 
 A major version because the Scala 2.13 artifacts are gone; the library is

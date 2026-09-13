@@ -31,6 +31,21 @@ them on, or maintain them.
 [![Scala 3.3 LTS](https://img.shields.io/badge/scala-3.3%20LTS-red)](build.sbt)
 [![Apache 2.0](https://img.shields.io/badge/licence-Apache%202.0-blue)](LICENSE)
 
+## Documentation
+
+This README is the reference: every expectation, matcher and rule. The
+[`docs`](docs/README.md) folder is the guide, from a first spec to adopting the
+library across a service:
+
+- [Getting started](docs/getting-started.md) — install, a first spec, reading a failure
+- [Writing view specs](docs/writing-view-specs.md) — the DSL, control by control
+- [Rules and standards](docs/rules-and-standards.md) — what the check traits enforce, and how to tune them
+- [Languages and message files](docs/languages-and-messages.md) — Welsh, or any language, and the files behind it
+- [Coverage and entry points](docs/coverage-and-entry-points.md) — what the spec never looked at
+- [Failure messages](docs/failure-messages.md) — how to read what a red test says
+- [Adopting in an existing service](docs/adopting.md) — replacing a home-grown spec base, and moving from 1.x
+- [Troubleshooting](docs/troubleshooting.md) — the questions that come up
+
 ## Why
 
 Testing a rendered template usually means one of two things: asserting on raw
@@ -327,7 +342,7 @@ listed again here.
 | `standardsRules` | Which rules run alongside every `display(...)`: none in the core, and each rule module adds its own. |
 | `failOnWarnings` | Whether warnings fail the test. |
 | `reportWarnings` | Whether passing tests still surface their warnings in the test output. |
-| `display` | The page shows all of this, and holds to the GOV.UK standards. |
+| `display` | The page shows all of this, and holds to every rule `standardsRules` resolves to. |
 | `displayOnly` | As `display`, but without the standards — for the rare page that has to break a rule, or while a legacy view is being brought up to standard. |
 | `meetStandards` | Whatever `standardsRules` resolves to, for a spec that has its own assertions already. |
 | `meetStandardsExcept` | The standards, minus the named rules. |
