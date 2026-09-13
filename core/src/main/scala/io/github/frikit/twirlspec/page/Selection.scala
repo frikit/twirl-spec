@@ -22,14 +22,14 @@ import scala.jdk.CollectionConverters._
 
 /** A named set of elements pulled out of a page. */
 final class Selection private (
-  val name: String,
-  val selector: String,
-  val elements: List[Element]
+    val name: String,
+    val selector: String,
+    val elements: List[Element]
 ) {
 
-  def isEmpty: Boolean  = elements.isEmpty
+  def isEmpty: Boolean = elements.isEmpty
   def nonEmpty: Boolean = elements.nonEmpty
-  def size: Int         = elements.size
+  def size: Int = elements.size
 
   def headOption: Option[Element] = elements.headOption
 
@@ -54,13 +54,18 @@ final class Selection private (
 
   def ids: List[String] = attrs("id")
 
-  def classes: Set[String] = headOption.map(_.classNames().asScala.toSet).getOrElse(Set.empty)
+  def classes: Set[String] =
+    headOption.map(_.classNames().asScala.toSet).getOrElse(Set.empty)
 
   def hasClass(c: String): Boolean = elements.exists(_.hasClass(c))
 
   /** Narrow this selection with a further CSS selector. */
   def select(css: String): Selection =
-    Selection(s"$name $css", s"$selector $css", elements.flatMap(_.select(css).asScala.toList))
+    Selection(
+      s"$name $css",
+      s"$selector $css",
+      elements.flatMap(_.select(css).asScala.toList)
+    )
 
   def filter(p: Element => Boolean): Selection =
     new Selection(name, selector, elements.filter(p))
@@ -76,7 +81,11 @@ final class Selection private (
 
 object Selection {
 
-  def apply(name: String, selector: String, elements: List[Element]): Selection =
+  def apply(
+      name: String,
+      selector: String,
+      elements: List[Element]
+  ): Selection =
     new Selection(name, selector, elements)
 
   def empty(name: String, selector: String): Selection =

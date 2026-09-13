@@ -25,7 +25,12 @@ import testviews.html.nameView
 /** What a developer sees when a view test goes red. */
 class FailureReportingSpec extends AnyWordSpec with Matchers with Bilingual {
 
-  private val form = Form(mapping("firstName" -> text, "lastName" -> text)(Tuple2.apply)(t => Some((t._1, t._2))))
+  private val form = Form(
+    mapping("firstName" -> text, "lastName" -> text)(Tuple2.apply)(t =>
+      Some((t._1, t._2))
+    )
+  )
+
   private val page = render(inject[nameView].apply(form))
 
   "a failing check" should {
@@ -40,7 +45,7 @@ class FailureReportingSpec extends AnyWordSpec with Matchers with Bilingual {
         )
       )
       report.errors.size mustBe 3
-      report.message       must include("failed 3 checks")
+      report.message must include("failed 3 checks")
     }
 
     "name the rule, the expectation and what was actually rendered" in {
@@ -59,21 +64,28 @@ class FailureReportingSpec extends AnyWordSpec with Matchers with Bilingual {
     }
 
     "say when a message key does not exist rather than comparing key to key" in {
-      val message = checkPage(page, Seq(title("whatIsYourName.notAKey"))).message
-      message must include("message key `whatIsYourName.notAKey` is not defined")
+      val message =
+        checkPage(page, Seq(title("whatIsYourName.notAKey"))).message
+      message must include(
+        "message key `whatIsYourName.notAKey` is not defined"
+      )
       message must include("add `whatIsYourName.notAKey` to conf/messages")
     }
 
     "name the missing key in the right language" in
       inLanguage(welsh) {
         val welshPage = render(inject[nameView].apply(form))
-        val message   = checkPage(welshPage, Seq(title("untranslated.missing"))).message
+        val message =
+          checkPage(welshPage, Seq(title("untranslated.missing"))).message
         message must include("not defined for lang `cy`")
         message must include("conf/messages.cy")
       }
 
     "point at the field when an input has no label" in {
-      val message = checkPage(page, Seq(textInput("firstName").labelled("checkAnswers.dob"))).message
+      val message = checkPage(
+        page,
+        Seq(textInput("firstName").labelled("checkAnswers.dob"))
+      ).message
       message must include("input(firstName) label")
       message must include("Date of birth")
     }
@@ -82,8 +94,12 @@ class FailureReportingSpec extends AnyWordSpec with Matchers with Bilingual {
       val brokenHtml =
         """<!DOCTYPE html><html lang="en"><head><title>t</title></head>
           |<body><main><h1>A</h1><input id="x" name="x" type="text"></main></body></html>""".stripMargin
-      val broken     = io.github.frikit.twirlspec.page.Page.fromString(brokenHtml, english, messages)
-      val message    = checkPage(broken, Seq(textInput("x").labelled("whatIsYourName.firstName"))).message
+      val broken = io.github.frikit.twirlspec.page.Page
+        .fromString(brokenHtml, english, messages)
+      val message = checkPage(
+        broken,
+        Seq(textInput("x").labelled("whatIsYourName.firstName"))
+      ).message
       message must include("WCAG 3.3.2")
     }
   }
@@ -99,19 +115,20 @@ class FailureReportingSpec extends AnyWordSpec with Matchers with Bilingual {
 
     "describe the page structure on its own" in {
       // Asserted on content, not column widths — the gutter is presentation.
-      val lines = page.outline.linesIterator.map(_.trim.replaceAll("\\s+", " ")).toList
-      lines                                                    must contain("h1 What is your name?")
-      lines                                                    must contain("caption Personal details")
-      lines                                                    must contain("back link /back")
-      lines                                                    must contain("lang toggle present")
-      lines                                                    must contain("form POST /register/name")
-      lines.exists(_.startsWith("button submit"))            mustBe true
+      val lines =
+        page.outline.linesIterator.map(_.trim.replaceAll("\\s+", " ")).toList
+      lines must contain("h1 What is your name?")
+      lines must contain("caption Personal details")
+      lines must contain("back link /back")
+      lines must contain("lang toggle present")
+      lines must contain("form POST /register/name")
+      lines.exists(_.startsWith("button submit")) mustBe true
       lines.exists(_.startsWith("title What is your name?")) mustBe true
     }
 
     "list the errors when the page is in an error state" in {
       val errorPage = render(inject[nameView].apply(form, showErrors = true))
-      val outline   = errorPage.outline
+      val outline = errorPage.outline
       outline must include("errors")
       outline must include("summary -> #firstName")
       outline must include("inline  firstName: Enter their first name")

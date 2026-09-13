@@ -26,11 +26,11 @@ import scala.jdk.CollectionConverters._
 
 /** A rendered GOV.UK page, ready to be asked questions. */
 final class Page(
-  val document: Document,
-  val lang: Lang,
-  val messages: Messages,
-  val source: String,
-  val parseErrors: List[String] = Nil
+    val document: Document,
+    val lang: Lang,
+    val messages: Messages,
+    val source: String,
+    val parseErrors: List[String] = Nil
 ) {
 
   // ---------------------------------------------------------------- selectors
@@ -255,7 +255,7 @@ final class Page(
       .asScala
       .toList
       .map { e =>
-        val field  = e.id().stripSuffix("-error")
+        val field = e.id().stripSuffix("-error")
         val hidden = e
           .select(".govuk-visually-hidden")
           .asScala
@@ -384,24 +384,24 @@ final class Page(
     named("warning text", ".govuk-warning-text__text")
 
   def insetText: Selection = named("inset text", ".govuk-inset-text")
-  def panel: Selection     = named("panel", ".govuk-panel")
-  def details: Selection   = named("details", ".govuk-details, details")
-  def tabs: Selection      = named("tabs", ".govuk-tabs")
+  def panel: Selection = named("panel", ".govuk-panel")
+  def details: Selection = named("details", ".govuk-details, details")
+  def tabs: Selection = named("tabs", ".govuk-tabs")
   def accordion: Selection = named("accordion", ".govuk-accordion")
-  def tables: Selection    = named("table", "table")
+  def tables: Selection = named("table", "table")
 
   def pagination: Selection =
     named("pagination", ".govuk-pagination, .hmrc-pagination")
 
-  def tags: Selection         = named("tag", ".govuk-tag")
-  def bulletList: Selection   = named("bullet list", ".govuk-list--bullet")
+  def tags: Selection = named("tag", ".govuk-tag")
+  def bulletList: Selection = named("bullet list", ".govuk-list--bullet")
   def numberedList: Selection = named("numbered list", ".govuk-list--number")
-  def addToAList: Selection   = named("add to a list", ".hmrc-add-to-a-list")
+  def addToAList: Selection = named("add to a list", ".hmrc-add-to-a-list")
 
   def paragraphs: Selection =
     named("paragraph", "p.govuk-body, p.govuk-body-l, p.govuk-body-s, main p")
 
-  def links: Selection  = named("link", "a[href]")
+  def links: Selection = named("link", "a[href]")
   def images: Selection = named("image", "img")
 
   def notificationBanner: Selection =
@@ -461,9 +461,9 @@ object Page {
     // Twirl does not check that a template produces well-formed markup, and
     // Jsoup will silently repair what it is given. Asking it to record what it
     // repaired is free, and turns a whole class of template bug into a finding.
-    val parser   = Parser.htmlParser().setTrackErrors(50)
+    val parser = Parser.htmlParser().setTrackErrors(50)
     val document = Jsoup.parse(html, "", parser)
-    val errors   = parser.getErrors.asScala.toList.map(_.toString)
+    val errors = parser.getErrors.asScala.toList.map(_.toString)
     new Page(document, lang, messages, html, errors)
   }
 

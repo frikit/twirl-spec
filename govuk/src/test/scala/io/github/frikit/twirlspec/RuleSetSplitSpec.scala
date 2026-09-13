@@ -27,7 +27,8 @@ import io.github.frikit.twirlspec.wcag.{TwirlStandards, WcagStandards}
 class RuleSetSplitSpec extends AnyWordSpec with Matchers with TwirlSpec {
 
   /** The default a project gets from `with WcagChecks`. */
-  override def standardsRules: Seq[Rule] = WcagStandards.all ++ TwirlStandards.all
+  override def standardsRules: Seq[Rule] =
+    WcagStandards.all ++ TwirlStandards.all
 
   private def allStandards: Seq[Rule] = standardsRules ++ GovukStandards.all
 
@@ -74,7 +75,9 @@ class RuleSetSplitSpec extends AnyWordSpec with Matchers with TwirlSpec {
 
       // They are still excluded from the default set, so nothing reports itself
       // as a GOV.UK standard to a project that is not using the Design System.
-      standardsRules.map(_.id) must contain noElementsOf GovukStandards.all.map(_.id)
+      standardsRules.map(_.id) must contain noElementsOf GovukStandards.all.map(
+        _.id
+      )
     }
 
     "still have GOV.UK rules that bite on Design System markup" in {
@@ -95,40 +98,48 @@ class RuleSetSplitSpec extends AnyWordSpec with Matchers with TwirlSpec {
         english,
         messages
       )
-      GovukStandards.expectation().check(govukPage).map(_.rule)                   must contain("error-title-prefix")
+      GovukStandards.expectation().check(govukPage).map(_.rule) must contain(
+        "error-title-prefix"
+      )
       // Warnings are advisory; what matters is that nothing blocking fires.
       WcagStandards
         .expectation(standardsRules)
         .check(govukPage)
-        .filter(_.severity == io.github.frikit.twirlspec.expect.Severity.Error) mustBe empty
+        .filter(
+          _.severity == io.github.frikit.twirlspec.expect.Severity.Error
+        ) mustBe empty
     }
   }
 
   "the rule sets" should {
 
     "be disjoint" in {
-      val wcag  = WcagStandards.all.map(_.id).toSet
+      val wcag = WcagStandards.all.map(_.id).toSet
       val twirl = TwirlStandards.all.map(_.id).toSet
       val govuk = GovukStandards.all.map(_.id).toSet
-      wcag intersect twirl  mustBe empty
-      wcag intersect govuk  mustBe empty
+      wcag intersect twirl mustBe empty
+      wcag intersect govuk mustBe empty
       twirl intersect govuk mustBe empty
     }
 
     "together account for every rule, each with a unique id" in {
       val ids = allStandards.map(_.id)
       ids.distinct.size mustBe ids.size
-      ids.size          mustBe (WcagStandards.all.size + TwirlStandards.all.size + GovukStandards.all.size)
+      ids.size mustBe (WcagStandards.all.size + TwirlStandards.all.size + GovukStandards.all.size)
     }
 
     "default to the design-system agnostic set" in {
-      standardsRules.map(_.id) must contain allOf ("one-h1", "labelled-controls", "no-raw-message-keys")
-      standardsRules.size    mustBe (WcagStandards.all.size + TwirlStandards.all.size)
+      standardsRules.map(_.id) must contain allOf (
+        "one-h1",
+        "labelled-controls",
+        "no-raw-message-keys"
+      )
+      standardsRules.size mustBe (WcagStandards.all.size + TwirlStandards.all.size)
     }
 
     "add the GOV.UK rules only when asked" in {
       allStandards.map(_.id) must contain("error-summary-targets")
-      allStandards.size    mustBe (standardsRules.size + GovukStandards.all.size)
+      allStandards.size mustBe (standardsRules.size + GovukStandards.all.size)
     }
   }
 

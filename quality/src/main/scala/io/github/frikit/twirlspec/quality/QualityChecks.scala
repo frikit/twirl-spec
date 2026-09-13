@@ -22,8 +22,8 @@ import io.github.frikit.twirlspec.TwirlSpecDsl
 
 /** Adds the semantic, performance and metadata rules to every `display(...)`.
   *
-  * Composes with the other rule modules, so `with WcagChecks with QualityChecks`
-  * runs both.
+  * Composes with the other rule modules, so
+  * `with WcagChecks with QualityChecks` runs both.
   */
 trait QualityChecks extends TwirlSpecDsl {
 

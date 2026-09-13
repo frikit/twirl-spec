@@ -50,16 +50,18 @@ class ControlStateSpec extends AnyWordSpec with Matchers with TwirlSpec {
       |  </form>
       |</main></body></html>""".stripMargin
 
-  private lazy val page: Page                                         = Page.fromString(html, english, messages)
-  private def check(e: io.github.frikit.twirlspec.expect.Expectation) = e.check(page).map(_.rule)
+  private lazy val page: Page = Page.fromString(html, english, messages)
+
+  private def check(e: io.github.frikit.twirlspec.expect.Expectation) =
+    e.check(page).map(_.rule)
 
   "form values" should {
 
     "read every named control the way a browser would submit it" in {
       check(
         formValues(
-          "email"   -> "ada@example.com",
-          "notes"   -> "Some notes",
+          "email" -> "ada@example.com",
+          "notes" -> "Some notes",
           "country" -> "GB",
           "contact" -> "email"
         )
@@ -67,12 +69,18 @@ class ControlStateSpec extends AnyWordSpec with Matchers with TwirlSpec {
     }
 
     "report a value that differs, and a name that is not there" in {
-      check(formValues("email" -> "someone@else.com")) mustBe Seq("formValues(email)")
-      check(formValues("nope" -> "x"))                 mustBe Seq("formValues(nope)")
+      check(formValues("email" -> "someone@else.com")) mustBe Seq(
+        "formValues(email)"
+      )
+      check(formValues("nope" -> "x")) mustBe Seq("formValues(nope)")
       checkPage(
-        Page.fromString("<html><body><h1>A</h1></body></html>", english, messages),
+        Page.fromString(
+          "<html><body><h1>A</h1></body></html>",
+          english,
+          messages
+        ),
         Seq(formValues("a" -> "b"))
-      ).message                                          must include("(no named controls)")
+      ).message must include("(no named controls)")
     }
   }
 
@@ -80,19 +88,19 @@ class ControlStateSpec extends AnyWordSpec with Matchers with TwirlSpec {
 
     "see a control disabled through its fieldset, not just its own attribute" in {
       check(disabled("locked")) mustBe empty
-      check(enabled("free"))    mustBe empty
-      check(enabled("locked"))  mustBe Seq("enabled(locked)")
-      check(disabled("free"))   mustBe Seq("disabled(free)")
+      check(enabled("free")) mustBe empty
+      check(enabled("locked")) mustBe Seq("enabled(locked)")
+      check(disabled("free")) mustBe Seq("disabled(free)")
     }
 
     "read required and invalid" in {
-      check(required("email"))           mustBe empty
-      check(invalid("email"))            mustBe empty
+      check(required("email")) mustBe empty
+      check(invalid("email")) mustBe empty
       // notes is a <textarea>: the state expectations cover any control, not
       // just <input>, so these fail because it is neither, not because it is
       // missing.
-      check(required("notes"))           mustBe Seq("required(notes)")
-      check(invalid("notes"))            mustBe Seq("invalid(notes)")
+      check(required("notes")) mustBe Seq("required(notes)")
+      check(invalid("notes")) mustBe Seq("invalid(notes)")
       page.formControl("notes").nonEmpty mustBe true
     }
 
@@ -107,16 +115,22 @@ class ControlStateSpec extends AnyWordSpec with Matchers with TwirlSpec {
     }
 
     "read the description announced after the name" in {
-      check(describedAs("email", "kitchenSink.email.hint")) mustBe Seq("describedAs(email)")
-      page.accessibleDescription(page.input("email")(0))    mustBe "We only use this to contact you"
+      check(describedAs("email", "kitchenSink.email.hint")) mustBe Seq(
+        "describedAs(email)"
+      )
+      page.accessibleDescription(
+        page.input("email")(0)
+      ) mustBe "We only use this to contact you"
     }
 
     "report a control that is not on the page" in {
-      check(disabled("nope"))                              mustBe Seq("disabled(nope)")
-      check(enabled("nope"))                               mustBe Seq("enabled(nope)")
-      check(required("nope"))                              mustBe Seq("required(nope)")
-      check(invalid("nope"))                               mustBe Seq("invalid(nope)")
-      check(describedAs("nope", "kitchenSink.email.hint")) mustBe Seq("describedAs(nope)")
+      check(disabled("nope")) mustBe Seq("disabled(nope)")
+      check(enabled("nope")) mustBe Seq("enabled(nope)")
+      check(required("nope")) mustBe Seq("required(nope)")
+      check(invalid("nope")) mustBe Seq("invalid(nope)")
+      check(describedAs("nope", "kitchenSink.email.hint")) mustBe Seq(
+        "describedAs(nope)"
+      )
     }
   }
 
@@ -129,8 +143,12 @@ class ControlStateSpec extends AnyWordSpec with Matchers with TwirlSpec {
     "reject the reverse, and report either side being absent" in {
       check(appearsBefore("form", ".govuk-error-summary")) mustBe
         Seq("order(form before .govuk-error-summary)")
-      check(appearsBefore(".nope", "form"))                mustBe Seq("order(.nope before form)")
-      check(appearsBefore("form", ".nope"))                mustBe Seq("order(form before .nope)")
+      check(appearsBefore(".nope", "form")) mustBe Seq(
+        "order(.nope before form)"
+      )
+      check(appearsBefore("form", ".nope")) mustBe Seq(
+        "order(form before .nope)"
+      )
     }
   }
 

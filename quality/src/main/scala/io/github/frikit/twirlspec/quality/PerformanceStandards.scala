@@ -62,7 +62,9 @@ object PerformanceStandards extends RuleSet {
         .select("head script[src]")
         .asScala
         .toList
-        .filterNot(e => e.hasAttr("defer") || e.hasAttr("async") || e.attr("type") == "module")
+        .filterNot(e =>
+          e.hasAttr("defer") || e.hasAttr("async") || e.attr("type") == "module"
+        )
         .map(e =>
           Violation(
             "scripts-are-deferred",

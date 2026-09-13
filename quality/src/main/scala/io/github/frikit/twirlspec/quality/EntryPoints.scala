@@ -39,9 +39,9 @@ object EntryPoints {
     ).flatten
 
   private def checkRender(
-    view: AnyRef,
-    expected: Html,
-    args: Seq[Any]
+      view: AnyRef,
+      expected: Html,
+      args: Seq[Any]
   ): Option[String] =
     method(view, "render", args.size) match {
       case None    => Some(s"render/${args.size} not found on ${name(view)}")
@@ -51,9 +51,9 @@ object EntryPoints {
     }
 
   private def checkF(
-    view: AnyRef,
-    expected: Html,
-    args: Seq[Any]
+      view: AnyRef,
+      expected: Html,
+      args: Seq[Any]
   ): Option[String] =
     method(view, "f", 0) match {
       case None    => Some(s"f not found on ${name(view)}")
@@ -75,11 +75,11 @@ object EntryPoints {
     * arguments are fed in a group at a time.
     */
   private def applyCurried(f: AnyRef, args: Seq[Any]): AnyRef = {
-    var current   = f
+    var current = f
     var remaining = args
-    var arity     = functionArity(current)
+    var arity = functionArity(current)
     while (arity.isDefined) {
-      val wanted       = arity.get
+      val wanted = arity.get
       val (now, later) = remaining.splitAt(wanted)
       if (now.size < wanted)
         throw new IllegalStateException(
@@ -104,7 +104,9 @@ object EntryPoints {
   }
 
   private def method(view: AnyRef, named: String, arity: Int) =
-    view.getClass.getMethods.find(m => m.getName == named && m.getParameterCount == arity)
+    view.getClass.getMethods.find(m =>
+      m.getName == named && m.getParameterCount == arity
+    )
 
   private def attempt(what: String)(f: => AnyRef): Option[AnyRef] =
     try Some(f)
@@ -114,7 +116,7 @@ object EntryPoints {
     }
 
   private def sameAs(expected: Html, what: String)(
-    got: AnyRef
+      got: AnyRef
   ): Option[String] =
     if (got.toString == expected.toString) None
     else Some(s"$what produced different html from apply")

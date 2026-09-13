@@ -28,11 +28,16 @@ object Anchors {
 
   val defaultTrackedAttributes: Set[String] = Set("data-journey-click")
 
-  def namesOf(e: Element, tracked: Set[String] = defaultTrackedAttributes): List[String] = {
-    val id       = e.id()
-    val idName   = if (id.nonEmpty) List(s"#$id") else Nil
-    val link     = if (isLink(e)) List(linkName(e)) else Nil
-    val tracking = tracked.toList.sorted.collect { case a if e.hasAttr(a) => s"$a=${e.attr(a)}" }
+  def namesOf(
+      e: Element,
+      tracked: Set[String] = defaultTrackedAttributes
+  ): List[String] = {
+    val id = e.id()
+    val idName = if (id.nonEmpty) List(s"#$id") else Nil
+    val link = if (isLink(e)) List(linkName(e)) else Nil
+    val tracking = tracked.toList.sorted.collect {
+      case a if e.hasAttr(a) => s"$a=${e.attr(a)}"
+    }
     idName ::: link ::: tracking
   }
 

@@ -19,12 +19,14 @@ package io.github.frikit.twirlspec.page
 /** Whitespace and punctuation normalisation. */
 object Text {
 
-  private val Nbsp        = 0x00a0.toChar.toString // non-breaking space
-  private val NarrowNbsp  = 0x202f.toChar.toString
-  private val SoftHyphen  = 0x00ad.toChar.toString
-  private val RightQuote  = 0x2019.toChar.toString // curly apostrophe, used all over GOV.UK content
-  private val LeftQuote   = 0x2018.toChar.toString
-  private val LeftDouble  = 0x201c.toChar.toString
+  private val Nbsp = 0x00a0.toChar.toString // non-breaking space
+  private val NarrowNbsp = 0x202f.toChar.toString
+  private val SoftHyphen = 0x00ad.toChar.toString
+
+  private val RightQuote =
+    0x2019.toChar.toString // curly apostrophe, used all over GOV.UK content
+  private val LeftQuote = 0x2018.toChar.toString
+  private val LeftDouble = 0x201c.toChar.toString
   private val RightDouble = 0x201d.toChar.toString
 
   private val Whitespace = "\\s+".r
@@ -45,7 +47,8 @@ object Text {
       Whitespace.replaceAllIn(substituted, " ").trim
     }
 
-  /** True when two pieces of page/message text are equal after normalisation. */
+  /** True when two pieces of page/message text are equal after normalisation.
+    */
   def same(a: String, b: String): Boolean = normalise(a) == normalise(b)
 
   def containsText(haystack: String, needle: String): Boolean =

@@ -23,7 +23,7 @@ import scala.jdk.CollectionConverters._
 
 /** A cache of Play applications keyed by configuration. */
 final private[twirlspec] class ApplicationCache(
-  build: Map[String, Any] => Application
+    build: Map[String, Any] => Application
 ) {
 
   private val applications =

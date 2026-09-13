@@ -74,7 +74,11 @@ class HtmlStandards(attributePrefixes: Set[String]) extends RuleSet {
       "every attribute is one the HTML specification defines"
     ) { page =>
       page.document.getAllElements.asScala.toSeq
-        .flatMap(e => e.attributes.asScala.map(a => (e.tagName.toLowerCase, a.getKey.toLowerCase)))
+        .flatMap(e =>
+          e.attributes.asScala.map(a =>
+            (e.tagName.toLowerCase, a.getKey.toLowerCase)
+          )
+        )
         .distinct
         .sortBy(_._2)
         .filterNot { case (_, a) =>

@@ -36,7 +36,7 @@ class AmbiguitySpec extends AnyWordSpec with Matchers with TwirlSpec {
       messages
     )
 
-  private def check(p: Page, e: Expectation)   = e.check(p).map(_.rule)
+  private def check(p: Page, e: Expectation) = e.check(p).map(_.rule)
   private def message(p: Page, e: Expectation) = checkPage(p, Seq(e)).message
 
   "a form control that appears twice" should {
@@ -47,9 +47,11 @@ class AmbiguitySpec extends AnyWordSpec with Matchers with TwirlSpec {
           |<label for="email">Work email</label><input id="email" name="email" value="work@example.com">
           |<label for="email2">Home email</label><input id="email2" name="email" value="home@example.com">""".stripMargin
       )
-      check(p, textInput("email").withValue("work@example.com")) mustBe Seq("input(email)")
-      message(p, textInput("email"))                               must include("2 elements matched")
-      message(p, textInput("email"))                               must include("this assertion is ambiguous")
+      check(p, textInput("email").withValue("work@example.com")) mustBe Seq(
+        "input(email)"
+      )
+      message(p, textInput("email")) must include("2 elements matched")
+      message(p, textInput("email")) must include("this assertion is ambiguous")
     }
 
     "name what matched, so the fix is obvious" in {
@@ -68,15 +70,17 @@ class AmbiguitySpec extends AnyWordSpec with Matchers with TwirlSpec {
 
     "reject duplicates too" in {
       val dupIds = pageOf("""<h1>A</h1><p id="x">one</p><p id="x">two</p>""")
-      check(dupIds, element("x"))                          mustBe Seq("element(x)")
-      check(dupIds, elementWithText("x", "site.continue")) mustBe Seq("element(x)")
-      check(dupIds, elementHasClass("x", "y"))             mustBe Seq("class(x)")
+      check(dupIds, element("x")) mustBe Seq("element(x)")
+      check(dupIds, elementWithText("x", "site.continue")) mustBe Seq(
+        "element(x)"
+      )
+      check(dupIds, elementHasClass("x", "y")) mustBe Seq("class(x)")
 
       val twoBackLinks = pageOf(
         """<a href="/one" class="govuk-back-link">Back</a>
           |<a href="/two" class="govuk-back-link">Back</a><h1>A</h1>""".stripMargin
       )
-      check(twoBackLinks, backLink)            mustBe Seq("backLink")
+      check(twoBackLinks, backLink) mustBe Seq("backLink")
       check(twoBackLinks, backLink.to("/one")) mustBe Seq("backLink")
 
       val twoServiceNames = pageOf(
@@ -95,11 +99,13 @@ class AmbiguitySpec extends AnyWordSpec with Matchers with TwirlSpec {
         """<h1>A</h1><label for="d1">D</label><input id="d1" name="d" disabled>
           |<label for="d2">D</label><input id="d2" name="d">""".stripMargin
       )
-      check(twoControls, disabled("d"))                     mustBe Seq("disabled(d)")
-      check(twoControls, enabled("d"))                      mustBe Seq("enabled(d)")
-      check(twoControls, required("d"))                     mustBe Seq("required(d)")
-      check(twoControls, invalid("d"))                      mustBe Seq("invalid(d)")
-      check(twoControls, describedAs("d", "site.continue")) mustBe Seq("describedAs(d)")
+      check(twoControls, disabled("d")) mustBe Seq("disabled(d)")
+      check(twoControls, enabled("d")) mustBe Seq("enabled(d)")
+      check(twoControls, required("d")) mustBe Seq("required(d)")
+      check(twoControls, invalid("d")) mustBe Seq("invalid(d)")
+      check(twoControls, describedAs("d", "site.continue")) mustBe Seq(
+        "describedAs(d)"
+      )
     }
 
     "reject a summary list with the same key twice" in {
@@ -110,8 +116,12 @@ class AmbiguitySpec extends AnyWordSpec with Matchers with TwirlSpec {
           |<div class="govuk-summary-list__row"><dt class="govuk-summary-list__key">Name</dt>
           |<dd class="govuk-summary-list__value">Grace</dd></div></dl>""".stripMargin
       )
-      check(p, summaryRow("checkAnswers.name"))   must contain("summaryRow(messages(checkAnswers.name))")
-      message(p, summaryRow("checkAnswers.name")) must include("2 summary list rows have this key")
+      check(p, summaryRow("checkAnswers.name")) must contain(
+        "summaryRow(messages(checkAnswers.name))"
+      )
+      message(p, summaryRow("checkAnswers.name")) must include(
+        "2 summary list rows have this key"
+      )
     }
 
     "reject an error summary with two titles" in {
@@ -136,16 +146,25 @@ class AmbiguitySpec extends AnyWordSpec with Matchers with TwirlSpec {
           |<ul class="govuk-list govuk-list--bullet"><li>First bullet</li><li>Second bullet</li></ul>
           |<a href="/a">one</a><a href="/b">two</a>""".stripMargin
       )
-      check(p, radioGroup("c").withOptions("red" -> "kitchenSink.red", "blue" -> "kitchenSink.blue")) mustBe empty
-      check(p, bullets("kitchenSink.b1", "kitchenSink.b2"))                                           mustBe empty
-      check(p, cssSelector("a[href]"))                                                                mustBe empty
-      check(p, elementCount("a[href]", 2))                                                            mustBe empty
+      check(
+        p,
+        radioGroup("c")
+          .withOptions("red" -> "kitchenSink.red", "blue" -> "kitchenSink.blue")
+      ) mustBe empty
+      check(p, bullets("kitchenSink.b1", "kitchenSink.b2")) mustBe empty
+      check(p, cssSelector("a[href]")) mustBe empty
+      check(p, elementCount("a[href]", 2)) mustBe empty
     }
 
     "remain the escape hatch when several matches are legitimate" in {
-      val p = pageOf("""<h1>A</h1><input id="a" name="dup"><input id="b" name="dup">""")
-      check(p, textInput("dup"))                    mustBe Seq("input(dup)") // ambiguous
-      check(p, elementCount("""[name="dup"]""", 2)) mustBe empty // stated as a group instead
+      val p = pageOf(
+        """<h1>A</h1><input id="a" name="dup"><input id="b" name="dup">"""
+      )
+      check(p, textInput("dup")) mustBe Seq("input(dup)") // ambiguous
+      check(
+        p,
+        elementCount("""[name="dup"]""", 2)
+      ) mustBe empty // stated as a group instead
     }
   }
 

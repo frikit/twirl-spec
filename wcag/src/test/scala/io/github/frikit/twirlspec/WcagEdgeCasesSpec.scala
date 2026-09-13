@@ -40,8 +40,8 @@ class WcagEdgeCasesSpec extends AnyWordSpec with Matchers with TwirlSpec {
   "selecting rules at exactly one level" should {
     "return that level alone, not the levels beneath it" in {
       val aaa = WcagStandards.atLevel(Level.AAA).map(_.id)
-      aaa                                       must contain("link-text-is-meaningful")
-      aaa                                       must not contain "labelled-controls" // Level A
+      aaa must contain("link-text-is-meaningful")
+      aaa must not contain "labelled-controls" // Level A
       WcagStandards.atLevel(Level.AA).map(_.id) must contain(
         "no-empty-headings"
       )
@@ -58,7 +58,7 @@ class WcagEdgeCasesSpec extends AnyWordSpec with Matchers with TwirlSpec {
         english,
         messages
       )
-      val ids  = WcagStandards
+      val ids = WcagStandards
         .expectation(WcagStandards.only("unique-ids"))
         .check(page)
         .map(_.message.split("\"")(1))
@@ -66,12 +66,12 @@ class WcagEdgeCasesSpec extends AnyWordSpec with Matchers with TwirlSpec {
     }
 
     "be ordered when a page has more than one ungrouped choice set" in {
-      val body  =
+      val body =
         """<label for="z1">Z1</label><input type="radio" id="z1" name="zebra" value="1">
           |<label for="z2">Z2</label><input type="radio" id="z2" name="zebra" value="2">
           |<label for="a1">A1</label><input type="radio" id="a1" name="apple" value="1">
           |<label for="a2">A2</label><input type="radio" id="a2" name="apple" value="2">""".stripMargin
-      val page  = Page.fromString(
+      val page = Page.fromString(
         s"""<!DOCTYPE html><html lang="en"><head><title>t</title></head>
            |<body><main><h1>A</h1>$body</main></body></html>""".stripMargin,
         english,

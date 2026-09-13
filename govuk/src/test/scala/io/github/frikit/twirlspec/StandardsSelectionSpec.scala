@@ -25,7 +25,8 @@ import io.github.frikit.twirlspec.wcag.{TwirlStandards, WcagStandards}
 /** Selecting and switching off rules, across the rule modules. */
 class StandardsSelectionSpec extends AnyWordSpec with Matchers with TwirlSpec {
 
-  override def standardsRules: Seq[Rule] = WcagStandards.all ++ TwirlStandards.all ++ GovukStandards.all
+  override def standardsRules: Seq[Rule] =
+    WcagStandards.all ++ TwirlStandards.all ++ GovukStandards.all
 
   "the matcher variants" should {
 
@@ -39,7 +40,7 @@ class StandardsSelectionSpec extends AnyWordSpec with Matchers with TwirlSpec {
           english,
           messages
         )
-      broken                                         must displayOnly(headingText("One Two"))
+      broken must displayOnly(headingText("One Two"))
       standardsExpectation.check(broken).map(_.rule) must contain("one-h1")
     }
 
@@ -51,12 +52,14 @@ class StandardsSelectionSpec extends AnyWordSpec with Matchers with TwirlSpec {
           english,
           messages
         )
-      noLabel                                         must meetStandardsExcept("labelled-controls")
-      standardsExpectation.check(noLabel).map(_.rule) must contain("labelled-controls")
+      noLabel must meetStandardsExcept("labelled-controls")
+      standardsExpectation.check(noLabel).map(_.rule) must contain(
+        "labelled-controls"
+      )
     }
 
     "surface warnings on a page that otherwise passes" in {
-      val vague  = io.github.frikit.twirlspec.page.Page
+      val vague = io.github.frikit.twirlspec.page.Page
         .fromString(
           """<html lang="en"><head><title>t</title></head><body><main>
                       |<h1>A</h1><a href="/x">click here</a></main></body></html>""".stripMargin,
@@ -64,23 +67,24 @@ class StandardsSelectionSpec extends AnyWordSpec with Matchers with TwirlSpec {
           messages
         )
       val report = checkPage(vague, Seq(standardsExpectation))
-      report.passed             mustBe true
+      report.passed mustBe true
       report.warnings.map(_.rule) must contain("link-text-is-meaningful")
-      vague                       must meetStandards // passes, and routes the warning to the reporter
+      vague must meetStandards // passes, and routes the warning to the reporter
     }
   }
 
   "the standards rule set" should {
 
     "select a named subset" in {
-      WcagStandards.only("one-h1").map(_.id)    mustBe Seq("one-h1")
+      WcagStandards.only("one-h1").map(_.id) mustBe Seq("one-h1")
       WcagStandards.allExcept("one-h1").map(_.id) must not contain "one-h1"
-      WcagStandards.all.head.toString             must include("—")
+      WcagStandards.all.head.toString must include("—")
     }
 
     "skip page-level rules for a fragment" in {
-      val fragment = io.github.frikit.twirlspec.page.Page.fromString("<p>just a component</p>", english, messages)
-      Rule.isFullPage(fragment)            mustBe false
+      val fragment = io.github.frikit.twirlspec.page.Page
+        .fromString("<p>just a component</p>", english, messages)
+      Rule.isFullPage(fragment) mustBe false
       standardsExpectation.check(fragment) mustBe empty
     }
   }

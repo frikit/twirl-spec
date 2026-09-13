@@ -19,10 +19,19 @@ package io.github.frikit.twirlspec
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import io.github.frikit.twirlspec.page.Page
-import io.github.frikit.twirlspec.quality.{MetadataStandards, PerformanceStandards, QualityChecks, SemanticStandards}
+import io.github.frikit.twirlspec.quality.{
+  MetadataStandards,
+  PerformanceStandards,
+  QualityChecks,
+  SemanticStandards
+}
 
 /** Mixing the module in is how a project turns these rules on. */
-class QualityChecksSpec extends AnyWordSpec with Matchers with TwirlSpec with QualityChecks {
+class QualityChecksSpec
+    extends AnyWordSpec
+    with Matchers
+    with TwirlSpec
+    with QualityChecks {
 
   private def pageOf(body: String) =
     Page.fromString(
@@ -45,7 +54,9 @@ class QualityChecksSpec extends AnyWordSpec with Matchers with TwirlSpec with Qu
     "make display fail on markup only these rules object to" in {
       // A nested control: nothing in the accessibility or safety sets sees it.
       a[org.scalatest.exceptions.TestFailedException] must be thrownBy {
-        pageOf("""<a href="/x">Read <button>more</button></a>""") must display(heading(literal("A")))
+        pageOf("""<a href="/x">Read <button>more</button></a>""") must display(
+          heading(literal("A"))
+        )
       }
     }
 

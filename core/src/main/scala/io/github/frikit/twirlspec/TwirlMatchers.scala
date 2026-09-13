@@ -26,7 +26,9 @@ import scala.util.control.NonFatal
 /** ScalaTest matchers over a rendered page. */
 trait TwirlMatchers { self: TwirlSpecDsl =>
 
-  /** Which rules run alongside every `display(...)`. Empty here; rule modules add theirs via `super.standardsRules`. */
+  /** Which rules run alongside every `display(...)`. Empty here; rule modules
+    * add theirs via `super.standardsRules`.
+    */
   def standardsRules: Seq[Rule] = Nil
 
   /** Whether warnings fail the test. */
@@ -39,17 +41,30 @@ trait TwirlMatchers { self: TwirlSpecDsl =>
   def display(expectations: Expectation*): Matcher[Page] =
     matcherFor(expectations.toSeq :+ Rule.expectation(standardsRules), "page")
 
-  /** As `display`, but without the standards — for the rare page that has to break a rule, or while a legacy view is being brought up to standard.
+  /** As `display`, but without the standards — for the rare page that has to
+    * break a rule, or while a legacy view is being brought up to standard.
     */
   def displayOnly(expectations: Expectation*): Matcher[Page] =
     matcherFor(expectations.toSeq, "page")
 
-  /** Whatever `standardsRules` resolves to, for a spec that has its own assertions already. */
-  def meetStandards: Matcher[Page] = matcherFor(Seq(Rule.expectation(standardsRules)), "page")
+  /** Whatever `standardsRules` resolves to, for a spec that has its own
+    * assertions already.
+    */
+  def meetStandards: Matcher[Page] =
+    matcherFor(Seq(Rule.expectation(standardsRules)), "page")
 
-  /** The standards, minus the named rules. Prefer fixing the page: an exclusion here hides the rule on every page it is applied to. */
+  /** The standards, minus the named rules. Prefer fixing the page: an exclusion
+    * here hides the rule on every page it is applied to.
+    */
   def meetStandardsExcept(ruleIds: String*): Matcher[Page] =
-    matcherFor(Seq(Rule.expectation(standardsRules.filterNot(r => ruleIds.toSet.contains(r.id)))), "page")
+    matcherFor(
+      Seq(
+        Rule.expectation(
+          standardsRules.filterNot(r => ruleIds.toSet.contains(r.id))
+        )
+      ),
+      "page"
+    )
 
   /** The active rule set as one expectation, for asserting on the result. */
   def standardsExpectation: Expectation = Rule.expectation(standardsRules)
@@ -58,11 +73,15 @@ trait TwirlMatchers { self: TwirlSpecDsl =>
   def checkPage(page: Page, expectations: Seq[Expectation]): CheckReport =
     CheckReport(page, Expectation.all(expectations).check(page), "page")
 
-  private def matcherFor(expectations: Seq[Expectation], subject: String): Matcher[Page] =
+  private def matcherFor(
+      expectations: Seq[Expectation],
+      subject: String
+  ): Matcher[Page] =
     new Matcher[Page] {
       def apply(page: Page): MatchResult = {
-        val report = CheckReport(page, Expectation.all(expectations).check(page), subject)
-        val ok     = report.passed && (!failOnWarnings || report.warnings.isEmpty)
+        val report =
+          CheckReport(page, Expectation.all(expectations).check(page), subject)
+        val ok = report.passed && (!failOnWarnings || report.warnings.isEmpty)
 
         if (ok && reportWarnings && report.warnings.nonEmpty) surface(report)
 
@@ -75,11 +94,13 @@ trait TwirlMatchers { self: TwirlSpecDsl =>
       }
     }
 
-  /** Warnings are worth seeing on a green run too — that is how a service finds out it is one fix away from being able to turn `failOnWarnings` on.
+  /** Warnings are worth seeing on a green run too — that is how a service finds
+    * out it is one fix away from being able to turn `failOnWarnings` on.
     */
   private def surface(report: CheckReport): Unit =
     try {
-      val lines = report.warnings.map(w => s"  ${w.rule}: ${w.message}").mkString("\n")
+      val lines =
+        report.warnings.map(w => s"  ${w.rule}: ${w.message}").mkString("\n")
       alertHook(s"twirl-spec: ${report.warnings.size} warning(s)\n$lines")
     } catch { case NonFatal(_) => () }
 

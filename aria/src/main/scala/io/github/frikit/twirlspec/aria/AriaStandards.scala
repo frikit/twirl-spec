@@ -45,7 +45,9 @@ object AriaStandards extends RuleSet {
       ).flatMap { e =>
         e.attributes.asScala
           .map(_.getKey)
-          .filter(k => k.startsWith("aria-") && !AriaVocabulary.attributes.contains(k))
+          .filter(k =>
+            k.startsWith("aria-") && !AriaVocabulary.attributes.contains(k)
+          )
           .map { unknown =>
             Violation(
               "aria-attr-is-real",
@@ -65,18 +67,19 @@ object AriaStandards extends RuleSet {
       "an aria- attribute taking a fixed set of values carries one of them"
     ) { page =>
       elementsWith(page, _ => true).flatMap { e =>
-        AriaVocabulary.tokenValues.toSeq.sortBy(_._1).flatMap { case (attr, allowed) =>
-          val value = e.attr(attr)
-          if (e.hasAttr(attr) && !allowed.contains(value.toLowerCase.trim))
-            Seq(
-              Violation(
-                "aria-attr-value-is-allowed",
-                s"""$attr="$value" is not a value the specification allows""",
-                expected = Some(allowed.toList.sorted.mkString(", ")),
-                actual = Some(value)
-              ).at(describe(e))
-            )
-          else Nil
+        AriaVocabulary.tokenValues.toSeq.sortBy(_._1).flatMap {
+          case (attr, allowed) =>
+            val value = e.attr(attr)
+            if (e.hasAttr(attr) && !allowed.contains(value.toLowerCase.trim))
+              Seq(
+                Violation(
+                  "aria-attr-value-is-allowed",
+                  s"""$attr="$value" is not a value the specification allows""",
+                  expected = Some(allowed.toList.sorted.mkString(", ")),
+                  actual = Some(value)
+                ).at(describe(e))
+              )
+            else Nil
         }
       }
     },
@@ -102,23 +105,24 @@ object AriaStandards extends RuleSet {
         }
       }
     },
-    Rule("aria-required-attr", "a role that depends on state declares it") { page =>
-      rolesOn(page).flatMap { case (e, role) =>
-        AriaVocabulary.requiredAttributes
-          .getOrElse(role, Set.empty)
-          .toList
-          .sorted
-          .collect {
-            case attr if !e.hasAttr(attr) =>
-              Violation(
-                "aria-required-attr",
-                s"""role="$role" needs $attr""",
-                expected = Some(attr)
-              )
-                .at(describe(e))
-                .withHint("without it the control announces no state at all")
-          }
-      }
+    Rule("aria-required-attr", "a role that depends on state declares it") {
+      page =>
+        rolesOn(page).flatMap { case (e, role) =>
+          AriaVocabulary.requiredAttributes
+            .getOrElse(role, Set.empty)
+            .toList
+            .sorted
+            .collect {
+              case attr if !e.hasAttr(attr) =>
+                Violation(
+                  "aria-required-attr",
+                  s"""role="$role" needs $attr""",
+                  expected = Some(attr)
+                )
+                  .at(describe(e))
+                  .withHint("without it the control announces no state at all")
+            }
+        }
     },
     Rule(
       "aria-required-parent",
@@ -188,7 +192,7 @@ object AriaStandards extends RuleSet {
         .asScala
         .toSeq
         .flatMap { e =>
-          val labelled  = e.hasAttr("aria-label") || e.hasAttr("aria-labelledby")
+          val labelled = e.hasAttr("aria-label") || e.hasAttr("aria-labelledby")
           val focusable = e.hasAttr("tabindex") && e.attr("tabindex") != "-1"
           if (labelled || focusable)
             Seq(
@@ -206,33 +210,34 @@ object AriaStandards extends RuleSet {
           else Nil
         }
     },
-    Rule("accesskey-unique", "no two elements answer to the same access key") { page =>
-      page.document
-        .select("[accesskey]")
-        .asScala
-        .toSeq
-        .groupBy(_.attr("accesskey").toLowerCase)
-        .toSeq
-        .sortBy(_._1)
-        .collect {
-          case (key, elements) if key.nonEmpty && elements.size > 1 =>
-            Violation(
-              "accesskey-unique",
-              s"""accesskey="$key" is on ${elements.size} elements""",
-              actual = Some(elements.map(describe).mkString(", "))
-            )
-        }
+    Rule("accesskey-unique", "no two elements answer to the same access key") {
+      page =>
+        page.document
+          .select("[accesskey]")
+          .asScala
+          .toSeq
+          .groupBy(_.attr("accesskey").toLowerCase)
+          .toSeq
+          .sortBy(_._1)
+          .collect {
+            case (key, elements) if key.nonEmpty && elements.size > 1 =>
+              Violation(
+                "accesskey-unique",
+                s"""accesskey="$key" is on ${elements.size} elements""",
+                actual = Some(elements.map(describe).mkString(", "))
+              )
+          }
     },
     Rule(
       "autocomplete-is-valid",
       "an autocomplete attribute uses tokens the specification defines"
     ) { page =>
       page.document.select("[autocomplete]").asScala.toSeq.flatMap { e =>
-        val raw    = e.attr("autocomplete").toLowerCase.trim
+        val raw = e.attr("autocomplete").toLowerCase.trim
         val tokens = raw.split("\\s+").filter(_.nonEmpty).toList
-        val body   =
+        val body =
           tokens.filterNot(AriaVocabulary.autocompleteModifiers.contains)
-        val ok     = raw.isEmpty || body.nonEmpty && body
+        val ok = raw.isEmpty || body.nonEmpty && body
           .forall(AriaVocabulary.autocompleteTokens.contains)
         if (ok) Nil
         else
@@ -331,7 +336,9 @@ object AriaStandards extends RuleSet {
       "a definition list contains only terms and descriptions"
     ) { page =>
       page.document.select("dl").asScala.toSeq.flatMap { dl =>
-        val stray = dl.children.asScala.filterNot(c => Set("dt", "dd", "div", "script", "template").contains(c.tagName))
+        val stray = dl.children.asScala.filterNot(c =>
+          Set("dt", "dd", "div", "script", "template").contains(c.tagName)
+        )
         if (stray.isEmpty) Nil
         else
           Seq(
@@ -393,7 +400,9 @@ object AriaStandards extends RuleSet {
       e.attr("aria-labelledby")
         .split("\\s+")
         .filter(_.nonEmpty)
-        .flatMap(id => Option(page.document.getElementById(id)).map(_.text().trim))
+        .flatMap(id =>
+          Option(page.document.getElementById(id)).map(_.text().trim)
+        )
         .mkString(" ")
     else ""
 
@@ -401,7 +410,9 @@ object AriaStandards extends RuleSet {
     page.document.getAllElements.asScala.toSeq.filter(p)
 
   private def rolesOn(page: Page): Seq[(Element, String)] =
-    page.document.getAllElements.asScala.toSeq.flatMap(e => roleOf(e).map(r => (e, r)))
+    page.document.getAllElements.asScala.toSeq.flatMap(e =>
+      roleOf(e).map(r => (e, r))
+    )
 
   /** The explicit role, or the one the tag implies for the landmarks that have
     * one.
@@ -418,12 +429,12 @@ object AriaStandards extends RuleSet {
   private val sectioning = "article, aside, main, nav, section"
 
   private def implicitRole(e: Element): Option[String] = e.tagName match {
-    case "nav"       => Some("navigation")
-    case "aside"     => Some("complementary")
-    case "main"      => Some("main")
-    case "form"      => Some("form")
-    case "header"    => Option.when(e.closest(sectioning) == null)("banner")
-    case "footer"    => Option.when(e.closest(sectioning) == null)("contentinfo")
+    case "nav"    => Some("navigation")
+    case "aside"  => Some("complementary")
+    case "main"   => Some("main")
+    case "form"   => Some("form")
+    case "header" => Option.when(e.closest(sectioning) == null)("banner")
+    case "footer" => Option.when(e.closest(sectioning) == null)("contentinfo")
     case "ul" | "ol" => Some("list")
     case "li"        => Some("listitem")
     case "table"     => Some("table")
@@ -437,7 +448,7 @@ object AriaStandards extends RuleSet {
     e.parents.asScala.toSeq.flatMap(roleOf)
 
   private def describe(e: Element): String = {
-    val id      = e.id()
+    val id = e.id()
     val classes = e
       .className()
       .split("\\s+")

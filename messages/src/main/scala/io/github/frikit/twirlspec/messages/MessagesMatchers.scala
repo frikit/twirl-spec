@@ -25,10 +25,11 @@ import java.io.File
 /** Matchers over a service's message files. */
 trait MessagesMatchers {
 
-  def messagesIntegrityConfig: MessagesIntegrity.Config = MessagesIntegrity.Config.default
+  def messagesIntegrityConfig: MessagesIntegrity.Config =
+    MessagesIntegrity.Config.default
 
   def beConsistentAcrossLanguages(
-    config: MessagesIntegrity.Config = messagesIntegrityConfig
+      config: MessagesIntegrity.Config = messagesIntegrityConfig
   ): Matcher[MessagesApi] =
     new Matcher[MessagesApi] {
       def apply(api: MessagesApi): MatchResult = {
@@ -42,13 +43,17 @@ trait MessagesMatchers {
       report(MessagesIntegrity.duplicateKeys(files), "message files")
   }
 
-  private def report(violations: Seq[Violation], subject: String): MatchResult = {
-    val errors   = violations.filter(_.severity == Severity.Error)
+  private def report(
+      violations: Seq[Violation],
+      subject: String
+  ): MatchResult = {
+    val errors = violations.filter(_.severity == Severity.Error)
     val warnings = violations.filter(_.severity == Severity.Warning)
 
-    val body   = errors.map(_.render()).mkString("\n\n")
+    val body = errors.map(_.render()).mkString("\n\n")
     val warned =
-      if (warnings.isEmpty) "" else "\n\n  warnings:\n" + warnings.map(_.render("  ")).mkString("\n")
+      if (warnings.isEmpty) ""
+      else "\n\n  warnings:\n" + warnings.map(_.render("  ")).mkString("\n")
 
     MatchResult(
       errors.isEmpty,

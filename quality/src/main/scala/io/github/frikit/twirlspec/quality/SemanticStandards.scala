@@ -31,39 +31,41 @@ object SemanticStandards extends RuleSet {
     "a[href], button, input:not([type=hidden]), select, textarea"
 
   lazy val all: Seq[Rule] = Seq(
-    Rule("no-nested-interactive", "no control contains another control") { page =>
-      page.document
-        .select(Interactive)
-        .asScala
-        .toList
-        // Jsoup's Element.select matches the element itself as well as its
-        // descendants, so every control would otherwise contain itself.
-        .filter(e => e.select(Interactive).asScala.exists(_ ne e))
-        .map(e =>
-          Violation(
-            "no-nested-interactive",
-            s"a <${e.tagName()}> contains another control",
-            actual = Some(Text.preview(e.outerHtml(), 100))
-          ).withHint(
-            "keyboard and pointer disagree about what was activated, and screen readers announce both"
-          )
-        )
-    },
-    Rule("lists-contain-list-items", "a list contains only list items") { page =>
-      page.document
-        .select("ul > *:not(li), ol > *:not(li)")
-        .asScala
-        .toList
-        .filterNot(e => Set("script", "template")(e.tagName()))
-        .map(e =>
-          Violation(
-            "lists-contain-list-items",
-            s"a <${e.parent().tagName()}> has a <${e.tagName()}> child"
-          )
-            .withHint(
-              "only <li> may be a direct child, or the list loses its length and position announcements"
+    Rule("no-nested-interactive", "no control contains another control") {
+      page =>
+        page.document
+          .select(Interactive)
+          .asScala
+          .toList
+          // Jsoup's Element.select matches the element itself as well as its
+          // descendants, so every control would otherwise contain itself.
+          .filter(e => e.select(Interactive).asScala.exists(_ ne e))
+          .map(e =>
+            Violation(
+              "no-nested-interactive",
+              s"a <${e.tagName()}> contains another control",
+              actual = Some(Text.preview(e.outerHtml(), 100))
+            ).withHint(
+              "keyboard and pointer disagree about what was activated, and screen readers announce both"
             )
-        )
+          )
+    },
+    Rule("lists-contain-list-items", "a list contains only list items") {
+      page =>
+        page.document
+          .select("ul > *:not(li), ol > *:not(li)")
+          .asScala
+          .toList
+          .filterNot(e => Set("script", "template")(e.tagName()))
+          .map(e =>
+            Violation(
+              "lists-contain-list-items",
+              s"a <${e.parent().tagName()}> has a <${e.tagName()}> child"
+            )
+              .withHint(
+                "only <li> may be a direct child, or the list loses its length and position announcements"
+              )
+          )
     },
     Rule(
       "no-presentational-markup",

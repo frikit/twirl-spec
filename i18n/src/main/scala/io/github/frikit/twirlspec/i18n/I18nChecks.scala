@@ -52,15 +52,15 @@ trait I18nChecks extends TwirlSpecDsl {
 
   /** The differences, for a spec that would rather report than fail. */
   def translationDifferences(
-    pages: Seq[Page],
-    base: Option[Lang] = None
+      pages: Seq[Page],
+      base: Option[Lang] = None
   ): Seq[Violation] =
     compare(pages, base, Set.empty)
 
   private def compare(
-    pages: Seq[Page],
-    base: Option[Lang],
-    excluded: Set[String]
+      pages: Seq[Page],
+      base: Option[Lang],
+      excluded: Set[String]
   ): Seq[Violation] = {
     val rules = TranslationStandards
       .all(translationConfig)
@@ -80,12 +80,12 @@ trait I18nChecks extends TwirlSpecDsl {
       .orElse(pages.headOption)
 
   private def matcher(
-    base: Option[Lang],
-    excluded: Set[String]
+      base: Option[Lang],
+      excluded: Set[String]
   ): Matcher[Seq[Page]] =
     new Matcher[Seq[Page]] {
       def apply(pages: Seq[Page]): MatchResult = pages.headOption match {
-        case None        =>
+        case None =>
           MatchResult(
             false,
             "no pages were given to compare",

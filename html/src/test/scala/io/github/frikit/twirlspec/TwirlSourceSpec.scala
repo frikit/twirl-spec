@@ -23,8 +23,11 @@ import org.scalatest.wordspec.AnyWordSpec
 /** A template is two languages at once, and only one of them writes tags. */
 class TwirlSourceSpec extends AnyWordSpec with Matchers {
 
-  /** Blanking leaves the spaces where the Scala was, so compare structure rather than spacing. */
-  private def html(template: String) = TwirlSource.htmlOnly(template).replaceAll("\\s+", "")
+  /** Blanking leaves the spaces where the Scala was, so compare structure
+    * rather than spacing.
+    */
+  private def html(template: String) =
+    TwirlSource.htmlOnly(template).replaceAll("\\s+", "")
 
   "htmlOnly" should {
 
@@ -49,7 +52,9 @@ class TwirlSourceSpec extends AnyWordSpec with Matchers {
     }
 
     "drop a dotted chain and its arguments" in {
-      html("""<a href="@routes.Foo.bar(1)">x</a>""") mustBe """<ahref="">x</a>"""
+      html(
+        """<a href="@routes.Foo.bar(1)">x</a>"""
+      ) mustBe """<ahref="">x</a>"""
     }
 
     "drop type parameters" in {
@@ -97,11 +102,15 @@ class TwirlSourceSpec extends AnyWordSpec with Matchers {
     }
 
     "drop a bare else-if continuation, which twirl allows without an at-sign" in {
-      html("@if(a) { <p>1</p> } else if(b < c) { <p>2</p> }") mustBe "{<p>1</p>}{<p>2</p>}"
+      html(
+        "@if(a) { <p>1</p> } else if(b < c) { <p>2</p> }"
+      ) mustBe "{<p>1</p>}{<p>2</p>}"
     }
 
     "drop a bare else" in {
-      html("@if(a) { <p>1</p> } else { <p>2</p> }") mustBe "{<p>1</p>}{<p>2</p>}"
+      html(
+        "@if(a) { <p>1</p> } else { <p>2</p> }"
+      ) mustBe "{<p>1</p>}{<p>2</p>}"
     }
 
     "drop a bare else-if whose condition is not bracketed" in {
@@ -137,7 +146,9 @@ class TwirlSourceSpec extends AnyWordSpec with Matchers {
     }
 
     "keep the newlines inside an expression that spans lines" in {
-      TwirlSource.htmlOnly("@if(a <\n b) {\n<div>x</div>\n}").count(_ == '\n') mustBe 3
+      TwirlSource
+        .htmlOnly("@if(a <\n b) {\n<div>x</div>\n}")
+        .count(_ == '\n') mustBe 3
     }
 
     "match the right bracket when they are nested" in {
@@ -158,12 +169,18 @@ class TwirlSourceSpec extends AnyWordSpec with Matchers {
     }
 
     "still find genuinely unbalanced markup" in {
-      TagBalance.checkTemplate("@if(a) {\n  <div><span>text</div>\n}").map(_.message) mustBe
-        List("</div> on line 2 closes <span> from line 2 as well, so the two overlap")
+      TagBalance
+        .checkTemplate("@if(a) {\n  <div><span>text</div>\n}")
+        .map(_.message) mustBe
+        List(
+          "</div> on line 2 closes <span> from line 2 as well, so the two overlap"
+        )
     }
 
     "still find a stray end tag" in {
-      TagBalance.checkTemplate("<ul><li>x</li></ul>\n</a>").map(_.message) mustBe
+      TagBalance
+        .checkTemplate("<ul><li>x</li></ul>\n</a>")
+        .map(_.message) mustBe
         List("</a> on line 2 closes nothing that was open")
     }
   }

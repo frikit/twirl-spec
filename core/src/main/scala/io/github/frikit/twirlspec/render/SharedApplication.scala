@@ -19,23 +19,32 @@ package io.github.frikit.twirlspec.render
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 
-/** One Play application per distinct configuration, shared by every spec in the JVM. */
+/** One Play application per distinct configuration, shared by every spec in the
+  * JVM.
+  */
 object SharedApplication {
 
-  /** Configuration every view test wants: no metrics, no auditing, no CSP nonce. Languages are the service's to declare. */
+  /** Configuration every view test wants: no metrics, no auditing, no CSP
+    * nonce. Languages are the service's to declare.
+    */
   val viewTestDefaults: Map[String, Any] = Map(
-    "metrics.enabled"                -> false,
-    "auditing.enabled"               -> false,
-    "play.i18n.langs"                -> Seq("en"),
+    "metrics.enabled" -> false,
+    "auditing.enabled" -> false,
+    "play.i18n.langs" -> Seq("en"),
     "play.filters.csp.nonce.enabled" -> false
   )
 
-  private val cache = new ApplicationCache(config => new GuiceApplicationBuilder().configure(config).build())
+  private val cache = new ApplicationCache(config =>
+    new GuiceApplicationBuilder().configure(config).build()
+  )
 
   /** The application for this configuration, building it on first use. */
-  def apply(configuration: Map[String, Any]): Application = cache(viewTestDefaults ++ configuration)
+  def apply(configuration: Map[String, Any]): Application = cache(
+    viewTestDefaults ++ configuration
+  )
 
-  /** How many applications this JVM has built — asserted by twirl-spec's own tests, and useful in a service that suspects it is still booting per spec.
+  /** How many applications this JVM has built — asserted by twirl-spec's own
+    * tests, and useful in a service that suspects it is still booting per spec.
     */
   def instanceCount: Int = cache.instanceCount
 

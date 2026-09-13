@@ -43,18 +43,29 @@ object AccessibleName {
       e.attr("aria-label"),
       labelFor(document, e),
       if (e.tagName() == "img") e.attr("alt") else "",
-      if (e.tagName() == "fieldset") e.select("legend").asScala.headOption.map(_.text()).getOrElse("") else "",
+      if (e.tagName() == "fieldset")
+        e.select("legend").asScala.headOption.map(_.text()).getOrElse("")
+      else "",
       if (e.tagName() == "input") e.attr("value") else "",
       e.text()
     )
 
-    Text.normalise(candidates.find(c => Text.normalise(c).nonEmpty).getOrElse(""))
+    Text.normalise(
+      candidates.find(c => Text.normalise(c).nonEmpty).getOrElse("")
+    )
   }
 
   private def labelFor(document: Document, e: Element): String = {
     val byId = Option(e.id())
       .filter(_.nonEmpty)
-      .map(id => document.select(s"""label[for="$id"]""").asScala.toList.map(_.text()).mkString(" "))
+      .map(id =>
+        document
+          .select(s"""label[for="$id"]""")
+          .asScala
+          .toList
+          .map(_.text())
+          .mkString(" ")
+      )
       .getOrElse("")
     if (byId.nonEmpty) byId
     else Option(e.closest("label")).map(_.text()).getOrElse("")

@@ -43,15 +43,18 @@ class WcagInternalsSpec extends AnyWordSpec with Matchers with TwirlSpec {
         english,
         messages
       )
-      val fired   = standardsExpectation.check(noTitle).map(_.rule)
+      val fired = standardsExpectation.check(noTitle).map(_.rule)
       fired must contain("title-present")
       fired must contain("main-landmark")
       fired must contain("submit-has-name")
     }
 
     "quote the surrounding text when a Scala value leaks in" in {
-      val leak = pageOf("<h1>A</h1><p>Your name is Some(Ada) according to our records</p>")
-      val v    = standardsExpectation.check(leak).find(_.rule == "no-scala-leakage")
+      val leak = pageOf(
+        "<h1>A</h1><p>Your name is Some(Ada) according to our records</p>"
+      )
+      val v =
+        standardsExpectation.check(leak).find(_.rule == "no-scala-leakage")
       v.flatMap(_.actual).getOrElse("") must include("Some(Ada)")
     }
   }

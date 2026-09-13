@@ -21,7 +21,9 @@ import org.scalatest.wordspec.AnyWordSpec
 import io.github.frikit.twirlspec.expect.Expectation
 import io.github.frikit.twirlspec.page.Page
 
-/** Every expectation in the DSL, on a page that satisfies it and on one that does not. */
+/** Every expectation in the DSL, on a page that satisfies it and on one that
+  * does not.
+  */
 class ExpectationDslSpec extends AnyWordSpec with Matchers with Bilingual {
 
   private val fixture =
@@ -110,18 +112,25 @@ class ExpectationDslSpec extends AnyWordSpec with Matchers with Bilingual {
   private def check(e: Expectation): Seq[String] = e.check(page).map(_.rule)
 
   private def passes(name: String, e: Expectation): Unit =
-    withClue(s"$name should have passed but reported: ${e.check(page).map(_.message).mkString("; ")} — ") {
+    withClue(
+      s"$name should have passed but reported: ${e.check(page).map(_.message).mkString("; ")} — "
+    ) {
       check(e) mustBe empty
     }
 
   private def fails(name: String, e: Expectation): Unit =
-    withClue(s"$name should have failed but passed — ")(check(e) must not be empty)
+    withClue(s"$name should have failed but passed — ")(
+      check(e) must not be empty
+    )
 
   "framing expectations" should {
     "pass on a page that satisfies them" in {
       passes("title", title("kitchenSink.title"))
       passes("titleText", titleText("Everything at once"))
-      passes("exactTitle", exactTitle("Everything at once - Example Service - GOV.UK"))
+      passes(
+        "exactTitle",
+        exactTitle("Everything at once - Example Service - GOV.UK")
+      )
       passes("title literal", title(literal("Everything at once")))
       passes("heading", heading("kitchenSink.heading"))
       passes("headingText", headingText("Everything at once"))
@@ -161,13 +170,25 @@ class ExpectationDslSpec extends AnyWordSpec with Matchers with Bilingual {
           .withAutocomplete("email")
           .ofType("email")
       )
-      passes("textArea", textArea("notes").labelled("kitchenSink.notes").withValue("Some notes"))
-      passes("textInput labelledText", textInput("email").labelledText("Email address"))
-      passes("textInput hintedText", textInput("email").hintedText("We will only use this to contact you"))
+      passes(
+        "textArea",
+        textArea("notes").labelled("kitchenSink.notes").withValue("Some notes")
+      )
+      passes(
+        "textInput labelledText",
+        textInput("email").labelledText("Email address")
+      )
+      passes(
+        "textInput hintedText",
+        textInput("email").hintedText("We will only use this to contact you")
+      )
       passes("textInput labelledByLegend", textInput("email").labelledByLegend)
       passes(
         "dropdown",
-        dropdown("country").labelled("kitchenSink.country").withOptionValues("GB", "FR").withOptionCount(2)
+        dropdown("country")
+          .labelled("kitchenSink.country")
+          .withOptionValues("GB", "FR")
+          .withOptionCount(2)
       )
       passes(
         "checkboxGroup",
@@ -176,8 +197,14 @@ class ExpectationDslSpec extends AnyWordSpec with Matchers with Bilingual {
           .withOptions("red" -> "kitchenSink.red", "blue" -> "kitchenSink.blue")
           .selectedIs("red")
       )
-      passes("checkboxGroup withOptionValues", checkboxGroup("colours").withOptionValues("red", "blue"))
-      passes("checkboxGroup containingOption", checkboxGroup("colours").containingOption("red", "kitchenSink.red"))
+      passes(
+        "checkboxGroup withOptionValues",
+        checkboxGroup("colours").withOptionValues("red", "blue")
+      )
+      passes(
+        "checkboxGroup containingOption",
+        checkboxGroup("colours").containingOption("red", "kitchenSink.red")
+      )
       passes("fileUpload", fileUpload("evidence"))
       passes("hiddenInput", hiddenInput("csrfToken", "abc123"))
       passes("submitButton", submitButton("site.continue"))
@@ -197,12 +224,24 @@ class ExpectationDslSpec extends AnyWordSpec with Matchers with Bilingual {
       fails("wrong type", textInput("email").ofType("text"))
       fails("unlabelled input", textInput("csrfToken"))
       fails("missing textarea", textArea("nope"))
-      fails("wrong dropdown options", dropdown("country").withOptionValues("DE"))
+      fails(
+        "wrong dropdown options",
+        dropdown("country").withOptionValues("DE")
+      )
       fails("wrong dropdown count", dropdown("country").withOptionCount(9))
       fails("missing checkbox group", checkboxGroup("nope"))
-      fails("wrong checkbox legend", checkboxGroup("colours").legendIs("kitchenSink.title"))
-      fails("wrong checkbox options", checkboxGroup("colours").withOptionValues("green"))
-      fails("wrong checkbox selection", checkboxGroup("colours").nothingSelected)
+      fails(
+        "wrong checkbox legend",
+        checkboxGroup("colours").legendIs("kitchenSink.title")
+      )
+      fails(
+        "wrong checkbox options",
+        checkboxGroup("colours").withOptionValues("green")
+      )
+      fails(
+        "wrong checkbox selection",
+        checkboxGroup("colours").nothingSelected
+      )
       fails("missing file upload", fileUpload("nope"))
       fails("wrong hidden value", hiddenInput("csrfToken", "wrong"))
       fails("missing hidden input", hiddenInput("nope", "x"))
@@ -211,9 +250,15 @@ class ExpectationDslSpec extends AnyWordSpec with Matchers with Bilingual {
       fails("wrong form action", formPostsTo("/elsewhere"))
       fails("wrong form method", formGetsFrom("/kitchen-sink"))
       fails("errorTitlePrefix on a clean page", errorTitlePrefix)
-      fails("errorSummary on a clean page", errorSummary("email" -> "kitchenSink.error.email.required"))
+      fails(
+        "errorSummary on a clean page",
+        errorSummary("email" -> "kitchenSink.error.email.required")
+      )
       fails("errorSummaryTitle on a clean page", errorSummaryTitle())
-      fails("fieldError on a clean page", fieldError("email", "kitchenSink.error.email.required"))
+      fails(
+        "fieldError on a clean page",
+        fieldError("email", "kitchenSink.error.email.required")
+      )
     }
   }
 
@@ -234,8 +279,17 @@ class ExpectationDslSpec extends AnyWordSpec with Matchers with Bilingual {
       passes("link", link("kitchenSink.link").to("/guidance"))
       passes("linkText", linkText("Read the guidance"))
       passes("linkWithId", linkWithId("guidance-link").to("/guidance"))
-      passes("link saying", linkWithId("guidance-link").saying("kitchenSink.link"))
-      passes("summaryList", summaryList("checkAnswers.name" -> "Ada Lovelace", "checkAnswers.dob" -> "27 March 1993"))
+      passes(
+        "link saying",
+        linkWithId("guidance-link").saying("kitchenSink.link")
+      )
+      passes(
+        "summaryList",
+        summaryList(
+          "checkAnswers.name" -> "Ada Lovelace",
+          "checkAnswers.dob" -> "27 March 1993"
+        )
+      )
       passes(
         "summaryRow",
         summaryRow("checkAnswers.name")
@@ -243,7 +297,10 @@ class ExpectationDslSpec extends AnyWordSpec with Matchers with Bilingual {
           .withChangeLinkTo("/change/name")
           .withActions("checkAnswers.change")
       )
-      passes("tableHeaders", tableHeaders("kitchenSink.col1", "kitchenSink.col2"))
+      passes(
+        "tableHeaders",
+        tableHeaders("kitchenSink.col1", "kitchenSink.col2")
+      )
       passes("tableRow", tableRow("Ada", "1815"))
       passes("element", element("submit"))
       passes("noElement", noElement("nope"))
@@ -265,15 +322,33 @@ class ExpectationDslSpec extends AnyWordSpec with Matchers with Bilingual {
       fails("wrong details summary", detailsSummary("kitchenSink.p1"))
       fails("wrong bullets", bullets("kitchenSink.b1"))
       fails("bullets with undefined key", bullets("kitchenSink.notAKey"))
-      fails("wrong numbered items", numberedItems("kitchenSink.b1", "kitchenSink.b2"))
+      fails(
+        "wrong numbered items",
+        numberedItems("kitchenSink.b1", "kitchenSink.b2")
+      )
       fails("missing link", link("kitchenSink.absent"))
       fails("wrong link href", link("kitchenSink.link").to("/elsewhere"))
-      fails("wrong summary list", summaryList("checkAnswers.name" -> "Someone Else"))
+      fails(
+        "wrong summary list",
+        summaryList("checkAnswers.name" -> "Someone Else")
+      )
       fails("missing summary row", summaryRow("kitchenSink.absent"))
-      fails("wrong summary row value", summaryRow("checkAnswers.name").withValue("Someone Else"))
-      fails("wrong change link", summaryRow("checkAnswers.name").withChangeLinkTo("/elsewhere"))
-      fails("wrong row actions", summaryRow("checkAnswers.name").withActions("kitchenSink.absent"))
-      fails("wrong table headers", tableHeaders("kitchenSink.col2", "kitchenSink.col1"))
+      fails(
+        "wrong summary row value",
+        summaryRow("checkAnswers.name").withValue("Someone Else")
+      )
+      fails(
+        "wrong change link",
+        summaryRow("checkAnswers.name").withChangeLinkTo("/elsewhere")
+      )
+      fails(
+        "wrong row actions",
+        summaryRow("checkAnswers.name").withActions("kitchenSink.absent")
+      )
+      fails(
+        "wrong table headers",
+        tableHeaders("kitchenSink.col2", "kitchenSink.col1")
+      )
       fails("missing table row", tableRow("Grace", "1906"))
       fails("missing element", element("nope"))
       fails("noElement that exists", noElement("submit"))
@@ -289,13 +364,21 @@ class ExpectationDslSpec extends AnyWordSpec with Matchers with Bilingual {
   "expectation combinators" should {
 
     "combine with and" in {
-      passes("and", title("kitchenSink.title").and(heading("kitchenSink.heading")))
-      fails("and with one failure", title("kitchenSink.title").and(heading("kitchenSink.absent")))
+      passes(
+        "and",
+        title("kitchenSink.title").and(heading("kitchenSink.heading"))
+      )
+      fails(
+        "and with one failure",
+        title("kitchenSink.title").and(heading("kitchenSink.absent"))
+      )
     }
 
     "downgrade to a warning" in {
       val violations = heading("kitchenSink.absent").asWarning.check(page)
-      violations.map(_.severity) mustBe Seq(io.github.frikit.twirlspec.expect.Severity.Warning)
+      violations.map(_.severity) mustBe Seq(
+        io.github.frikit.twirlspec.expect.Severity.Warning
+      )
     }
 
     "apply conditionally" in {
@@ -304,56 +387,64 @@ class ExpectationDslSpec extends AnyWordSpec with Matchers with Bilingual {
     }
 
     "describe themselves" in {
-      Expectation.satisfied.check(page)                                                  mustBe empty
-      expectations(title("kitchenSink.title"), heading("kitchenSink.heading")).description must include("title")
+      Expectation.satisfied.check(page) mustBe empty
+      expectations(
+        title("kitchenSink.title"),
+        heading("kitchenSink.heading")
+      ).description must include("title")
     }
   }
 
   "the page model" should {
 
     "expose selections that describe themselves" in {
-      page.css(".govuk-summary-list__row").toString                                must include("x2")
-      page.css(".nothing-here").toString                                           must include("no match")
-      page.byId("submit").text                                                   mustBe "Continue"
-      page.input("email").attr("type")                                           mustBe Some("email")
-      page.input("email").ids                                                    mustBe List("email")
-      page.css("main").select("h1").text                                         mustBe "Everything at once"
-      page.checkboxes("colours").texts                                             must have size 2
-      page.links.containing("guidance").size                                     mustBe 1
-      page.css(".govuk-summary-list__row").filter(_.text().contains("Ada")).size mustBe 1
-      page.byId("submit").classes                                                  must contain("govuk-button")
-      page.byId("submit").hasClass("govuk-button")                               mustBe true
-      page.byId("guidance-link").html                                              must include("Read the guidance")
-      page.forms.attrs("method")                                                 mustBe List("post")
-      page.text                                                                    must include("Everything at once")
-      page.contains("A paragraph of guidance.")                                  mustBe true
-      page.summaryRows                                                             must have size 2
-      page.tables.nonEmpty                                                       mustBe true
-      page.bulletList.nonEmpty                                                   mustBe true
-      page.numberedList.nonEmpty                                                 mustBe true
-      page.tags.isEmpty                                                          mustBe true
-      page.breadcrumbs.isEmpty                                                   mustBe true
-      page.pagination.isEmpty                                                    mustBe true
-      page.accordion.isEmpty                                                     mustBe true
-      page.tabs.isEmpty                                                          mustBe true
-      page.addToAList.isEmpty                                                    mustBe true
-      page.images.isEmpty                                                        mustBe true
-      page.legends.size                                                          mustBe 1
-      page.fieldsets.size                                                        mustBe 1
-      page.hints.size                                                            mustBe 2
-      page.buttons.nonEmpty                                                      mustBe true
-      page.formAction                                                            mustBe Some("/kitchen-sink")
-      page.formMethod                                                            mustBe Some("POST")
-      page.toString                                                                must include("lang=en")
+      page.css(".govuk-summary-list__row").toString must include("x2")
+      page.css(".nothing-here").toString must include("no match")
+      page.byId("submit").text mustBe "Continue"
+      page.input("email").attr("type") mustBe Some("email")
+      page.input("email").ids mustBe List("email")
+      page.css("main").select("h1").text mustBe "Everything at once"
+      page.checkboxes("colours").texts must have size 2
+      page.links.containing("guidance").size mustBe 1
+      page
+        .css(".govuk-summary-list__row")
+        .filter(_.text().contains("Ada"))
+        .size mustBe 1
+      page.byId("submit").classes must contain("govuk-button")
+      page.byId("submit").hasClass("govuk-button") mustBe true
+      page.byId("guidance-link").html must include("Read the guidance")
+      page.forms.attrs("method") mustBe List("post")
+      page.text must include("Everything at once")
+      page.contains("A paragraph of guidance.") mustBe true
+      page.summaryRows must have size 2
+      page.tables.nonEmpty mustBe true
+      page.bulletList.nonEmpty mustBe true
+      page.numberedList.nonEmpty mustBe true
+      page.tags.isEmpty mustBe true
+      page.breadcrumbs.isEmpty mustBe true
+      page.pagination.isEmpty mustBe true
+      page.accordion.isEmpty mustBe true
+      page.tabs.isEmpty mustBe true
+      page.addToAList.isEmpty mustBe true
+      page.images.isEmpty mustBe true
+      page.legends.size mustBe 1
+      page.fieldsets.size mustBe 1
+      page.hints.size mustBe 2
+      page.buttons.nonEmpty mustBe true
+      page.formAction mustBe Some("/kitchen-sink")
+      page.formMethod mustBe Some("POST")
+      page.toString must include("lang=en")
     }
 
     "resolve messages and report undefined keys" in {
-      page.message("kitchenSink.title")            mustBe Some("Everything at once")
-      page.message("kitchenSink.notAKey")          mustBe None
-      page.messageOrKey("kitchenSink.notAKey")     mustBe "kitchenSink.notAKey"
+      page.message("kitchenSink.title") mustBe Some("Everything at once")
+      page.message("kitchenSink.notAKey") mustBe None
+      page.messageOrKey("kitchenSink.notAKey") mustBe "kitchenSink.notAKey"
       page.withLang(welsh, messagesIn(welsh)).lang mustBe welsh
     }
   }
 
-  private def messagesIn(lang: play.api.i18n.Lang) = messagesApi.preferred(Seq(lang))
+  private def messagesIn(lang: play.api.i18n.Lang) =
+    messagesApi.preferred(Seq(lang))
+
 }

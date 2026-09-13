@@ -26,11 +26,15 @@ import testviews.html.{checkAnswersView, dateView, nameView, radioView}
 class TwirlSpecEndToEndSpec extends AnyWordSpec with Matchers with Bilingual {
 
   private val nameForm: Form[(String, String)] =
-    Form(mapping("firstName" -> text, "lastName" -> text)(Tuple2.apply)(t => Some((t._1, t._2))))
+    Form(
+      mapping("firstName" -> text, "lastName" -> text)(Tuple2.apply)(t =>
+        Some((t._1, t._2))
+      )
+    )
 
-  private val name         = inject[nameView]
-  private val radio        = inject[radioView]
-  private val date         = inject[dateView]
+  private val name = inject[nameView]
+  private val radio = inject[radioView]
+  private val date = inject[dateView]
   private val checkAnswers = inject[checkAnswersView]
 
   "a question page" should {
@@ -45,7 +49,9 @@ class TwirlSpecEndToEndSpec extends AnyWordSpec with Matchers with Bilingual {
         languageToggle,
         paragraph("whatIsYourName.p1"),
         formPostsTo("/register/name"),
-        textInput("firstName").labelled("whatIsYourName.firstName").withAutocomplete("given-name"),
+        textInput("firstName")
+          .labelled("whatIsYourName.firstName")
+          .withAutocomplete("given-name"),
         textInput("lastName")
           .labelled("whatIsYourName.lastName")
           .hinted("whatIsYourName.lastName.hint")
@@ -70,7 +76,7 @@ class TwirlSpecEndToEndSpec extends AnyWordSpec with Matchers with Bilingual {
         errorSummaryTitle(),
         errorSummary(
           "firstName" -> "whatIsYourName.error.firstName.required",
-          "lastName"  -> "whatIsYourName.error.lastName.required"
+          "lastName" -> "whatIsYourName.error.lastName.required"
         ),
         fieldError("firstName", "whatIsYourName.error.firstName.required"),
         fieldError("lastName", "whatIsYourName.error.lastName.required")
@@ -102,7 +108,9 @@ class TwirlSpecEndToEndSpec extends AnyWordSpec with Matchers with Bilingual {
   "a date page" should {
     "check all three fields, the legend and the hint at once" in {
       render(date()) must display(
-        dateInput("value").legendIs("dateOfBirth.legend").hinted("dateOfBirth.hint"),
+        dateInput("value")
+          .legendIs("dateOfBirth.legend")
+          .hinted("dateOfBirth.hint"),
         submitButton()
       )
     }
@@ -113,10 +121,14 @@ class TwirlSpecEndToEndSpec extends AnyWordSpec with Matchers with Bilingual {
       render(checkAnswers("Ada Lovelace", "27 March 1993")) must display(
         summaryList(
           "checkAnswers.name" -> "Ada Lovelace",
-          "checkAnswers.dob"  -> "27 March 1993"
+          "checkAnswers.dob" -> "27 March 1993"
         ),
-        summaryRow("checkAnswers.name").withValue("Ada Lovelace").withChangeLinkTo("/change/name"),
-        summaryRow("checkAnswers.dob").withValue("27 March 1993").withChangeLinkTo("/change/dob")
+        summaryRow("checkAnswers.name")
+          .withValue("Ada Lovelace")
+          .withChangeLinkTo("/change/name"),
+        summaryRow("checkAnswers.dob")
+          .withValue("27 March 1993")
+          .withChangeLinkTo("/change/dob")
       )
     }
   }
@@ -136,9 +148,9 @@ class TwirlSpecEndToEndSpec extends AnyWordSpec with Matchers with Bilingual {
     "resolve welsh content, not english" in
       inLanguage(welsh) {
         val page = render(name(nameForm))
-        page.title               must startWith("Beth yw eu henw?")
-        page.h1.text           mustBe "Beth yw eu henw?"
-        page.htmlLang          mustBe Some("cy")
+        page.title must startWith("Beth yw eu henw?")
+        page.h1.text mustBe "Beth yw eu henw?"
+        page.htmlLang mustBe Some("cy")
         page.submitButton.text mustBe "Yn eich blaen"
       }
   }
@@ -152,5 +164,8 @@ class TwirlSpecEndToEndSpec extends AnyWordSpec with Matchers with Bilingual {
 }
 
 object SharedApplicationCount {
-  def value: Int = io.github.frikit.twirlspec.render.SharedApplication.instanceCount
+
+  def value: Int =
+    io.github.frikit.twirlspec.render.SharedApplication.instanceCount
+
 }

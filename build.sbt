@@ -47,7 +47,9 @@ lazy val commonSettings = Seq(
   // Play and Twirl sit on the oldest 3.0.x on purpose, and Scala on the LTS
   // line, so dependencyUpdates should not keep proposing the newest of each.
   dependencyUpdatesFilter -= moduleFilter(organization = "org.playframework"),
-  dependencyUpdatesFilter -= moduleFilter(organization = "org.playframework.twirl"),
+  dependencyUpdatesFilter -= moduleFilter(organization =
+    "org.playframework.twirl"
+  ),
   dependencyUpdatesFilter -= moduleFilter(organization = "org.scala-lang"),
   // Suites share one Play application through SharedApplication, and one suite
   // exercises the shutdown hook that stops it, so suites run one at a time.

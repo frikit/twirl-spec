@@ -35,12 +35,16 @@ object WcagStandards extends RuleSet {
 
   /** Rules for a conformance claim, which is cumulative: `AA` includes `A`. */
   def conformingTo(
-    level: Level,
-    version: WcagVersion = WcagVersion.V2_2
+      level: Level,
+      version: WcagVersion = WcagVersion.V2_2
   ): Seq[Rule] = {
-    val levels   = Level.upTo(level).toSet
+    val levels = Level.upTo(level).toSet
     val versions = WcagVersion.upTo(version).toSet
-    all.filter(r => r.criterion.exists(c => levels.contains(c.level) && versions.contains(c.since)))
+    all.filter(r =>
+      r.criterion.exists(c =>
+        levels.contains(c.level) && versions.contains(c.since)
+      )
+    )
   }
 
   /** Rules introduced in exactly this version of WCAG. */
@@ -81,7 +85,8 @@ object WcagStandards extends RuleSet {
       "title-present",
       "a page has a non-empty <title>",
       pageLevel = true,
-      criterion = Some(Criterion("2.4.2", "Page Titled", Level.A, WcagVersion.V2_0))
+      criterion =
+        Some(Criterion("2.4.2", "Page Titled", Level.A, WcagVersion.V2_0))
     ) { page =>
       if (page.title.nonEmpty) Nil
       else Seq(Violation("title-present", "the page has an empty <title>"))
@@ -90,10 +95,11 @@ object WcagStandards extends RuleSet {
       "html-lang",
       "the <html> element declares the rendered language",
       pageLevel = true,
-      criterion = Some(Criterion("3.1.1", "Language of Page", Level.A, WcagVersion.V2_0))
+      criterion =
+        Some(Criterion("3.1.1", "Language of Page", Level.A, WcagVersion.V2_0))
     ) { page =>
       page.htmlLang match {
-        case None                                     =>
+        case None =>
           Seq(
             Violation("html-lang", "the <html> element has no lang attribute")
               .withHint("WCAG 3.1.1")
@@ -107,7 +113,7 @@ object WcagStandards extends RuleSet {
               "page was rendered in a different language"
             )
           )
-        case _                                        => Nil
+        case _ => Nil
       }
     },
     Rule(
@@ -163,7 +169,8 @@ object WcagStandards extends RuleSet {
     Rule(
       "unique-ids",
       "element ids are unique",
-      criterion = Some(Criterion("4.1.2", "Name, Role, Value", Level.A, WcagVersion.V2_0))
+      criterion =
+        Some(Criterion("4.1.2", "Name, Role, Value", Level.A, WcagVersion.V2_0))
     ) { page =>
       page.document
         .select("[id]")
@@ -196,7 +203,8 @@ object WcagStandards extends RuleSet {
         Violation(
           "labelled-controls",
           s"<${e.tagName()}${describeControl(e)}> has no label",
-          expected = Some(s"""label[for="${e.id()}"], aria-label or aria-labelledby"""),
+          expected =
+            Some(s"""label[for="${e.id()}"], aria-label or aria-labelledby"""),
           actual = Some(Text.preview(e.outerHtml(), 120))
         ).withHint("WCAG 3.3.2 / 4.1.2")
       }
@@ -217,7 +225,7 @@ object WcagStandards extends RuleSet {
 
       groups.toSeq.sortBy(_._1).flatMap { case (name, members) =>
         Option(members.head.closest("fieldset")) match {
-          case None           =>
+          case None =>
             Seq(
               Violation(
                 "grouped-choices",
@@ -242,7 +250,8 @@ object WcagStandards extends RuleSet {
     Rule(
       "submit-has-name",
       "the submit control has visible text",
-      criterion = Some(Criterion("4.1.2", "Name, Role, Value", Level.A, WcagVersion.V2_0))
+      criterion =
+        Some(Criterion("4.1.2", "Name, Role, Value", Level.A, WcagVersion.V2_0))
     ) { page =>
       page.document
         .select("button[type=submit], input[type=submit], button:not([type])")
@@ -376,9 +385,12 @@ object WcagStandards extends RuleSet {
         .map { e =>
           Violation(
             "input-purpose-autocomplete",
-            s"""field "${if (e.attr("name").nonEmpty) e.attr("name")
-              else e.id()}" collects information about the user but declares no autocomplete""",
-            expected = Some("an autocomplete token, for example autocomplete=\"email\"")
+            s"""field "${
+                if (e.attr("name").nonEmpty) e.attr("name")
+                else e.id()
+              }" collects information about the user but declares no autocomplete""",
+            expected =
+              Some("an autocomplete token, for example autocomplete=\"email\"")
           ).warn.withHint(
             "WCAG 1.3.5 — lets a browser fill the field on the user's behalf"
           )
@@ -418,7 +430,8 @@ object WcagStandards extends RuleSet {
     Rule(
       "no-aria-hidden-focusable",
       "nothing hidden from assistive technology can still take focus",
-      criterion = Some(Criterion("4.1.2", "Name, Role, Value", Level.A, WcagVersion.V2_0))
+      criterion =
+        Some(Criterion("4.1.2", "Name, Role, Value", Level.A, WcagVersion.V2_0))
     ) { page =>
       val focusable = "a[href], button, input, select, textarea, [tabindex]"
       page.document
@@ -437,13 +450,16 @@ object WcagStandards extends RuleSet {
     Rule(
       "no-positive-tabindex",
       "focus order follows the document",
-      criterion = Some(Criterion("2.4.3", "Focus Order", Level.A, WcagVersion.V2_0))
+      criterion =
+        Some(Criterion("2.4.3", "Focus Order", Level.A, WcagVersion.V2_0))
     ) { page =>
       page.document
         .select("[tabindex]")
         .asScala
         .toList
-        .filter(e => scala.util.Try(e.attr("tabindex").toInt).toOption.exists(_ > 0))
+        .filter(e =>
+          scala.util.Try(e.attr("tabindex").toInt).toOption.exists(_ > 0)
+        )
         .map(e =>
           Violation(
             "no-positive-tabindex",
@@ -460,14 +476,17 @@ object WcagStandards extends RuleSet {
       "zoom-not-blocked",
       "the page can be zoomed",
       pageLevel = true,
-      criterion = Some(Criterion("1.4.4", "Resize Text", Level.AA, WcagVersion.V2_0))
+      criterion =
+        Some(Criterion("1.4.4", "Resize Text", Level.AA, WcagVersion.V2_0))
     ) { page =>
       page.document
         .select("meta[name=viewport]")
         .asScala
         .toList
         .map(_.attr("content").toLowerCase.replaceAll("\\s", ""))
-        .filter(c => c.contains("user-scalable=no") || c.contains("maximum-scale=1"))
+        .filter(c =>
+          c.contains("user-scalable=no") || c.contains("maximum-scale=1")
+        )
         .map(c =>
           Violation(
             "zoom-not-blocked",
@@ -526,7 +545,8 @@ object WcagStandards extends RuleSet {
     Rule(
       "image-alt",
       "every image has an alt attribute",
-      criterion = Some(Criterion("1.1.1", "Non-text Content", Level.A, WcagVersion.V2_0))
+      criterion =
+        Some(Criterion("1.1.1", "Non-text Content", Level.A, WcagVersion.V2_0))
     ) { page =>
       page.images.elements
         .filterNot(_.hasAttr("alt"))
@@ -585,7 +605,7 @@ object WcagStandards extends RuleSet {
   }
 
   private def describeControl(e: Element): String = {
-    val id   =
+    val id =
       Option(e.id()).filter(_.nonEmpty).map(v => s""" id="$v"""").getOrElse("")
     val name = Option(e.attr("name"))
       .filter(_.nonEmpty)

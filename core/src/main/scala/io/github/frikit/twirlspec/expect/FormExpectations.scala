@@ -72,9 +72,9 @@ trait FormExpectations {
     buttonWith(s"button($id)", Expected.Key(key), Some(id))
 
   private def buttonWith(
-    rule: String,
-    expected: Expected,
-    id: Option[String]
+      rule: String,
+      expected: Expected,
+      id: Option[String]
   ): Expectation =
     Expectation(rule) { page =>
       val sel = id.fold(page.submitButton)(page.byId)
@@ -94,12 +94,12 @@ trait FormExpectations {
     Expectation(s"form $method $url") { page =>
       if (page.forms.isEmpty) Seq(Violation.missing("form", "form"))
       else {
-        val actualUrl    = page.formAction.getOrElse("")
+        val actualUrl = page.formAction.getOrElse("")
         val actualMethod = page.formMethod.getOrElse("GET")
-        val urlIssue     =
+        val urlIssue =
           if (actualUrl == url) Nil
           else Seq(Violation.mismatch("form action", url, actualUrl))
-        val methodIssue  =
+        val methodIssue =
           if (actualMethod.equalsIgnoreCase(method)) Nil
           else Seq(Violation.mismatch("form method", method, actualMethod))
         urlIssue ++ methodIssue
@@ -115,7 +115,7 @@ trait FormExpectations {
           case Some(got) if Text.same(got, want) => Nil
           case Some(got)                         =>
             Seq(Violation.mismatch(s"formValues($field)", want, got))
-          case None                              =>
+          case None =>
             Seq(
               Violation(
                 s"formValues($field)",
@@ -133,11 +133,15 @@ trait FormExpectations {
 
   /** The control is disabled, on itself or through an enclosing fieldset. */
   def disabled(nameOrId: String): Expectation =
-    controlIs(nameOrId, "disabled", "the control is not disabled")((page, e) => page.isDisabled(e))
+    controlIs(nameOrId, "disabled", "the control is not disabled")((page, e) =>
+      page.isDisabled(e)
+    )
 
   /** This control is not disabled. */
   def enabled(nameOrId: String): Expectation =
-    controlIs(nameOrId, "enabled", "the control is disabled")((page, e) => !page.isDisabled(e))
+    controlIs(nameOrId, "enabled", "the control is disabled")((page, e) =>
+      !page.isDisabled(e)
+    )
 
   /** This control is marked required. */
   def required(nameOrId: String): Expectation =
@@ -182,19 +186,19 @@ trait FormExpectations {
     * differ only in the predicate.
     */
   private def controlIs(
-    nameOrId: String,
-    state: String,
-    failure: String,
-    hint: Option[String] = None
+      nameOrId: String,
+      state: String,
+      failure: String,
+      hint: Option[String] = None
   )(
-    ok: (Page, Element) => Boolean
+      ok: (Page, Element) => Boolean
   ): Expectation = {
     val rule = s"$state($nameOrId)"
     Expectation(rule) { page =>
       Matching.exactlyOne(rule, page.formControl(nameOrId)) match {
         case Left(v)                 => Seq(v)
         case Right(e) if ok(page, e) => Nil
-        case Right(_)                => Seq(Violation(rule, failure).copy(hint = hint))
+        case Right(_) => Seq(Violation(rule, failure).copy(hint = hint))
       }
     }
   }
@@ -256,9 +260,9 @@ trait FormExpectations {
 
   /** The error summary mentions this field, whatever else it lists. */
   def errorSummaryContaining(
-    field: String,
-    key: String,
-    args: Any*
+      field: String,
+      key: String,
+      args: Any*
   ): Expectation =
     ErrorSummaryExpectation(
       List((field, Expected.Key(key, args.toSeq))),
@@ -272,11 +276,12 @@ trait FormExpectations {
         case Left(v)      => Seq(v.copy(rule = s"fieldError($field)"))
         case Right(value) =>
           page.fieldErrors.get(field) match {
-            case None        =>
+            case None =>
               Seq(
                 Violation(
                   rule = s"fieldError($field)",
-                  message = "no inline error message was rendered for this field",
+                  message =
+                    "no inline error message was rendered for this field",
                   expected = Some(value),
                   actual = Some(
                     if (page.fieldErrors.isEmpty)
@@ -301,14 +306,14 @@ trait FormExpectations {
 
 /** A text input (or textarea), its label, hint, value and autocomplete. */
 final case class TextInputExpectation(
-  name: String,
-  tag: String = "input",
-  label: Option[Expected] = None,
-  hint: Option[Expected] = None,
-  value: Option[String] = None,
-  autocomplete: Option[String] = None,
-  inputType: Option[String] = None,
-  labelRequired: Boolean = true
+    name: String,
+    tag: String = "input",
+    label: Option[Expected] = None,
+    hint: Option[Expected] = None,
+    value: Option[String] = None,
+    autocomplete: Option[String] = None,
+    inputType: Option[String] = None,
+    labelRequired: Boolean = true
 ) extends Expectation {
 
   def labelled(key: String, args: Any*): TextInputExpectation =
@@ -346,7 +351,7 @@ final case class TextInputExpectation(
 
         val labelIssues =
           FormChecks.labelIssues(page, rule, id, label, labelRequired)
-        val hintIssues  =
+        val hintIssues =
           hint.toSeq.flatMap(FormChecks.hintIssues(page, rule, id, _))
 
         val valueIssues = value.toSeq.flatMap { expectedValue =>
@@ -394,13 +399,13 @@ final case class TextInputExpectation(
 
 /** A radio or checkbox group: its legend, its options and what is selected. */
 final case class ChoiceGroupExpectation(
-  name: String,
-  kind: String,
-  options: Option[List[(String, Expected)]] = None,
-  legend: Option[Expected] = None,
-  hint: Option[Expected] = None,
-  selected: Option[Set[String]] = None,
-  exhaustive: Boolean = true
+    name: String,
+    kind: String,
+    options: Option[List[(String, Expected)]] = None,
+    legend: Option[Expected] = None,
+    hint: Option[Expected] = None,
+    selected: Option[Set[String]] = None,
+    exhaustive: Boolean = true
 ) extends Expectation {
 
   def withOptions(opts: (String, String)*): ChoiceGroupExpectation =
@@ -409,11 +414,14 @@ final case class ChoiceGroupExpectation(
     }))
 
   def withOptionValues(values: String*): ChoiceGroupExpectation =
-    copy(options = Some(values.toList.map(v => (v, Expected.Anything: Expected))))
+    copy(options =
+      Some(values.toList.map(v => (v, Expected.Anything: Expected)))
+    )
 
   def containingOption(value: String, key: String): ChoiceGroupExpectation =
     copy(
-      options = Some(options.getOrElse(Nil) :+ ((value, Expected.Key(key): Expected))),
+      options =
+        Some(options.getOrElse(Nil) :+ ((value, Expected.Key(key): Expected))),
       exhaustive = false
     )
 
@@ -436,13 +444,13 @@ final case class ChoiceGroupExpectation(
     val sel = if (kind == "radio") page.radios(name) else page.checkboxes(name)
     if (sel.isEmpty) Seq(Violation.missing(rule, sel.selector))
     else {
-      val elements     = sel.elements
+      val elements = sel.elements
       val actualValues = elements.map(_.attr("value"))
 
       val optionIssues = options.toSeq.flatMap { expectedOptions =>
         val expectedValues = expectedOptions.map(_._1)
-        val missing        = expectedValues.filterNot(actualValues.contains)
-        val unexpected     =
+        val missing = expectedValues.filterNot(actualValues.contains)
+        val unexpected =
           if (exhaustive) actualValues.filterNot(expectedValues.contains)
           else Nil
 
@@ -468,17 +476,18 @@ final case class ChoiceGroupExpectation(
                )
              else Nil)
 
-        val labelIssues = expectedOptions.flatMap { case (value, expectedLabel) =>
-          elements.find(_.attr("value") == value).toSeq.flatMap { element =>
-            val id = element.id()
-            FormChecks.labelIssues(
-              page,
-              s"$rule[$value]",
-              id,
-              Some(expectedLabel),
-              labelRequired = true
-            )
-          }
+        val labelIssues = expectedOptions.flatMap {
+          case (value, expectedLabel) =>
+            elements.find(_.attr("value") == value).toSeq.flatMap { element =>
+              val id = element.id()
+              FormChecks.labelIssues(
+                page,
+                s"$rule[$value]",
+                id,
+                Some(expectedLabel),
+                labelRequired = true
+              )
+            }
         }
 
         valueIssues ++ labelIssues
@@ -487,7 +496,7 @@ final case class ChoiceGroupExpectation(
       val legendIssues = legend.toSeq.flatMap(
         FormChecks.legendIssues(page, rule, elements.head, _)
       )
-      val hintIssues   = hint.toSeq.flatMap { h =>
+      val hintIssues = hint.toSeq.flatMap { h =>
         val fieldsetId =
           FormChecks.enclosingFieldsetHintId(elements.head).getOrElse(name)
         FormChecks.hintIssues(page, rule, fieldsetId, h, elements.take(1))
@@ -517,10 +526,10 @@ final case class ChoiceGroupExpectation(
 
 /** A `<select>` and its options. */
 final case class DropdownExpectation(
-  name: String,
-  label: Option[Expected] = None,
-  optionValues: Option[List[String]] = None,
-  optionCount: Option[Int] = None
+    name: String,
+    label: Option[Expected] = None,
+    optionValues: Option[List[String]] = None,
+    optionCount: Option[Int] = None
 ) extends Expectation {
 
   def labelled(key: String, args: Any*): DropdownExpectation =
@@ -540,7 +549,7 @@ final case class DropdownExpectation(
     Matching.exactlyOne(rule, sel) match {
       case Left(v)        => Seq(v)
       case Right(element) =>
-        val id     = if (element.id().nonEmpty) element.id() else name
+        val id = if (element.id().nonEmpty) element.id() else name
         val actual =
           element.select("option").asScala.toList.map(_.attr("value"))
 
@@ -577,10 +586,10 @@ final case class DropdownExpectation(
 
 /** The GOV.UK date input: three fields under one legend. */
 final case class DateInputExpectation(
-  name: String,
-  legend: Option[Expected] = None,
-  hint: Option[Expected] = None,
-  parts: List[String] = List("day", "month", "year")
+    name: String,
+    legend: Option[Expected] = None,
+    hint: Option[Expected] = None,
+    parts: List[String] = List("day", "month", "year")
 ) extends Expectation {
 
   def legendIs(key: String, args: Any*): DateInputExpectation =
@@ -606,8 +615,10 @@ final case class DateInputExpectation(
       Seq(
         Violation(
           rule = rule,
-          message = s"date input is missing field(s): ${missingParts.mkString(", ")}",
-          expected = Some(missingParts.map(p => s"$name.$p or $name-$p").mkString(", ")),
+          message =
+            s"date input is missing field(s): ${missingParts.mkString(", ")}",
+          expected =
+            Some(missingParts.map(p => s"$name.$p or $name-$p").mkString(", ")),
           actual = Some(
             page.css(".govuk-date-input input").ids match {
               case Nil => "(no date input fields on the page)"
@@ -619,8 +630,8 @@ final case class DateInputExpectation(
         )
       )
     else {
-      val partIds      = resolved.collect { case (part, Some(id)) => (part, id) }
-      val labelIssues  = partIds.flatMap { case (part, id) =>
+      val partIds = resolved.collect { case (part, Some(id)) => (part, id) }
+      val labelIssues = partIds.flatMap { case (part, id) =>
         FormChecks.labelIssues(
           page,
           s"$rule[$part]",
@@ -629,12 +640,12 @@ final case class DateInputExpectation(
           labelRequired = true
         )
       }
-      val first        = page.css(
+      val first = page.css(
         io.github.frikit.twirlspec.page.Page.idSelector(partIds.head._2)
       )(0)
       val legendIssues =
         legend.toSeq.flatMap(FormChecks.legendIssues(page, rule, first, _))
-      val hintIssues   = hint.toSeq.flatMap(
+      val hintIssues = hint.toSeq.flatMap(
         FormChecks.hintIssues(page, rule, name, _, List(first))
       )
       labelIssues ++ legendIssues ++ hintIssues
@@ -647,9 +658,9 @@ object DateInputExpectation {
 
   /** The id a date part actually rendered with, trying each convention. */
   private[twirlspec] def partId(
-    page: Page,
-    name: String,
-    part: String
+      page: Page,
+      name: String,
+      part: String
   ): Option[String] =
     List(s"$name.$part", s"$name-$part", part)
       .find(candidate =>
@@ -662,8 +673,8 @@ object DateInputExpectation {
 
 /** The error summary and the links inside it. */
 final case class ErrorSummaryExpectation(
-  entries: List[(String, Expected)],
-  exhaustive: Boolean = true
+    entries: List[(String, Expected)],
+    exhaustive: Boolean = true
 ) extends Expectation {
 
   def description: String = s"errorSummary(${entries.map(_._1).mkString(", ")})"
@@ -685,11 +696,12 @@ final case class ErrorSummaryExpectation(
           case Left(v)      => Seq(v.copy(rule = s"errorSummary($field)"))
           case Right(value) =>
             actual.find(_._1 == field) match {
-              case None                                       =>
+              case None =>
                 Seq(
                   Violation(
                     rule = s"errorSummary($field)",
-                    message = "the error summary has no entry linking to this field",
+                    message =
+                      "the error summary has no entry linking to this field",
                     expected = Some(s"""<a href="#$field">$value</a>"""),
                     actual = Some(
                       if (actual.isEmpty) "(summary has no links)"
@@ -702,7 +714,7 @@ final case class ErrorSummaryExpectation(
                 )
               case Some((_, text)) if !Text.same(text, value) =>
                 Seq(Violation.mismatch(s"errorSummary($field)", value, text))
-              case _                                          => Nil
+              case _ => Nil
             }
         }
       }
@@ -717,7 +729,8 @@ final case class ErrorSummaryExpectation(
               Seq(
                 Violation(
                   rule = "errorSummary",
-                  message = s"the error summary has entries that were not expected: ${surplus.mkString(", ")}",
+                  message =
+                    s"the error summary has entries that were not expected: ${surplus.mkString(", ")}",
                   expected = Some(entries.map(_._1).mkString(", ")),
                   actual = Some(actual.map(_._1).mkString(", "))
                 )
@@ -730,7 +743,8 @@ final case class ErrorSummaryExpectation(
         page.errorSummaryDanglingLinks.map { case (target, text) =>
           Violation(
             rule = "errorSummary link target",
-            message = s"summary entry links to #$target but no element on the page has that id",
+            message =
+              s"summary entry links to #$target but no element on the page has that id",
             expected = Some(s"an element with id `$target`"),
             actual = Some(text)
           ).withHint(
@@ -747,11 +761,11 @@ final case class ErrorSummaryExpectation(
 private[twirlspec] object FormChecks {
 
   def labelIssues(
-    page: Page,
-    rule: String,
-    fieldId: String,
-    expected: Option[Expected],
-    labelRequired: Boolean
+      page: Page,
+      rule: String,
+      fieldId: String,
+      expected: Option[Expected],
+      labelRequired: Boolean
   ): Seq[Violation] = {
     val label = page.labelFor(fieldId)
 
@@ -770,18 +784,20 @@ private[twirlspec] object FormChecks {
             )
         )
     } else
-      expected.toSeq.flatMap(e => Matching.compare(s"$rule label", e, label.text, page, Matching.Exact))
+      expected.toSeq.flatMap(e =>
+        Matching.compare(s"$rule label", e, label.text, page, Matching.Exact)
+      )
   }
 
   /** Check the hint's wording, and that it is announced. Grouped controls
     * reference it from the fieldset, not the input.
     */
   def hintIssues(
-    page: Page,
-    rule: String,
-    fieldId: String,
-    expected: Expected,
-    referrers: List[Element] = Nil
+      page: Page,
+      rule: String,
+      fieldId: String,
+      expected: Expected,
+      referrers: List[Element] = Nil
   ): Seq[Violation] = {
     val hint = page.hint(fieldId)
     if (hint.isEmpty)
@@ -800,7 +816,7 @@ private[twirlspec] object FormChecks {
         page,
         Matching.Exact
       )
-      val hintId     = hint.attr("id").getOrElse(s"$fieldId-hint")
+      val hintId = hint.attr("id").getOrElse(s"$fieldId-hint")
 
       val candidates =
         if (referrers.nonEmpty) referrers
@@ -810,7 +826,7 @@ private[twirlspec] object FormChecks {
             .elements
 
       val describedByValues = candidates.flatMap { element =>
-        val own      = element.attr("aria-describedby")
+        val own = element.attr("aria-describedby")
         val ancestor = Option(element.closest("fieldset[aria-describedby]"))
           .map(_.attr("aria-describedby"))
         (own +: ancestor.toList).filter(_.nonEmpty)
@@ -837,13 +853,13 @@ private[twirlspec] object FormChecks {
   }
 
   def legendIssues(
-    page: Page,
-    rule: String,
-    member: Element,
-    expected: Expected
+      page: Page,
+      rule: String,
+      member: Element,
+      expected: Expected
   ): Seq[Violation] =
     Option(member.closest("fieldset")) match {
-      case None           =>
+      case None =>
         Seq(
           Violation
             .missing(

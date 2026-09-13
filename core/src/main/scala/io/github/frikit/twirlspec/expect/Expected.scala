@@ -18,7 +18,9 @@ package io.github.frikit.twirlspec.expect
 
 import io.github.frikit.twirlspec.page.Page
 
-/** Something a check expects to find on the page, expressed either as a message key (the default, because that is what GOV.UK content always is) or as a literal string.
+/** Something a check expects to find on the page, expressed either as a message
+  * key (the default, because that is what GOV.UK content always is) or as a
+  * literal string.
   */
 sealed trait Expected {
   def describe: String
@@ -28,7 +30,9 @@ sealed trait Expected {
 object Expected {
 
   final case class Key(key: String, args: Seq[Any] = Nil) extends Expected {
-    def describe: String = if (args.isEmpty) s"messages($key)" else s"messages($key, ${args.mkString(", ")})"
+
+    def describe: String = if (args.isEmpty) s"messages($key)"
+    else s"messages($key, ${args.mkString(", ")})"
 
     def resolve(page: Page): Either[Violation, String] =
       page.message(key, args) match {
@@ -37,27 +41,35 @@ object Expected {
           Left(
             Violation(
               rule = "message key",
-              message = s"message key `$key` is not defined for lang `${page.lang.code}`",
+              message =
+                s"message key `$key` is not defined for lang `${page.lang.code}`",
               expected = Some(key)
-            ).withHint(s"add `$key` to conf/messages${if (page.lang.code == "en") "" else "." + page.lang.code}")
+            ).withHint(s"add `$key` to conf/messages${
+                if (page.lang.code == "en") "" else "." + page.lang.code
+              }")
           )
       }
 
   }
 
   final case class Literal(value: String) extends Expected {
-    def describe: String                               = s""""$value""""
-    def resolve(page: Page): Either[Violation, String] = Right(io.github.frikit.twirlspec.page.Text.normalise(value))
+    def describe: String = s""""$value""""
+
+    def resolve(page: Page): Either[Violation, String] = Right(
+      io.github.frikit.twirlspec.page.Text.normalise(value)
+    )
+
   }
 
   final case class Pattern(regex: scala.util.matching.Regex) extends Expected {
-    def describe: String                               = s"matching /$regex/"
+    def describe: String = s"matching /$regex/"
     def resolve(page: Page): Either[Violation, String] = Right(regex.toString)
   }
 
-  /** Matches anything non-empty — for "there is a heading, I don't care what". */
+  /** Matches anything non-empty — for "there is a heading, I don't care what".
+    */
   case object Anything extends Expected {
-    def describe: String                               = "anything non-empty"
+    def describe: String = "anything non-empty"
     def resolve(page: Page): Either[Violation, String] = Right("")
   }
 

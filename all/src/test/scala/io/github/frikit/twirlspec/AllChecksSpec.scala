@@ -21,28 +21,40 @@ import org.scalatest.wordspec.AnyWordSpec
 import io.github.frikit.twirlspec.aria.AriaStandards
 import io.github.frikit.twirlspec.html.HtmlStandards
 import io.github.frikit.twirlspec.page.Page
-import io.github.frikit.twirlspec.wcag.{SecurityStandards, TwirlStandards, WcagStandards}
+import io.github.frikit.twirlspec.wcag.{
+  SecurityStandards,
+  TwirlStandards,
+  WcagStandards
+}
 import io.github.frikit.twirlspec.govuk.GovukStandards
-import io.github.frikit.twirlspec.quality.{MetadataStandards, PerformanceStandards, SemanticStandards}
+import io.github.frikit.twirlspec.quality.{
+  MetadataStandards,
+  PerformanceStandards,
+  SemanticStandards
+}
 
 /** One mixin has to be the same as four. */
-class AllChecksSpec extends AnyWordSpec with Matchers with Bilingual with AllChecks {
+class AllChecksSpec
+    extends AnyWordSpec
+    with Matchers
+    with Bilingual
+    with AllChecks {
 
   "AllChecks" should {
 
     "carry every rule from every module, and nothing twice" in {
       val ids = standardsRules.map(_.id)
-      ids                 must contain allElementsOf WcagStandards.all.map(_.id)
-      ids                 must contain allElementsOf TwirlStandards.all.map(_.id)
-      ids                 must contain allElementsOf SecurityStandards.all.map(_.id)
-      ids                 must contain allElementsOf GovukStandards.all.map(_.id)
-      ids                 must contain allElementsOf SemanticStandards.all.map(_.id)
-      ids                 must contain allElementsOf PerformanceStandards.all.map(_.id)
-      ids                 must contain allElementsOf MetadataStandards.all.map(_.id)
-      ids                 must contain allElementsOf AriaStandards.all.map(_.id)
-      ids                 must contain allElementsOf HtmlStandards.all.map(_.id)
+      ids must contain allElementsOf WcagStandards.all.map(_.id)
+      ids must contain allElementsOf TwirlStandards.all.map(_.id)
+      ids must contain allElementsOf SecurityStandards.all.map(_.id)
+      ids must contain allElementsOf GovukStandards.all.map(_.id)
+      ids must contain allElementsOf SemanticStandards.all.map(_.id)
+      ids must contain allElementsOf PerformanceStandards.all.map(_.id)
+      ids must contain allElementsOf MetadataStandards.all.map(_.id)
+      ids must contain allElementsOf AriaStandards.all.map(_.id)
+      ids must contain allElementsOf HtmlStandards.all.map(_.id)
       ids.distinct.size mustBe ids.size
-      ids.size          mustBe (WcagStandards.all ++ TwirlStandards.all ++ SecurityStandards.all ++
+      ids.size mustBe (WcagStandards.all ++ TwirlStandards.all ++ SecurityStandards.all ++
         GovukStandards.all ++ SemanticStandards.all ++ PerformanceStandards.all ++ MetadataStandards.all ++
         AriaStandards.all ++ HtmlStandards.all).size
     }
@@ -59,7 +71,7 @@ class AllChecksSpec extends AnyWordSpec with Matchers with Bilingual with AllChe
         english,
         messages
       )
-      val fired  = standardsExpectation.check(broken).map(_.rule)
+      val fired = standardsExpectation.check(broken).map(_.rule)
       fired must contain("one-h1") // WcagStandards
       fired must contain("no-scala-leakage") // TwirlStandards
       fired must contain("no-javascript-href") // SecurityStandards

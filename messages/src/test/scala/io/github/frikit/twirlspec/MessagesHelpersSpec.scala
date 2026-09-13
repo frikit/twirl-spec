@@ -27,21 +27,21 @@ class MessagesHelpersSpec extends AnyWordSpec with Matchers with Bilingual {
     "expose each language's map" in {
       MessagesIntegrity.baseMessages(
         messagesApi
-      )                                                  must contain key "service.name"
+      ) must contain key "service.name"
       MessagesIntegrity.messagesFor(
         messagesApi,
         "cy"
-      )                                                  must contain key "service.name"
+      ) must contain key "service.name"
       MessagesIntegrity.messagesFor(messagesApi, "fr") mustBe empty
     }
 
     "abbreviate a long list of missing keys" in {
       val english = (1 to 30).map(i => s"k$i" -> s"v$i").toMap
-      val api     = new play.api.i18n.DefaultMessagesApi(
+      val api = new play.api.i18n.DefaultMessagesApi(
         messages = Map("default" -> english, "cy" -> Map("k1" -> "v1")),
         langs = new play.api.i18n.DefaultLangs(Seq(this.english, welsh))
       )
-      val v       = MessagesIntegrity
+      val v = MessagesIntegrity
         .check(api)
         .find(_.rule == "messages.translation-parity")
       v.flatMap(_.actual).getOrElse("") must include("more)")

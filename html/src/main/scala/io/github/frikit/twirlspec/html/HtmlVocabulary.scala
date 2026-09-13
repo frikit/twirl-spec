@@ -16,7 +16,9 @@
 
 package io.github.frikit.twirlspec.html
 
-/** The parts of the HTML vocabulary a checker needs to know to tell a mistake from a shorthand. */
+/** The parts of the HTML vocabulary a checker needs to know to tell a mistake
+  * from a shorthand.
+  */
 object HtmlVocabulary {
 
   /** Elements that never have content, so never have an end tag. */
@@ -64,7 +66,9 @@ object HtmlVocabulary {
     "html"
   )
 
-  /** Elements whose content is text, not markup: a `<` inside them opens nothing. */
+  /** Elements whose content is text, not markup: a `<` inside them opens
+    * nothing.
+    */
   val rawText: Set[String] = Set("script", "style", "textarea", "title")
 
   /** Every element name in the HTML living standard. */
@@ -409,12 +413,17 @@ object HtmlVocabulary {
     "preserveaspectratio"
   )
 
-  def isKnownElement(name: String): Boolean = elements.contains(name.toLowerCase)
+  def isKnownElement(name: String): Boolean =
+    elements.contains(name.toLowerCase)
 
-  /** `data-*` and `aria-*` are open sets by design, and a framework may add its own prefix. */
+  /** `data-*` and `aria-*` are open sets by design, and a framework may add its
+    * own prefix.
+    */
   def isKnownAttribute(name: String, extraPrefixes: Set[String]): Boolean = {
     val n = name.toLowerCase
-    n.startsWith("data-") || n.startsWith("aria-") || extraPrefixes.exists(n.startsWith) ||
+    n.startsWith("data-") || n.startsWith("aria-") || extraPrefixes.exists(
+      n.startsWith
+    ) ||
     globalAttributes.contains(n) || elementAttributes.contains(n)
   }
 

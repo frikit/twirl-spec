@@ -36,8 +36,8 @@ object GovukStandards extends RuleSet {
       pageLevel = true
     ) { page =>
       val hasErrors = page.errorSummary.nonEmpty
-      val prefixes  = Matching.errorTitlePrefixes(page)
-      val prefixed  = prefixes.exists(p => page.title.startsWith(p))
+      val prefixes = Matching.errorTitlePrefixes(page)
+      val prefixed = prefixes.exists(p => page.title.startsWith(p))
       if (hasErrors && !prefixed)
         Seq(
           Violation(
@@ -68,12 +68,12 @@ object GovukStandards extends RuleSet {
         .flatMap { errorElement =>
           val errorId = errorElement.id()
           val fieldId = errorId.stripSuffix("-error")
-          val field   = page.byId(fieldId)
+          val field = page.byId(fieldId)
           if (field.isEmpty) Nil // covered by error-summary-targets
           else {
             // A single input references its own error.
-            val own         = field.attr("aria-describedby").getOrElse("")
-            val ancestor    = field.headOption
+            val own = field.attr("aria-describedby").getOrElse("")
+            val ancestor = field.headOption
               .flatMap(e => Option(e.closest("fieldset[aria-describedby]")))
               .map(_.attr("aria-describedby"))
               .getOrElse("")

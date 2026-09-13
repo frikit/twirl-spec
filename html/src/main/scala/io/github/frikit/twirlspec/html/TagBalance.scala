@@ -39,7 +39,12 @@ object TagBalance {
     def message = s"</$name> on line $line closes nothing that was open"
   }
 
-  final case class MisNested(name: String, line: Int, closedInstead: String, openedOn: Int) extends Problem {
+  final case class MisNested(
+      name: String,
+      line: Int,
+      closedInstead: String,
+      openedOn: Int
+  ) extends Problem {
 
     def message =
       s"</$name> on line $line closes <$closedInstead> from line $openedOn as well, so the two overlap"
@@ -52,26 +57,30 @@ object TagBalance {
 
   /** The same check against a Twirl template rather than a rendered page.
     *
-    * Cheap enough to run over a whole estate: no application, no render. It sees
-    * only what the template writes literally, so markup arriving from a helper is
-    * invisible, and a template that opens an element in one branch and closes it
-    * in another looks unbalanced, because on any single render it is.
+    * Cheap enough to run over a whole estate: no application, no render. It
+    * sees only what the template writes literally, so markup arriving from a
+    * helper is invisible, and a template that opens an element in one branch
+    * and closes it in another looks unbalanced, because on any single render it
+    * is.
     */
-  def checkTemplate(template: String): List[Problem] = check(TwirlSource.htmlOnly(template))
+  def checkTemplate(template: String): List[Problem] = check(
+    TwirlSource.htmlOnly(template)
+  )
 
   def check(source: String): List[Problem] = {
     val stripped = blankOutSkippedRegions(source)
-    val open     = mutable.Stack.empty[Open]
+    val open = mutable.Stack.empty[Open]
     val problems = mutable.ListBuffer.empty[Problem]
 
     tag.findAllMatchIn(stripped).foreach { m =>
-      val closing    = m.group(1) == "/"
-      val name       = m.group(2).toLowerCase
+      val closing = m.group(1) == "/"
+      val name = m.group(2).toLowerCase
       val selfClosed = m.group(4) == "/"
-      val line       = lineOf(stripped, m.start)
+      val line = lineOf(stripped, m.start)
 
       if (closing) closeTag(name, line, open, problems)
-      else if (!selfClosed && !HtmlVocabulary.void.contains(name)) open.push(Open(name, line))
+      else if (!selfClosed && !HtmlVocabulary.void.contains(name))
+        open.push(Open(name, line))
     }
 
     problems ++= open.toList
@@ -81,10 +90,10 @@ object TagBalance {
   }
 
   private def closeTag(
-    name: String,
-    line: Int,
-    open: mutable.Stack[Open],
-    problems: mutable.ListBuffer[Problem]
+      name: String,
+      line: Int,
+      open: mutable.Stack[Open],
+      problems: mutable.ListBuffer[Problem]
   ): Unit =
     if (open.isEmpty) problems += StrayClose(name, line)
     else if (open.top.name == name) open.pop()
@@ -98,10 +107,10 @@ object TagBalance {
 
   @tailrec
   private def unwind(
-    name: String,
-    line: Int,
-    open: mutable.Stack[Open],
-    problems: mutable.ListBuffer[Problem]
+      name: String,
+      line: Int,
+      open: mutable.Stack[Open],
+      problems: mutable.ListBuffer[Problem]
   ): Unit = {
     val top = open.pop()
     if (top.name == name) ()
@@ -112,11 +121,15 @@ object TagBalance {
     }
   }
 
-  /** Comments, doctypes and raw-text elements hold things that look like tags but are not. */
+  /** Comments, doctypes and raw-text elements hold things that look like tags
+    * but are not.
+    */
   private def blankOutSkippedRegions(source: String): String = {
-    val out                             = new StringBuilder(source)
+    val out = new StringBuilder(source)
     def blank(from: Int, to: Int): Unit =
-      (from until math.min(to, out.length)).foreach(i => if (out.charAt(i) != '\n') out.setCharAt(i, ' '))
+      (from until math.min(to, out.length)).foreach(i =>
+        if (out.charAt(i) != '\n') out.setCharAt(i, ' ')
+      )
 
     blankBetween(source, "<!--", "-->", blank)
     blankBetween(source, "<!", ">", blank)
@@ -130,12 +143,19 @@ object TagBalance {
     out.toString
   }
 
-  private def blankBetween(source: String, from: String, to: String, blank: (Int, Int) => Unit): Unit = {
+  private def blankBetween(
+      source: String,
+      from: String,
+      to: String,
+      blank: (Int, Int) => Unit
+  ): Unit = {
     var i = source.indexOf(from)
     while (i >= 0) {
       val end = source.indexOf(to, i + from.length)
       if (end < 0) { blank(i, source.length); i = -1 }
-      else { blank(i, end + to.length); i = source.indexOf(from, end + to.length) }
+      else {
+        blank(i, end + to.length); i = source.indexOf(from, end + to.length)
+      }
     }
   }
 

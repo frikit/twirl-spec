@@ -28,26 +28,27 @@ import scala.jdk.CollectionConverters._
 object SecurityStandards extends RuleSet {
 
   lazy val all: Seq[Rule] = Seq(
-    Rule("no-password-in-get", "a password is never submitted in a URL") { page =>
-      page.document
-        .select("form[method=get]")
-        .asScala
-        .toList
-        .filter(_.select("input[type=password]").asScala.nonEmpty)
-        .map { form =>
-          Violation(
-            "no-password-in-get",
-            "a password field sits in a form that submits by GET",
-            expected = Some("""method="post""""),
-            actual = Some(
-              Option(form.attr("action"))
-                .filter(_.nonEmpty)
-                .getOrElse("(no action)")
+    Rule("no-password-in-get", "a password is never submitted in a URL") {
+      page =>
+        page.document
+          .select("form[method=get]")
+          .asScala
+          .toList
+          .filter(_.select("input[type=password]").asScala.nonEmpty)
+          .map { form =>
+            Violation(
+              "no-password-in-get",
+              "a password field sits in a form that submits by GET",
+              expected = Some("""method="post""""),
+              actual = Some(
+                Option(form.attr("action"))
+                  .filter(_.nonEmpty)
+                  .getOrElse("(no action)")
+              )
+            ).withHint(
+              "a GET puts the password in the URL, and so in history, logs and referrers"
             )
-          ).withHint(
-            "a GET puts the password in the URL, and so in history, logs and referrers"
-          )
-        }
+          }
     },
     Rule("no-javascript-href", "links do not carry javascript: URLs") { page =>
       page.document

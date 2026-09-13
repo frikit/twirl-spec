@@ -22,13 +22,22 @@ import io.github.frikit.twirlspec.expect.Expectation
 import io.github.frikit.twirlspec.page.Page
 
 /** The failure branch of every expectation. */
-class ExpectationFailureModesSpec extends AnyWordSpec with Matchers with TwirlSpec {
+class ExpectationFailureModesSpec
+    extends AnyWordSpec
+    with Matchers
+    with TwirlSpec {
 
   /** Nothing on it. */
   private lazy val bare: Page =
-    Page.fromString("""<!DOCTYPE html><html><head><title></title></head><body></body></html>""", english, messages)
+    Page.fromString(
+      """<!DOCTYPE html><html><head><title></title></head><body></body></html>""",
+      english,
+      messages
+    )
 
-  /** Present but wrong, so the mismatch branches fire rather than the missing ones. */
+  /** Present but wrong, so the mismatch branches fire rather than the missing
+    * ones.
+    */
   private lazy val wrong: Page = Page.fromString(
     """<!DOCTYPE html>
       |<html lang="cy">
@@ -90,9 +99,17 @@ class ExpectationFailureModesSpec extends AnyWordSpec with Matchers with TwirlSp
       failsOn(bare, "signOutLink", signOutLink)
       failsOn(bare, "phaseBanner", phaseBanner)
       failsOn(bare, "formPostsTo", formPostsTo("/x"))
-      failsOn(bare, "textInput", textInput("email").labelled("kitchenSink.email"))
+      failsOn(
+        bare,
+        "textInput",
+        textInput("email").labelled("kitchenSink.email")
+      )
       failsOn(bare, "textArea", textArea("notes"))
-      failsOn(bare, "dropdown", dropdown("country").labelled("kitchenSink.country"))
+      failsOn(
+        bare,
+        "dropdown",
+        dropdown("country").labelled("kitchenSink.country")
+      )
       failsOn(bare, "radioGroup", radioGroup("colours"))
       failsOn(bare, "checkboxGroup", checkboxGroup("colours"))
       failsOn(bare, "dateInput", dateInput("dob"))
@@ -102,7 +119,11 @@ class ExpectationFailureModesSpec extends AnyWordSpec with Matchers with TwirlSp
       failsOn(bare, "button", button("save", "kitchenSink.save"))
       failsOn(bare, "warning", warning("kitchenSink.warning"))
       failsOn(bare, "insetText", insetText("kitchenSink.inset"))
-      failsOn(bare, "notificationBanner", notificationBanner("kitchenSink.banner"))
+      failsOn(
+        bare,
+        "notificationBanner",
+        notificationBanner("kitchenSink.banner")
+      )
       failsOn(bare, "panelTitle", panelTitle("kitchenSink.panelTitle"))
       failsOn(bare, "panelBody", panelBody("kitchenSink.panelBody"))
       failsOn(bare, "detailsSummary", detailsSummary("kitchenSink.details"))
@@ -117,8 +138,16 @@ class ExpectationFailureModesSpec extends AnyWordSpec with Matchers with TwirlSp
       failsOn(bare, "paragraph", paragraph("kitchenSink.p1"))
       failsOn(bare, "content", content("kitchenSink.p1"))
       failsOn(bare, "errorSummaryTitle", errorSummaryTitle())
-      failsOn(bare, "errorSummaryContaining", errorSummaryContaining("email", "kitchenSink.error.email.required"))
-      failsOn(bare, "fieldError", fieldError("email", "kitchenSink.error.email.required"))
+      failsOn(
+        bare,
+        "errorSummaryContaining",
+        errorSummaryContaining("email", "kitchenSink.error.email.required")
+      )
+      failsOn(
+        bare,
+        "fieldError",
+        fieldError("email", "kitchenSink.error.email.required")
+      )
     }
   }
 
@@ -130,34 +159,90 @@ class ExpectationFailureModesSpec extends AnyWordSpec with Matchers with TwirlSp
       failsOn(wrong, "serviceName", serviceName())
       failsOn(wrong, "backLink.to", backLink.to("/back"))
       failsOn(wrong, "formPostsTo", formPostsTo("/kitchen-sink"))
-      failsOn(wrong, "unlabelled input", textInput("email").labelled("kitchenSink.email"))
-      failsOn(wrong, "missing hint", textInput("email").hinted("kitchenSink.email.hint"))
-      failsOn(wrong, "radios with no fieldset", radioGroup("colours").legendIs("kitchenSink.colours"))
-      failsOn(wrong, "fieldset with no legend", radioGroup("sizes").legendIs("kitchenSink.colours"))
+      failsOn(
+        wrong,
+        "unlabelled input",
+        textInput("email").labelled("kitchenSink.email")
+      )
+      failsOn(
+        wrong,
+        "missing hint",
+        textInput("email").hinted("kitchenSink.email.hint")
+      )
+      failsOn(
+        wrong,
+        "radios with no fieldset",
+        radioGroup("colours").legendIs("kitchenSink.colours")
+      )
+      failsOn(
+        wrong,
+        "fieldset with no legend",
+        radioGroup("sizes").legendIs("kitchenSink.colours")
+      )
       failsOn(wrong, "date input missing parts", dateInput("dob"))
-      failsOn(wrong, "date input hint", dateInput("dob").withParts("day").hinted("dateOfBirth.hint"))
+      failsOn(
+        wrong,
+        "date input hint",
+        dateInput("dob").withParts("day").hinted("dateOfBirth.hint")
+      )
     }
   }
 
   "expectations about an error state" should {
     "report a wrong summary title, wrong entries and dangling links" in {
       failsOn(errored, "errorSummaryTitle", errorSummaryTitle())
-      failsOn(errored, "wrong summary entry", errorSummary("email" -> "kitchenSink.error.email.required"))
+      failsOn(
+        errored,
+        "wrong summary entry",
+        errorSummary("email" -> "kitchenSink.error.email.required")
+      )
       failsOn(
         errored,
         "unexpected summary entries",
         errorSummaryContaining("ghost", "kitchenSink.error.email.required")
       )
-      failsOn(errored, "wrong field error", fieldError("email", "kitchenSink.error.email.required"))
+      failsOn(
+        errored,
+        "wrong field error",
+        fieldError("email", "kitchenSink.error.email.required")
+      )
       failsOn(errored, "noErrors", noErrors)
-      failsOn(errored, "undefined key in fieldError", fieldError("email", "kitchenSink.notAKey"))
-      failsOn(errored, "undefined key in errorSummary", errorSummary("ghost" -> "kitchenSink.notAKey"))
-      failsOn(errored, "undefined key in summaryList", summaryList("kitchenSink.notAKey" -> "x"))
-      failsOn(errored, "undefined key in tableHeaders", tableHeaders("kitchenSink.notAKey"))
-      failsOn(errored, "undefined key in noContent", noContent("kitchenSink.notAKey"))
+      failsOn(
+        errored,
+        "undefined key in fieldError",
+        fieldError("email", "kitchenSink.notAKey")
+      )
+      failsOn(
+        errored,
+        "undefined key in errorSummary",
+        errorSummary("ghost" -> "kitchenSink.notAKey")
+      )
+      failsOn(
+        errored,
+        "undefined key in summaryList",
+        summaryList("kitchenSink.notAKey" -> "x")
+      )
+      failsOn(
+        errored,
+        "undefined key in tableHeaders",
+        tableHeaders("kitchenSink.notAKey")
+      )
+      failsOn(
+        errored,
+        "undefined key in noContent",
+        noContent("kitchenSink.notAKey")
+      )
       failsOn(errored, "undefined key in link", link("kitchenSink.notAKey"))
-      failsOn(errored, "undefined key in summaryRow", summaryRow("kitchenSink.notAKey"))
-      failsOn(errored, "undefined key in subheading", subheading("kitchenSink.notAKey"))
+      failsOn(
+        errored,
+        "undefined key in summaryRow",
+        summaryRow("kitchenSink.notAKey")
+      )
+      failsOn(
+        errored,
+        "undefined key in subheading",
+        subheading("kitchenSink.notAKey")
+      )
       failsOn(
         errored,
         "undefined key in row actions",
@@ -167,7 +252,7 @@ class ExpectationFailureModesSpec extends AnyWordSpec with Matchers with TwirlSp
 
     "still see the error summary links that do exist" in {
       errored.errorSummaryLinks.map(_._1) mustBe List("ghost", "other")
-      errored.fieldErrors("email")        mustBe "A different message"
+      errored.fieldErrors("email") mustBe "A different message"
     }
   }
 
@@ -187,20 +272,26 @@ class ExpectationFailureModesSpec extends AnyWordSpec with Matchers with TwirlSp
 
   "every expectation" should {
     "describe itself" in {
-      textInput("email").description                                        mustBe "input(email)"
-      textArea("notes").description                                         mustBe "textarea(notes)"
-      radioGroup("colours").description                                     mustBe "radioGroup(colours)"
-      checkboxGroup("colours").description                                  mustBe "checkboxGroup(colours)"
-      dropdown("country").description                                       mustBe "dropdown(country)"
-      dateInput("dob").description                                          mustBe "dateInput(dob)"
-      backLink.description                                                  mustBe "backLink"
-      backLink.to("/back").description                                      mustBe "backLink -> /back"
-      link("kitchenSink.link").description                                    must include("messages(kitchenSink.link)")
-      linkWithId("guidance-link").withId("other").description               mustBe "link(#other)"
-      summaryRow("checkAnswers.name").description                             must include("summaryRow")
-      errorSummary("email" -> "kitchenSink.error.email.required").description must include("errorSummary")
-      literal("x").describe                                                 mustBe "\"x\""
-      anyText.describe                                                        must include("anything")
+      textInput("email").description mustBe "input(email)"
+      textArea("notes").description mustBe "textarea(notes)"
+      radioGroup("colours").description mustBe "radioGroup(colours)"
+      checkboxGroup("colours").description mustBe "checkboxGroup(colours)"
+      dropdown("country").description mustBe "dropdown(country)"
+      dateInput("dob").description mustBe "dateInput(dob)"
+      backLink.description mustBe "backLink"
+      backLink.to("/back").description mustBe "backLink -> /back"
+      link("kitchenSink.link").description must include(
+        "messages(kitchenSink.link)"
+      )
+      linkWithId("guidance-link")
+        .withId("other")
+        .description mustBe "link(#other)"
+      summaryRow("checkAnswers.name").description must include("summaryRow")
+      errorSummary(
+        "email" -> "kitchenSink.error.email.required"
+      ).description must include("errorSummary")
+      literal("x").describe mustBe "\"x\""
+      anyText.describe must include("anything")
     }
   }
 

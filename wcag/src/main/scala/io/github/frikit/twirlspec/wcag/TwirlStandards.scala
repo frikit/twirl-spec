@@ -89,29 +89,30 @@ object TwirlStandards extends RuleSet {
             )
         }
     },
-    Rule("no-scala-leakage", "no Scala value leaks into the rendered page") { page =>
-      val body    = page.text
-      val markers = Seq(
-        "Some(",
-        "None)",
-        "List(",
-        "Vector(",
-        "Map(",
-        "ArraySeq(",
-        "$anonfun",
-        "@scala.",
-        "null null"
-      )
-      markers.filter(body.contains).map { m =>
-        Violation(
-          "no-scala-leakage",
-          s"""the page contains "$m"""",
-          actual = Some(snippetAround(body, m))
+    Rule("no-scala-leakage", "no Scala value leaks into the rendered page") {
+      page =>
+        val body = page.text
+        val markers = Seq(
+          "Some(",
+          "None)",
+          "List(",
+          "Vector(",
+          "Map(",
+          "ArraySeq(",
+          "$anonfun",
+          "@scala.",
+          "null null"
         )
-          .withHint(
-            "a value reached the template without being unwrapped or formatted"
+        markers.filter(body.contains).map { m =>
+          Violation(
+            "no-scala-leakage",
+            s"""the page contains "$m"""",
+            actual = Some(snippetAround(body, m))
           )
-      }
+            .withHint(
+              "a value reached the template without being unwrapped or formatted"
+            )
+        }
     }
   )
 

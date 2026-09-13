@@ -46,7 +46,9 @@ object Outline {
         .filter(_.nonEmpty)
         .map(t => field("title", Text.preview(t))),
       page.htmlLang.map(l => field("lang", l)),
-      page.serviceName.headOption.map(_ => field("service", page.serviceName.text)),
+      page.serviceName.headOption.map(_ =>
+        field("service", page.serviceName.text)
+      ),
       page.h1.headOption.map(_ => field("h1", page.h1.text)),
       page.caption.headOption.map(_ => field("caption", page.caption.text)),
       page.backLink.attr("href").map(h => field("back link", h)),
@@ -89,18 +91,18 @@ object Outline {
   }
 
   private def describeControl(page: Page, e: Element): String = {
-    val tag     = e.tagName()
-    val kind    = if (tag == "input") e.attr("type") else tag
-    val name    = Option(e.attr("name"))
+    val tag = e.tagName()
+    val kind = if (tag == "input") e.attr("type") else tag
+    val name = Option(e.attr("name"))
       .filter(_.nonEmpty)
       .orElse(Option(e.id()).filter(_.nonEmpty))
       .getOrElse("?")
-    val id      = e.id()
-    val label   =
+    val id = e.id()
+    val label =
       if (id.nonEmpty) Text.preview(page.labelFor(id).text, 45) else ""
-    val hint    = if (id.nonEmpty) Text.preview(page.hint(id).text, 40) else ""
+    val hint = if (id.nonEmpty) Text.preview(page.hint(id).text, 40) else ""
     val checked = if (e.hasAttr("checked")) " checked" else ""
-    val value   = Option(e.attr("value"))
+    val value = Option(e.attr("value"))
       .filter(_.nonEmpty)
       .map(v => s" value=${Text.preview(v, 25)}")
       .getOrElse("")
@@ -120,18 +122,18 @@ object Outline {
 
   private def components(page: Page): Seq[String] = {
     val present = Seq(
-      "summary list"        -> page.summaryList.size,
-      "warning text"        -> page.warningText.size,
-      "inset text"          -> page.insetText.size,
-      "details"             -> page.details.size,
-      "panel"               -> page.panel.size,
-      "tabs"                -> page.tabs.size,
-      "accordion"           -> page.accordion.size,
-      "table"               -> page.tables.size,
+      "summary list" -> page.summaryList.size,
+      "warning text" -> page.warningText.size,
+      "inset text" -> page.insetText.size,
+      "details" -> page.details.size,
+      "panel" -> page.panel.size,
+      "tabs" -> page.tabs.size,
+      "accordion" -> page.accordion.size,
+      "table" -> page.tables.size,
       "notification banner" -> page.notificationBanner.size,
-      "pagination"          -> page.pagination.size,
-      "add to a list"       -> page.addToAList.size,
-      "bullet list"         -> page.bulletList.size
+      "pagination" -> page.pagination.size,
+      "add to a list" -> page.addToAList.size,
+      "bullet list" -> page.bulletList.size
     ).filter(_._2 > 0)
 
     if (present.isEmpty) Nil
@@ -144,7 +146,7 @@ object Outline {
       val summary = page.errorSummaryLinks.map { case (target, txt) =>
         s"  summary -> #$target  ${Text.preview(txt, 70)}"
       }
-      val inline  = page.fieldErrors.toList.sortBy(_._1).map { case (f, m) =>
+      val inline = page.fieldErrors.toList.sortBy(_._1).map { case (f, m) =>
         s"  inline  $f: ${Text.preview(m, 70)}"
       }
       "errors" +: (summary ++ inline)

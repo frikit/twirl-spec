@@ -20,33 +20,35 @@ import org.jsoup.nodes.Element
 
 import scala.jdk.CollectionConverters._
 
-/** Finding elements the way an assistive technology does: by role and accessible name. */
+/** Finding elements the way an assistive technology does: by role and
+  * accessible name.
+  */
 object Roles {
 
   /** The HTML that carries each ARIA role implicitly, per HTML-AAM. */
   private val implicitly: Map[String, String] = Map(
-    "button"       -> "button, input[type=submit], input[type=button], input[type=reset]",
-    "link"         -> "a[href], area[href]",
-    "heading"      -> "h1, h2, h3, h4, h5, h6",
-    "textbox"      -> "input[type=text], input[type=email], input[type=tel], input[type=url], input[type=search], input:not([type]), textarea",
-    "checkbox"     -> "input[type=checkbox]",
-    "radio"        -> "input[type=radio]",
-    "combobox"     -> "select",
-    "list"         -> "ul, ol",
-    "listitem"     -> "li",
-    "group"        -> "fieldset",
-    "table"        -> "table",
-    "row"          -> "tr",
-    "cell"         -> "td",
+    "button" -> "button, input[type=submit], input[type=button], input[type=reset]",
+    "link" -> "a[href], area[href]",
+    "heading" -> "h1, h2, h3, h4, h5, h6",
+    "textbox" -> "input[type=text], input[type=email], input[type=tel], input[type=url], input[type=search], input:not([type]), textarea",
+    "checkbox" -> "input[type=checkbox]",
+    "radio" -> "input[type=radio]",
+    "combobox" -> "select",
+    "list" -> "ul, ol",
+    "listitem" -> "li",
+    "group" -> "fieldset",
+    "table" -> "table",
+    "row" -> "tr",
+    "cell" -> "td",
     "columnheader" -> "th",
-    "form"         -> "form",
-    "main"         -> "main",
-    "navigation"   -> "nav",
-    "banner"       -> "header",
-    "contentinfo"  -> "footer",
-    "img"          -> "img[alt]:not([alt=''])",
-    "separator"    -> "hr",
-    "article"      -> "article"
+    "form" -> "form",
+    "main" -> "main",
+    "navigation" -> "nav",
+    "banner" -> "header",
+    "contentinfo" -> "footer",
+    "img" -> "img[alt]:not([alt=''])",
+    "separator" -> "hr",
+    "article" -> "article"
   )
 
   /** Elements with this role, implicit or explicit.
@@ -54,11 +56,16 @@ object Roles {
     * An element carrying an explicit `role` is matched only by that role, so
     * `<a role="button">` is a button and not a link.
     */
-  def matching(document: org.jsoup.nodes.Document, role: String): List[Element] = {
-    val explicit  = document.select(s"[role=$role]").asScala.toList
+  def matching(
+      document: org.jsoup.nodes.Document,
+      role: String
+  ): List[Element] = {
+    val explicit = document.select(s"[role=$role]").asScala.toList
     val inherited = implicitly
       .get(role)
-      .map(sel => document.select(sel).asScala.toList.filterNot(_.hasAttr("role")))
+      .map(sel =>
+        document.select(sel).asScala.toList.filterNot(_.hasAttr("role"))
+      )
       .getOrElse(Nil)
     (inherited ++ explicit).distinct
   }

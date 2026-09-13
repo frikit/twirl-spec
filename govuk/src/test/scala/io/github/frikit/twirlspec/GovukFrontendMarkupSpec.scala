@@ -25,8 +25,15 @@ import io.github.frikit.twirlspec.wcag.WcagChecks
 import scala.io.Source
 import scala.util.Using
 
-/** twirl-spec's selectors and rules, checked against genuine govuk-frontend markup. */
-class GovukFrontendMarkupSpec extends AnyWordSpec with Matchers with Bilingual with WcagChecks with GovukChecks {
+/** twirl-spec's selectors and rules, checked against genuine govuk-frontend
+  * markup.
+  */
+class GovukFrontendMarkupSpec
+    extends AnyWordSpec
+    with Matchers
+    with Bilingual
+    with WcagChecks
+    with GovukChecks {
 
   private def captured(name: String): String =
     Using.resource(Source.fromResource(s"captured/$name.html"))(_.mkString)
@@ -46,15 +53,23 @@ class GovukFrontendMarkupSpec extends AnyWordSpec with Matchers with Bilingual w
         heading("whatIsYourName.heading"),
         serviceName(),
         backLink.to("/back"),
-        textInput("firstName").labelled("whatIsYourName.firstName").withAutocomplete("given-name"),
-        textInput("lastName").labelled("whatIsYourName.lastName").hinted("whatIsYourName.lastName.hint"),
+        textInput("firstName")
+          .labelled("whatIsYourName.firstName")
+          .withAutocomplete("given-name"),
+        textInput("lastName")
+          .labelled("whatIsYourName.lastName")
+          .hinted("whatIsYourName.lastName.hint"),
         radioGroup("livesInUk")
           .legendIs("livesInUk.legend", "Ada")
           .hinted("livesInUk.hint")
           .withOptions("true" -> "site.yes", "false" -> "site.no")
           .nothingSelected,
-        dateInput("dateOfBirth").legendIs("dateOfBirth.legend").hinted("dateOfBirth.hint"),
-        summaryRow("checkAnswers.name").withValue("Ada Lovelace").withChangeLinkTo("/change/name"),
+        dateInput("dateOfBirth")
+          .legendIs("dateOfBirth.legend")
+          .hinted("dateOfBirth.hint"),
+        summaryRow("checkAnswers.name")
+          .withValue("Ada Lovelace")
+          .withChangeLinkTo("/change/name"),
         submitButton("site.continue"),
         noErrors
       )
@@ -67,23 +82,32 @@ class GovukFrontendMarkupSpec extends AnyWordSpec with Matchers with Bilingual w
       pageOf("govuk-components-errors") must display(
         errorTitlePrefix,
         errorSummaryTitle(),
-        errorSummaryContaining("firstName", "whatIsYourName.error.firstName.required"),
+        errorSummaryContaining(
+          "firstName",
+          "whatIsYourName.error.firstName.required"
+        ),
         fieldError("firstName", "whatIsYourName.error.firstName.required")
       )
     }
 
     "wire the error to its field the way govuk-frontend does" in {
       val page = pageOf("govuk-components-errors")
-      page.fieldErrors.keys                                          must contain("firstName")
-      page.input("firstName").attr("aria-describedby").getOrElse("") must include("firstName-error")
-      page.errorSummaryLinks.map(_._1)                               must contain("firstName")
+      page.fieldErrors.keys must contain("firstName")
+      page
+        .input("firstName")
+        .attr("aria-describedby")
+        .getOrElse("") must include("firstName-error")
+      page.errorSummaryLinks.map(_._1) must contain("firstName")
     }
 
     "hold in Welsh too" in {
       pageOf("govuk-components-errors-cy", welsh) must display(
         errorTitlePrefix,
         heading("whatIsYourName.heading"),
-        errorSummaryContaining("firstName", "whatIsYourName.error.firstName.required")
+        errorSummaryContaining(
+          "firstName",
+          "whatIsYourName.error.firstName.required"
+        )
       )
     }
   }

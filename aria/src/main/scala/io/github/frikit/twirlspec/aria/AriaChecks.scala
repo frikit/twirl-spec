@@ -26,6 +26,7 @@ import io.github.frikit.twirlspec.standards.Rule
   */
 trait AriaChecks extends TwirlSpecDsl {
 
-  override def standardsRules: Seq[Rule] = super.standardsRules ++ AriaStandards.all
+  override def standardsRules: Seq[Rule] =
+    super.standardsRules ++ AriaStandards.all
 
 }

@@ -24,7 +24,11 @@ import org.scalatest.wordspec.AnyWordSpec
 /** The static half of what an automated accessibility tool reports, with no
   * browser involved.
   */
-class AriaStandardsSpec extends AnyWordSpec with Matchers with TwirlSpec with AriaChecks {
+class AriaStandardsSpec
+    extends AnyWordSpec
+    with Matchers
+    with TwirlSpec
+    with AriaChecks {
 
   private def pageOf(body: String, bodyAttrs: String = "") =
     Page.fromString(

@@ -41,12 +41,14 @@ object ContentCoverage {
   val defaultScope: String = "main, #main-content"
 
   def anchors(
-    page: Page,
-    trackedAttributes: Set[String] = defaultTrackedAttributes,
-    scope: String = defaultScope
+      page: Page,
+      trackedAttributes: Set[String] = defaultTrackedAttributes,
+      scope: String = defaultScope
   ): List[Anchor] =
     within(page, scope)
-      .flatMap(e => Anchors.namesOf(e, trackedAttributes).map(n => Anchor(kindOf(n), n, n)))
+      .flatMap(e =>
+        Anchors.namesOf(e, trackedAttributes).map(n => Anchor(kindOf(n), n, n))
+      )
       .distinctBy(_.name)
 
   /** Everything inside the scope, but not the container itself — a spec does
@@ -68,19 +70,23 @@ object ContentCoverage {
 
   /** The anchors on this page that no assertion has touched. */
   def unasserted(
-    page: Page,
-    ignored: Set[String] = Set.empty,
-    trackedAttributes: Set[String] = defaultTrackedAttributes,
-    scope: String = defaultScope
+      page: Page,
+      ignored: Set[String] = Set.empty,
+      trackedAttributes: Set[String] = defaultTrackedAttributes,
+      scope: String = defaultScope
   ): List[Anchor] = {
-    val touched    = CoverageRegistry.touched(page.coverageGroup)
+    val touched = CoverageRegistry.touched(page.coverageGroup)
     val ignoredIds = ignored.map(_.stripPrefix("#"))
     within(page, scope)
       .filterNot(insideIgnored(_, ignoredIds))
-      .flatMap(e => Anchors.namesOf(e, trackedAttributes).map(n => Anchor(kindOf(n), n, n)))
+      .flatMap(e =>
+        Anchors.namesOf(e, trackedAttributes).map(n => Anchor(kindOf(n), n, n))
+      )
       .distinctBy(_.name)
       .filterNot(a => touched.contains(a.name))
-      .filterNot(a => ignored.contains(a.name) || ignored.contains(a.name.stripPrefix("#")))
+      .filterNot(a =>
+        ignored.contains(a.name) || ignored.contains(a.name.stripPrefix("#"))
+      )
   }
 
   /** Ignoring a block means ignoring what it holds: a spec that disclaims the
@@ -88,11 +94,13 @@ object ContentCoverage {
     * the link inside it.
     */
   private def insideIgnored(e: Element, ignoredIds: Set[String]): Boolean =
-    ignoredIds.nonEmpty && (Iterator(e) ++ e.parents.asScala.iterator).exists(a => ignoredIds.contains(a.id()))
+    ignoredIds.nonEmpty && (Iterator(e) ++ e.parents.asScala.iterator).exists(
+      a => ignoredIds.contains(a.id())
+    )
 
   def report(unasserted: List[Anchor]): String = {
     val byKind = unasserted.groupBy(_.kind)
-    val lines  = List("id", "link", "tracking").flatMap { kind =>
+    val lines = List("id", "link", "tracking").flatMap { kind =>
       byKind.get(kind).map { as =>
         s"  $kind (${as.size}): ${as.map(_.name).mkString(", ")}"
       }

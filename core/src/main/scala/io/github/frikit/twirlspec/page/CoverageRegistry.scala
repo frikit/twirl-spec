@@ -22,8 +22,8 @@ import scala.collection.mutable
 /** Remembers which elements a spec's assertions actually looked at.
   *
   * A spec renders the same page many times over — once per test — so the record
-  * is keyed by the page's own html rather than by a  instance. Two renders
-  * that produce identical markup are the same page, and their assertions add up.
+  * is keyed by the page's own html rather than by a instance. Two renders that
+  * produce identical markup are the same page, and their assertions add up.
   */
 object CoverageRegistry {
 
@@ -31,12 +31,16 @@ object CoverageRegistry {
 
   def record(sourceKey: String, paths: Iterable[String]): Unit =
     if (paths.nonEmpty) {
-      val set = touchedBySource.getOrElseUpdate(sourceKey, mutable.Set.empty[String])
+      val set =
+        touchedBySource.getOrElseUpdate(sourceKey, mutable.Set.empty[String])
       set.synchronized(set ++= paths)
     }
 
   def touched(sourceKey: String): Set[String] =
-    touchedBySource.get(sourceKey).map(s => s.synchronized(s.toSet)).getOrElse(Set.empty)
+    touchedBySource
+      .get(sourceKey)
+      .map(s => s.synchronized(s.toSet))
+      .getOrElse(Set.empty)
 
   def reset(): Unit = touchedBySource.clear()
 }

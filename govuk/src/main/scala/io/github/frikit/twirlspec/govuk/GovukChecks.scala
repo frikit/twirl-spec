@@ -22,5 +22,8 @@ import io.github.frikit.twirlspec.TwirlSpecDsl
 
 /** Adds the GOV.UK Design System rules to every `display(...)` in a spec. */
 trait GovukChecks extends TwirlSpecDsl {
-  override def standardsRules: Seq[Rule] = super.standardsRules ++ GovukStandards.all
+
+  override def standardsRules: Seq[Rule] =
+    super.standardsRules ++ GovukStandards.all
+
 }

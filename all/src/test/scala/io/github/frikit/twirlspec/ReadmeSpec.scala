@@ -21,9 +21,17 @@ import io.github.frikit.twirlspec.expect.Severity
 import io.github.frikit.twirlspec.govuk.GovukStandards
 import io.github.frikit.twirlspec.html.HtmlStandards
 import io.github.frikit.twirlspec.i18n.TranslationStandards
-import io.github.frikit.twirlspec.quality.{MetadataStandards, PerformanceStandards, SemanticStandards}
+import io.github.frikit.twirlspec.quality.{
+  MetadataStandards,
+  PerformanceStandards,
+  SemanticStandards
+}
 import io.github.frikit.twirlspec.standards.RuleSet
-import io.github.frikit.twirlspec.wcag.{SecurityStandards, TwirlStandards, WcagStandards}
+import io.github.frikit.twirlspec.wcag.{
+  SecurityStandards,
+  TwirlStandards,
+  WcagStandards
+}
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
@@ -39,7 +47,7 @@ class ReadmeSpec extends AnyWordSpec with Matchers {
 
   private val readme: String = {
     val start = new File(sys.props("user.dir")).getAbsoluteFile
-    val root  = Iterator
+    val root = Iterator
       .iterate(start)(_.getParentFile)
       .takeWhile(_ != null)
       .find(dir => new File(dir, "README.md").isFile)
@@ -84,10 +92,10 @@ class ReadmeSpec extends AnyWordSpec with Matchers {
       mustCarry("the translation rules table", translationTable)
 
     "count the rules the way the code does" in {
-      val wcag     =
+      val wcag =
         WcagStandards.all.size + TwirlStandards.all.size + SecurityStandards.all.size
-      val tagged   = WcagStandards.all.count(_.criterion.nonEmpty)
-      val quality  =
+      val tagged = WcagStandards.all.count(_.criterion.nonEmpty)
+      val quality =
         SemanticStandards.all.size + PerformanceStandards.all.size + MetadataStandards.all.size
       val everyone = sets.map(_._3.all.size).sum
 
@@ -123,13 +131,15 @@ class ReadmeSpec extends AnyWordSpec with Matchers {
 
   private def rulesTable(set: RuleSet): String = {
     val withCriteria = set.all.exists(_.criterion.nonEmpty)
-    val header       =
+    val header =
       if (withCriteria) "| Rule | Checks | Criterion |\n|---|---|---|"
       else "| Rule | Checks |\n|---|---|"
-    val rows         = set.all.map { rule =>
-      val checks    = marked(rule.description, rule.severity)
+    val rows = set.all.map { rule =>
+      val checks = marked(rule.description, rule.severity)
       val criterion =
-        rule.criterion.fold("convention")(c => s"${c.number} ${c.title} · ${c.level.name} · WCAG ${c.since.name}")
+        rule.criterion.fold("convention")(c =>
+          s"${c.number} ${c.title} · ${c.level.name} · WCAG ${c.since.name}"
+        )
       if (withCriteria) s"| `${rule.id}` | $checks | $criterion |"
       else s"| `${rule.id}` | $checks |"
     }
@@ -138,7 +148,7 @@ class ReadmeSpec extends AnyWordSpec with Matchers {
 
   private def criteriaTable: String = {
     val header = "| Criterion | Level | Since | Rules |\n|---|---|---|---|"
-    val rows   = WcagStandards.criteria.map { c =>
+    val rows = WcagStandards.criteria.map { c =>
       val rules = WcagStandards.all
         .filter(_.criterion.contains(c))
         .map(r => s"`${r.id}`")
@@ -150,9 +160,11 @@ class ReadmeSpec extends AnyWordSpec with Matchers {
 
   private def translationTable: String = {
     val header = "| Rule | Checks |\n|---|---|"
-    val rows   = TranslationStandards
+    val rows = TranslationStandards
       .all()
-      .map(rule => s"| `${rule.id}` | ${marked(rule.description, rule.severity)} |")
+      .map(rule =>
+        s"| `${rule.id}` | ${marked(rule.description, rule.severity)} |"
+      )
     (header +: rows).mkString("\n")
   }
 

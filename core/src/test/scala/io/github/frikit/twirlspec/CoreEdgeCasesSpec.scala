@@ -20,7 +20,12 @@ import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import io.github.frikit.twirlspec.expect.Severity
 import io.github.frikit.twirlspec.page.Page
-import io.github.frikit.twirlspec.standards.{Criterion, Level, Rule, WcagVersion}
+import io.github.frikit.twirlspec.standards.{
+  Criterion,
+  Level,
+  Rule,
+  WcagVersion
+}
 
 /** The branches the main specs reach past: components that are absent rather
   * than wrong, keys that do not resolve, and the "nothing to show" half of a
@@ -53,7 +58,7 @@ class CoreEdgeCasesSpec extends AnyWordSpec with Matchers with TwirlSpec {
 
     "report the key for every content expectation" in {
       val p = pageOf("<h1>A</h1><p>Something</p>")
-      check(p, content("kitchenSink.notAKey"))   mustBe Seq("content")
+      check(p, content("kitchenSink.notAKey")) mustBe Seq("content")
       check(p, paragraph("kitchenSink.notAKey")) mustBe Seq("paragraph")
     }
 
@@ -68,7 +73,7 @@ class CoreEdgeCasesSpec extends AnyWordSpec with Matchers with TwirlSpec {
       check(
         p,
         summaryRow("checkAnswers.name").withActions("kitchenSink.notAKey")
-      )   must
+      ) must
         contain("summaryRow(messages(checkAnswers.name))")
       check(
         p,
@@ -77,7 +82,7 @@ class CoreEdgeCasesSpec extends AnyWordSpec with Matchers with TwirlSpec {
       check(
         p,
         summaryRow("checkAnswers.name").withChangeLinkTo("/elsewhere")
-      )   must
+      ) must
         contain("summaryRow(messages(checkAnswers.name)) change link")
     }
   }
@@ -89,7 +94,7 @@ class CoreEdgeCasesSpec extends AnyWordSpec with Matchers with TwirlSpec {
         """<h1>A</h1><fieldset><legend>When</legend><input id="d" name="d"></fieldset>"""
       )
       check(p, textInput("d").labelledByLegend) mustBe empty
-      check(p, textInput("d"))                  mustBe Seq("input(d) label")
+      check(p, textInput("d")) mustBe Seq("input(d) label")
     }
 
     "match a dropdown that has a name but no id" in {
@@ -184,14 +189,14 @@ class CoreEdgeCasesSpec extends AnyWordSpec with Matchers with TwirlSpec {
           Criterion("1.1.1", "Non-text Content", Level.A, WcagVersion.V2_0)
         )
       )(_ => Nil)
-      tagged.level       mustBe Some(Level.A)
+      tagged.level mustBe Some(Level.A)
       tagged.wcagVersion mustBe Some(WcagVersion.V2_0)
-      tagged.toString      must include("WCAG 1.1.1")
+      tagged.toString must include("WCAG 1.1.1")
 
       val untagged = Rule("x", "y")(_ => Nil)
-      untagged.level       mustBe None
+      untagged.level mustBe None
       untagged.wcagVersion mustBe None
-      untagged.toString    mustBe "x — y"
+      untagged.toString mustBe "x — y"
     }
   }
 
@@ -201,9 +206,9 @@ class CoreEdgeCasesSpec extends AnyWordSpec with Matchers with TwirlSpec {
         pageOf("<h1>A</h1>"),
         Seq(heading("kitchenSink.absent").asWarning)
       )
-      warned.passed                   mustBe true
+      warned.passed mustBe true
       warned.warnings.map(_.severity) mustBe Seq(Severity.Warning)
-      warned.message                    must include("warnings:")
+      warned.message must include("warnings:")
     }
   }
 
@@ -238,7 +243,7 @@ class CoreEdgeCasesSpec extends AnyWordSpec with Matchers with TwirlSpec {
           |<input type="radio" name="value" id="value-no" value="no">
           |</form>""".stripMargin
       ).outline
-      outline                                              must include("checked")
+      outline must include("checked")
       outline.linesIterator.count(_.contains("checked")) mustBe 1
     }
   }
@@ -246,9 +251,9 @@ class CoreEdgeCasesSpec extends AnyWordSpec with Matchers with TwirlSpec {
   "the defaults the DSL fills in" should {
 
     "name the control `value`, as Play's form helpers do" in {
-      radioGroup().description    mustBe "radioGroup(value)"
+      radioGroup().description mustBe "radioGroup(value)"
       checkboxGroup().description mustBe "checkboxGroup(value)"
-      dateInput().description     mustBe "dateInput(value)"
+      dateInput().description mustBe "dateInput(value)"
     }
 
     "give a page built directly no parse errors unless it is handed some" in {
@@ -260,7 +265,7 @@ class CoreEdgeCasesSpec extends AnyWordSpec with Matchers with TwirlSpec {
   "a wrapped expectation" should {
 
     "say how it was wrapped" in {
-      heading("site.continue").asWarning.description       must endWith(
+      heading("site.continue").asWarning.description must endWith(
         "(warning only)"
       )
       heading("site.continue").when(_ => true).description must endWith(
@@ -282,7 +287,7 @@ class CoreEdgeCasesSpec extends AnyWordSpec with Matchers with TwirlSpec {
       val wrong = pageOf(
         """<h1>A</h1><label for="e">Email</label><input id="e" name="e" autocomplete="tel">"""
       )
-      val none  = pageOf(
+      val none = pageOf(
         """<h1>A</h1><label for="e">Email</label><input id="e" name="e">"""
       )
       checkPage(

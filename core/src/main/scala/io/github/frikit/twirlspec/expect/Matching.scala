@@ -29,18 +29,29 @@ private[twirlspec] object Matching {
 
   /** GOV.UK prefixes the browser title of a page in an error state. */
   def errorTitlePrefixes(page: Page): Seq[String] =
-    (page.message("error.browser.title.prefix").toSeq ++ Seq("Error:", "Gwall:")).map(Text.normalise)
+    (page.message("error.browser.title.prefix").toSeq ++ Seq(
+      "Error:",
+      "Gwall:"
+    )).map(Text.normalise)
 
   def stripErrorPrefix(page: Page, title: String): String = {
     val t = Text.normalise(title)
-    errorTitlePrefixes(page).find(p => t.startsWith(p)).fold(t)(p => t.drop(p.length).trim)
+    errorTitlePrefixes(page)
+      .find(p => t.startsWith(p))
+      .fold(t)(p => t.drop(p.length).trim)
   }
 
-  def compare(rule: String, expected: Expected, actual: String, page: Page, mode: Mode): Seq[Violation] =
+  def compare(
+      rule: String,
+      expected: Expected,
+      actual: String,
+      page: Page,
+      mode: Mode
+  ): Seq[Violation] =
     expected.resolve(page) match {
       case Left(v)      => Seq(v.copy(rule = rule))
       case Right(value) =>
-        val a  = Text.normalise(actual)
+        val a = Text.normalise(actual)
         val ok = expected match {
           case Expected.Anything       => a.nonEmpty
           case Expected.Pattern(regex) => regex.findFirstIn(a).isDefined
@@ -71,7 +82,10 @@ private[twirlspec] object Matching {
     * than what it names. Where several matches are legitimate, assert on them
     * as a group with `cssSelector` and `elementCount`.
     */
-  def exactlyOne(rule: String, selection: Selection): Either[Violation, Element] =
+  def exactlyOne(
+      rule: String,
+      selection: Selection
+  ): Either[Violation, Element] =
     selection.elements match {
       case Nil        => Left(Violation.missing(rule, selection.selector))
       case one :: Nil => Right(one)
@@ -79,16 +93,22 @@ private[twirlspec] object Matching {
         Left(
           Violation(
             rule = rule,
-            message = s"${many.size} elements matched, so this assertion is ambiguous",
+            message =
+              s"${many.size} elements matched, so this assertion is ambiguous",
             expected = Some("exactly one match"),
             actual = Some(many.map(describe).mkString(" | "))
-          ).withHint("name the one you mean, or assert on the group with cssSelector and elementCount")
+          ).withHint(
+            "name the one you mean, or assert on the group with cssSelector and elementCount"
+          )
         )
     }
 
   private def describe(e: Element): String = {
-    val id   = Option(e.id()).filter(_.nonEmpty).map("#" + _).getOrElse("")
-    val name = Option(e.attr("name")).filter(_.nonEmpty).map(n => s"[name=$n]").getOrElse("")
+    val id = Option(e.id()).filter(_.nonEmpty).map("#" + _).getOrElse("")
+    val name = Option(e.attr("name"))
+      .filter(_.nonEmpty)
+      .map(n => s"[name=$n]")
+      .getOrElse("")
     val text = Text.preview(e.text(), 40)
     s"<${e.tagName()}$id$name>${if (text.nonEmpty) s" $text" else ""}"
   }

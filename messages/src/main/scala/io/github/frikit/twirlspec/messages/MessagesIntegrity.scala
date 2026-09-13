@@ -27,16 +27,24 @@ import scala.util.Using
 object MessagesIntegrity {
 
   final case class Config(
-    /** The language the others are measured against: Play's `default` file plus this one. */
-    baseLanguage: String = "en",
-    /** Whether every other configured language must carry every base key. Off for a single-language service. */
-    requireTranslations: Boolean = true,
-    /** How much of a translation may be identical to the base before it is treated as untranslated. */
-    maxUntranslatedRatio: Double = 0.06,
-    ignoreKeys: Set[String] = Set.empty,
-    ignoreKeyPrefixes: Set[String] = Set.empty,
-    /** Keys whose value is a URL are expected to be identical in every language. */
-    urlKeySuffixes: Set[String] = Set(".url", ".href", ".link.url")
+      /** The language the others are measured against: Play's `default` file
+        * plus this one.
+        */
+      baseLanguage: String = "en",
+      /** Whether every other configured language must carry every base key. Off
+        * for a single-language service.
+        */
+      requireTranslations: Boolean = true,
+      /** How much of a translation may be identical to the base before it is
+        * treated as untranslated.
+        */
+      maxUntranslatedRatio: Double = 0.06,
+      ignoreKeys: Set[String] = Set.empty,
+      ignoreKeyPrefixes: Set[String] = Set.empty,
+      /** Keys whose value is a URL are expected to be identical in every
+        * language.
+        */
+      urlKeySuffixes: Set[String] = Set(".url", ".href", ".link.url")
   ) {
 
     def ignores(key: String): Boolean =
@@ -54,7 +62,8 @@ object MessagesIntegrity {
   private def placeholders(value: String): List[Int] =
     Placeholder.findAllMatchIn(value).map(_.group(1).toInt).toList
 
-  /** How a message's single quotes behave under `MessageFormat`, which Play applies to every message whether or not it takes arguments.
+  /** How a message's single quotes behave under `MessageFormat`, which Play
+    * applies to every message whether or not it takes arguments.
     */
   sealed private[twirlspec] trait QuoteState
 
@@ -66,17 +75,22 @@ object MessagesIntegrity {
   }
 
   private[twirlspec] def quoteState(value: String): QuoteState = {
-    var i         = 0
-    var inQuote   = false
+    var i = 0
+    var inQuote = false
     var sawQuoted = false
     var quotedArg = false
     while (i < value.length) {
       val c = value.charAt(i)
       if (c == '\'') {
-        if (i + 1 < value.length && value.charAt(i + 1) == '\'') i += 2 // escaped apostrophe
+        if (i + 1 < value.length && value.charAt(i + 1) == '\'')
+          i += 2 // escaped apostrophe
         else { inQuote = !inQuote; if (inQuote) sawQuoted = true; i += 1 }
       } else {
-        if (inQuote && c == '{' && i + 1 < value.length && Character.isDigit(value.charAt(i + 1))) quotedArg = true
+        if (
+          inQuote && c == '{' && i + 1 < value.length && Character.isDigit(
+            value.charAt(i + 1)
+          )
+        ) quotedArg = true
         i += 1
       }
     }
@@ -86,9 +100,17 @@ object MessagesIntegrity {
     else QuoteState.Fine
   }
 
-  /** The base language's messages: Play's `default` file plus the file for the base code. */
-  def baseMessages(api: MessagesApi, config: Config = Config.default): Map[String, String] =
-    api.messages.getOrElse("default", Map.empty) ++ api.messages.getOrElse(config.baseLanguage, Map.empty)
+  /** The base language's messages: Play's `default` file plus the file for the
+    * base code.
+    */
+  def baseMessages(
+      api: MessagesApi,
+      config: Config = Config.default
+  ): Map[String, String] =
+    api.messages.getOrElse("default", Map.empty) ++ api.messages.getOrElse(
+      config.baseLanguage,
+      Map.empty
+    )
 
   def messagesFor(api: MessagesApi, langCode: String): Map[String, String] =
     api.messages.getOrElse(langCode, Map.empty)
@@ -98,14 +120,27 @@ object MessagesIntegrity {
     * Play keeps its own framework messages under `default.play`, alongside the
     * service's `default` file. Neither is a language.
     */
-  def translationLanguages(api: MessagesApi, config: Config = Config.default): List[String] =
-    (api.messages.keySet - config.baseLanguage).filterNot(_.startsWith("default")).toList.sorted
+  def translationLanguages(
+      api: MessagesApi,
+      config: Config = Config.default
+  ): List[String] =
+    (api.messages.keySet - config.baseLanguage)
+      .filterNot(_.startsWith("default"))
+      .toList
+      .sorted
 
   /** Every problem across the message files. */
-  def check(api: MessagesApi, config: Config = Config.default): Seq[Violation] = {
-    val base         = baseMessages(api, config).filterNot { case (k, _) => config.ignores(k) }
+  def check(
+      api: MessagesApi,
+      config: Config = Config.default
+  ): Seq[Violation] = {
+    val base = baseMessages(api, config).filterNot { case (k, _) =>
+      config.ignores(k)
+    }
     val translations = translationLanguages(api, config).map { lang =>
-      lang -> messagesFor(api, lang).filterNot { case (k, _) => config.ignores(k) }
+      lang -> messagesFor(api, lang).filterNot { case (k, _) =>
+        config.ignores(k)
+      }
     }
 
     val noTranslations =
@@ -114,7 +149,9 @@ object MessagesIntegrity {
           Violation(
             "messages.translation-parity",
             s"no messages file exists for any language other than ${config.baseLanguage}"
-          ).withHint("add conf/messages.<lang>, or set requireTranslations = false for a single-language service")
+          ).withHint(
+            "add conf/messages.<lang>, or set requireTranslations = false for a single-language service"
+          )
         )
       else Nil
 
@@ -123,7 +160,7 @@ object MessagesIntegrity {
       else
         translations.flatMap { case (lang, translated) =>
           val missing = (base.keySet -- translated.keySet).toList.sorted
-          val extra   = (translated.keySet -- base.keySet).toList.sorted
+          val extra = (translated.keySet -- base.keySet).toList.sorted
 
           (if (missing.isEmpty) Nil
            else
@@ -146,7 +183,10 @@ object MessagesIntegrity {
         }
 
     val allEntries =
-      base.toList.map((config.baseLanguage, _)) ++ translations.flatMap { case (lang, m) => m.toList.map((lang, _)) }
+      base.toList.map((config.baseLanguage, _)) ++ translations.flatMap {
+        case (lang, m) =>
+          m.toList.map((lang, _))
+      }
 
     val empty = allEntries.collect {
       case (lang, (key, value)) if value.trim.isEmpty =>
@@ -155,13 +195,15 @@ object MessagesIntegrity {
 
     val quotes = allEntries.flatMap { case (lang, (key, value)) =>
       quoteState(value) match {
-        case QuoteState.Unbalanced          =>
+        case QuoteState.Unbalanced =>
           Seq(
             Violation(
               "messages.unescaped-quote",
               s"[$lang] `$key` has an unpaired apostrophe, so it is dropped and any placeholder after it stops substituting",
               actual = Some(value)
-            ).withHint("double it: don''t — Play runs every message through MessageFormat")
+            ).withHint(
+              "double it: don''t — Play runs every message through MessageFormat"
+            )
           )
         case QuoteState.PlaceholderInQuotes =>
           Seq(
@@ -169,17 +211,21 @@ object MessagesIntegrity {
               "messages.quoted-placeholder",
               s"[$lang] `$key` has a placeholder inside a quoted section, so it will be shown literally",
               actual = Some(value)
-            ).withHint("close the quoted section before the placeholder, or double the apostrophes")
+            ).withHint(
+              "close the quoted section before the placeholder, or double the apostrophes"
+            )
           )
-        case QuoteState.DeliberatelyQuoted  =>
+        case QuoteState.DeliberatelyQuoted =>
           Seq(
             Violation(
               "messages.quoted-literal",
               s"[$lang] `$key` contains a MessageFormat quoted section",
               actual = Some(value)
-            ).warn.withHint("correct if deliberate; if you meant an apostrophe, double it")
+            ).warn.withHint(
+              "correct if deliberate; if you meant an apostrophe, double it"
+            )
           )
-        case QuoteState.Fine                => Nil
+        case QuoteState.Fine => Nil
       }
     }
 
@@ -190,16 +236,20 @@ object MessagesIntegrity {
           base.toList.sortBy(_._1).flatMap { case (key, baseValue) =>
             translated.get(key).toList.flatMap { value =>
               val baseArgs = placeholders(baseValue)
-              val args     = placeholders(value)
+              val args = placeholders(value)
               if (baseArgs.sorted == args.sorted) Nil
               else
                 Seq(
                   Violation(
                     "messages.placeholder-parity",
                     s"`$key` uses different placeholders in $lang than in ${config.baseLanguage}",
-                    expected = Some(s"${config.baseLanguage}: ${baseArgs.mkString(", ")}"),
+                    expected = Some(
+                      s"${config.baseLanguage}: ${baseArgs.mkString(", ")}"
+                    ),
                     actual = Some(s"$lang: ${args.mkString(", ")}")
-                  ).withHint("a missing placeholder shows the reader a blank where a value should be")
+                  ).withHint(
+                    "a missing placeholder shows the reader a blank where a value should be"
+                  )
                 )
             }
           }
@@ -210,16 +260,18 @@ object MessagesIntegrity {
       else
         translations.flatMap { case (lang, translated) =>
           val identical = base.count { case (key, value) =>
-            translated.get(key).contains(value) && !config.urlKeySuffixes.exists(key.endsWith)
+            translated.get(key).contains(value) && !config.urlKeySuffixes
+              .exists(key.endsWith)
           }
-          val ratio     = identical.toDouble / base.size.toDouble
+          val ratio = identical.toDouble / base.size.toDouble
           if (ratio <= config.maxUntranslatedRatio) Nil
           else
             Seq(
               Violation(
                 "messages.translation-coverage",
                 f"[$lang] ${ratio * 100}%.1f%% of messages are identical to the ${config.baseLanguage} ones",
-                expected = Some(f"at most ${config.maxUntranslatedRatio * 100}%.1f%%"),
+                expected =
+                  Some(f"at most ${config.maxUntranslatedRatio * 100}%.1f%%"),
                 actual = Some(s"$identical of ${base.size} keys")
               ).warn
             )
@@ -235,22 +287,33 @@ object MessagesIntegrity {
         source
           .getLines()
           .map(_.trim)
-          .filter(line => line.nonEmpty && !line.startsWith("#") && line.contains("="))
+          .filter(line =>
+            line.nonEmpty && !line.startsWith("#") && line.contains("=")
+          )
           .map(_.takeWhile(_ != '=').trim)
           .toList
       }
       keys
         .groupBy(identity)
-        .collect { case (key, occurrences) if occurrences.size > 1 => (key, occurrences.size) }
+        .collect {
+          case (key, occurrences) if occurrences.size > 1 =>
+            (key, occurrences.size)
+        }
         .toList
         .sortBy(_._1)
         .map { case (key, n) =>
-          Violation("messages.duplicate-key", s"${file.getName}: `$key` is defined $n times")
-            .withHint("Play keeps the last definition, so the earlier ones are dead content")
+          Violation(
+            "messages.duplicate-key",
+            s"${file.getName}: `$key` is defined $n times"
+          )
+            .withHint(
+              "Play keeps the last definition, so the earlier ones are dead content"
+            )
         }
     }
 
   private def preview(keys: List[String]): String =
-    if (keys.size <= 12) keys.mkString(", ") else keys.take(12).mkString(", ") + s", ... (${keys.size - 12} more)"
+    if (keys.size <= 12) keys.mkString(", ")
+    else keys.take(12).mkString(", ") + s", ... (${keys.size - 12} more)"
 
 }

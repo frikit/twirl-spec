@@ -17,7 +17,11 @@
 package io.github.frikit.twirlspec
 
 import io.github.frikit.twirlspec.page.{Anchors, CoverageRegistry, Page}
-import io.github.frikit.twirlspec.quality.{ContentCoverage, CoverageChecks, QualityChecks}
+import io.github.frikit.twirlspec.quality.{
+  ContentCoverage,
+  CoverageChecks,
+  QualityChecks
+}
 import org.jsoup.Jsoup
 import org.scalatest.BeforeAndAfterEach
 import org.scalatest.matchers.must.Matchers
@@ -27,7 +31,12 @@ import org.scalatest.wordspec.AnyWordSpec
   * what a spec never looked at.
   */
 class ContentCoverageSpec
-    extends AnyWordSpec with Matchers with TwirlSpec with QualityChecks with CoverageChecks with BeforeAndAfterEach {
+    extends AnyWordSpec
+    with Matchers
+    with TwirlSpec
+    with QualityChecks
+    with CoverageChecks
+    with BeforeAndAfterEach {
 
   override def beforeEach(): Unit = CoverageRegistry.reset()
 
@@ -52,29 +61,44 @@ class ContentCoverageSpec
   "Anchors" should {
 
     "name an element by its id" in {
-      Anchors.namesOf(Jsoup.parse("""<p id="a">x</p>""").select("p").first()) mustBe List("#a")
+      Anchors.namesOf(
+        Jsoup.parse("""<p id="a">x</p>""").select("p").first()
+      ) mustBe List("#a")
     }
 
     "name a link by its text" in {
-      Anchors.namesOf(Jsoup.parse("""<a href="/x">Read more</a>""").select("a").first()) mustBe
+      Anchors.namesOf(
+        Jsoup.parse("""<a href="/x">Read more</a>""").select("a").first()
+      ) mustBe
         List("""link "Read more"""")
     }
 
     "fall back to the href when a link has no text" in {
-      Anchors.namesOf(Jsoup.parse("""<a href="/x"></a>""").select("a").first()) mustBe List("link /x")
+      Anchors.namesOf(
+        Jsoup.parse("""<a href="/x"></a>""").select("a").first()
+      ) mustBe List("link /x")
     }
 
     "not treat an anchor without an href as a link" in {
-      Anchors.namesOf(Jsoup.parse("""<a>x</a>""").select("a").first()) mustBe empty
+      Anchors.namesOf(
+        Jsoup.parse("""<a>x</a>""").select("a").first()
+      ) mustBe empty
     }
 
     "name a tracked attribute" in {
-      Anchors.namesOf(Jsoup.parse("""<div data-journey-click="go">x</div>""").select("div").first()) mustBe
+      Anchors.namesOf(
+        Jsoup
+          .parse("""<div data-journey-click="go">x</div>""")
+          .select("div")
+          .first()
+      ) mustBe
         List("data-journey-click=go")
     }
 
     "ignore an attribute that is not tracked" in {
-      Anchors.namesOf(Jsoup.parse("""<div data-other="go">x</div>""").select("div").first()) mustBe empty
+      Anchors.namesOf(
+        Jsoup.parse("""<div data-other="go">x</div>""").select("div").first()
+      ) mustBe empty
     }
   }
 
@@ -82,7 +106,13 @@ class ContentCoverageSpec
 
     "list the ids, links and tracked elements inside the main content" in {
       val names = ContentCoverage.anchors(pageIn("a")).map(_.name)
-      names must contain allOf ("#intro", "#go", """link "Go somewhere"""", "link /bare", "data-journey-click=nav:go")
+      names must contain allOf (
+        "#intro",
+        "#go",
+        """link "Go somewhere"""",
+        "link /bare",
+        "data-journey-click=nav:go"
+      )
     }
 
     "leave the layout's header out of it" in {
@@ -90,7 +120,9 @@ class ContentCoverageSpec
     }
 
     "fall back to the whole document when the scope matches nothing" in {
-      val names = ContentCoverage.anchors(pageIn("c"), scope = "#nothing-here").map(_.name)
+      val names = ContentCoverage
+        .anchors(pageIn("c"), scope = "#nothing-here")
+        .map(_.name)
       names must contain("#skip")
     }
 
@@ -105,12 +137,17 @@ class ContentCoverageSpec
     }
 
     "accept an id to ignore, with or without its hash" in {
-      ContentCoverage.unasserted(pageIn("f"), ignored = Set("#intro")).map(_.name) must not contain "#intro"
-      ContentCoverage.unasserted(pageIn("g"), ignored = Set("intro")).map(_.name)  must not contain "#intro"
+      ContentCoverage
+        .unasserted(pageIn("f"), ignored = Set("#intro"))
+        .map(_.name) must not contain "#intro"
+      ContentCoverage
+        .unasserted(pageIn("g"), ignored = Set("intro"))
+        .map(_.name) must not contain "#intro"
     }
 
     "group its report by kind" in {
-      val report = ContentCoverage.report(ContentCoverage.unasserted(pageIn("h")))
+      val report =
+        ContentCoverage.report(ContentCoverage.unasserted(pageIn("h")))
       report must include("were never asserted")
       report must include("id (")
       report must include("link (")
@@ -118,7 +155,9 @@ class ContentCoverageSpec
     }
 
     "report nothing but the count when there is nothing to report" in {
-      ContentCoverage.report(Nil) mustBe "0 things on this page were never asserted:"
+      ContentCoverage.report(
+        Nil
+      ) mustBe "0 things on this page were never asserted:"
     }
   }
 
@@ -165,8 +204,10 @@ class ContentCoverageSpec
   "the assertEverything matcher" should {
 
     "fail while part of the page has gone unasserted" in {
-      val page   = pageIn("l")
-      val thrown = the[org.scalatest.exceptions.TestFailedException] thrownBy (page must assertEverything)
+      val page = pageIn("l")
+      val thrown = the[
+        org.scalatest.exceptions.TestFailedException
+      ] thrownBy (page must assertEverything)
       thrown.getMessage must include("were never asserted")
       thrown.getMessage must include("#intro")
     }
@@ -199,13 +240,23 @@ class ContentCoverageSpec
   "ignoring a block" should {
 
     "ignore what the block contains" in {
-      val page = pageIn("q", """<div id="chrome"><a href="/help" id="help">Help</a></div>""")
-      ContentCoverage.unasserted(page, ignored = Set("#chrome")).map(_.name) mustBe empty
+      val page = pageIn(
+        "q",
+        """<div id="chrome"><a href="/help" id="help">Help</a></div>"""
+      )
+      ContentCoverage
+        .unasserted(page, ignored = Set("#chrome"))
+        .map(_.name) mustBe empty
     }
 
     "leave the rest of the page alone" in {
-      val page = pageIn("r", """<div id="chrome"><a href="/help">Help</a></div><p id="mine">x</p>""")
-      ContentCoverage.unasserted(page, ignored = Set("#chrome")).map(_.name) mustBe List("#mine")
+      val page = pageIn(
+        "r",
+        """<div id="chrome"><a href="/help">Help</a></div><p id="mine">x</p>"""
+      )
+      ContentCoverage
+        .unasserted(page, ignored = Set("#chrome"))
+        .map(_.name) mustBe List("#mine")
     }
   }
 

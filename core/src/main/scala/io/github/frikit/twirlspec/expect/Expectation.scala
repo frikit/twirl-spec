@@ -31,39 +31,47 @@ trait Expectation { self =>
 
   /** Downgrade every violation this expectation produces to a warning. */
   def asWarning: Expectation = new Expectation {
-    def description: String               = s"${self.description} (warning only)"
+    def description: String = s"${self.description} (warning only)"
     def check(page: Page): Seq[Violation] = self.check(page).map(_.warn)
   }
 
   /** Only apply this expectation when the page satisfies a predicate. */
   def when(p: Page => Boolean): Expectation = new Expectation {
-    def description: String               = s"${self.description} (conditional)"
-    def check(page: Page): Seq[Violation] = if (p(page)) self.check(page) else Nil
+    def description: String = s"${self.description} (conditional)"
+    def check(page: Page): Seq[Violation] =
+      if (p(page)) self.check(page) else Nil
   }
 
 }
 
 object Expectation {
 
-  def apply(name: String)(f: Page => Seq[Violation]): Expectation = new Expectation {
-    def description: String               = name
-    def check(page: Page): Seq[Violation] = f(page)
-  }
+  def apply(name: String)(f: Page => Seq[Violation]): Expectation =
+    new Expectation {
+      def description: String = name
+      def check(page: Page): Seq[Violation] = f(page)
+    }
 
   val satisfied: Expectation = apply("(nothing)")(_ => Nil)
 
   def all(expectations: Seq[Expectation]): Expectation = new Expectation {
-    def description: String               = expectations.map(_.description).mkString(", ")
+    def description: String = expectations.map(_.description).mkString(", ")
     def check(page: Page): Seq[Violation] = expectations.flatMap(_.check(page))
   }
 
 }
 
 /** The result of evaluating a set of expectations against a page. */
-final case class CheckReport(page: Page, violations: Seq[Violation], subject: String) {
+final case class CheckReport(
+    page: Page,
+    violations: Seq[Violation],
+    subject: String
+) {
 
-  def errors: Seq[Violation]   = violations.filter(_.severity == Severity.Error)
-  def warnings: Seq[Violation] = violations.filter(_.severity == Severity.Warning)
+  def errors: Seq[Violation] = violations.filter(_.severity == Severity.Error)
+
+  def warnings: Seq[Violation] =
+    violations.filter(_.severity == Severity.Warning)
 
   def passed: Boolean = errors.isEmpty
 

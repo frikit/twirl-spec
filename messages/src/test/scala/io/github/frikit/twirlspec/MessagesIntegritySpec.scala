@@ -24,15 +24,25 @@ import io.github.frikit.twirlspec.messages.{MessagesIntegrity, MessagesMatchers}
 import java.io.{File, PrintWriter}
 import java.nio.file.Files
 
-class MessagesIntegritySpec extends AnyWordSpec with Matchers with Bilingual with MessagesMatchers {
+class MessagesIntegritySpec
+    extends AnyWordSpec
+    with Matchers
+    with Bilingual
+    with MessagesMatchers {
 
-  private def api(english: Map[String, String], welsh: Map[String, String]): MessagesApi =
+  private def api(
+      english: Map[String, String],
+      welsh: Map[String, String]
+  ): MessagesApi =
     new DefaultMessagesApi(
       messages = Map("default" -> english, "cy" -> welsh),
       langs = new DefaultLangs(Seq(Lang("en"), Lang("cy")))
     )
 
-  private def rules(english: Map[String, String], welsh: Map[String, String]): Set[String] =
+  private def rules(
+      english: Map[String, String],
+      welsh: Map[String, String]
+  ): Set[String] =
     MessagesIntegrity.check(api(english, welsh)).map(_.rule).toSet
 
   "the message files of this library's own fixtures" should {
@@ -46,14 +56,16 @@ class MessagesIntegritySpec extends AnyWordSpec with Matchers with Bilingual wit
     "not mistake Play's own framework messages for a language" in {
       val withFramework = new DefaultMessagesApi(
         messages = Map(
-          "default"      -> Map("a" -> "A"),
+          "default" -> Map("a" -> "A"),
           "default.play" -> Map("constraint.required" -> "Required"),
-          "cy"           -> Map("a" -> "A cy")
+          "cy" -> Map("a" -> "A cy")
         ),
         langs = new DefaultLangs(Seq(Lang("en"), Lang("cy")))
       )
       MessagesIntegrity.translationLanguages(withFramework) mustBe List("cy")
-      MessagesIntegrity.check(withFramework).map(_.rule) must not contain "messages.translation-parity"
+      MessagesIntegrity
+        .check(withFramework)
+        .map(_.rule) must not contain "messages.translation-parity"
     }
 
     "say so when there is no other language to compare against" in {
@@ -61,8 +73,12 @@ class MessagesIntegritySpec extends AnyWordSpec with Matchers with Bilingual wit
         messages = Map("default" -> Map("a" -> "A")),
         langs = new DefaultLangs(Seq(Lang("en")))
       )
-      val found       = MessagesIntegrity.check(monolingual).filter(_.rule == "messages.translation-parity")
-      found.map(_.message)     mustBe List("no messages file exists for any language other than en")
+      val found = MessagesIntegrity
+        .check(monolingual)
+        .filter(_.rule == "messages.translation-parity")
+      found.map(_.message) mustBe List(
+        "no messages file exists for any language other than en"
+      )
       found.flatMap(_.hint).head must include("requireTranslations = false")
     }
 
@@ -71,31 +87,43 @@ class MessagesIntegritySpec extends AnyWordSpec with Matchers with Bilingual wit
         messages = Map("default" -> Map("a" -> "A")),
         langs = new DefaultLangs(Seq(Lang("en")))
       )
-      MessagesIntegrity.check(monolingual, MessagesIntegrity.Config(requireTranslations = false)) mustBe empty
+      MessagesIntegrity.check(
+        monolingual,
+        MessagesIntegrity.Config(requireTranslations = false)
+      ) mustBe empty
     }
 
     "measure every configured language against the base" in {
       val trilingual = new DefaultMessagesApi(
         messages = Map(
           "default" -> Map("a" -> "A", "b" -> "B"),
-          "cy"      -> Map("a" -> "A cy", "b" -> "B cy"),
-          "fr"      -> Map("a" -> "A fr")
+          "cy" -> Map("a" -> "A cy", "b" -> "B cy"),
+          "fr" -> Map("a" -> "A fr")
         ),
         langs = new DefaultLangs(Seq(Lang("en"), Lang("cy"), Lang("fr")))
       )
-      val parity     = MessagesIntegrity.check(trilingual).filter(_.rule == "messages.translation-parity")
-      parity.map(_.message) mustBe List("[fr] 1 key(s) are in the en messages but not the fr ones")
+      val parity = MessagesIntegrity
+        .check(trilingual)
+        .filter(_.rule == "messages.translation-parity")
+      parity.map(_.message) mustBe List(
+        "[fr] 1 key(s) are in the en messages but not the fr ones"
+      )
     }
   }
 
   "key parity" should {
 
     "flag an english key with no welsh translation" in {
-      rules(Map("a" -> "A", "b" -> "B"), Map("a" -> "A cy")) must contain("messages.translation-parity")
+      rules(Map("a" -> "A", "b" -> "B"), Map("a" -> "A cy")) must contain(
+        "messages.translation-parity"
+      )
     }
 
     "flag a welsh key with no english original" in {
-      rules(Map("a" -> "A"), Map("a" -> "A cy", "orphan" -> "amddifad")) must contain("messages.base-parity")
+      rules(
+        Map("a" -> "A"),
+        Map("a" -> "A cy", "orphan" -> "amddifad")
+      ) must contain("messages.base-parity")
     }
 
     "say which keys are missing" in {
@@ -113,54 +141,77 @@ class MessagesIntegritySpec extends AnyWordSpec with Matchers with Bilingual wit
   "value checks" should {
 
     "flag an empty value" in {
-      rules(Map("a" -> "A", "b" -> "  "), Map("a" -> "A cy", "b" -> "B cy")) must contain("messages.empty-value")
+      rules(
+        Map("a" -> "A", "b" -> "  "),
+        Map("a" -> "A cy", "b" -> "B cy")
+      ) must contain("messages.empty-value")
     }
 
     "flag an unpaired apostrophe" in {
-      rules(Map("a" -> "Don't do that"), Map("a" -> "cy")) must contain("messages.unescaped-quote")
+      rules(Map("a" -> "Don't do that"), Map("a" -> "cy")) must contain(
+        "messages.unescaped-quote"
+      )
     }
 
     "accept a correctly doubled apostrophe" in {
-      rules(Map("a" -> "Don''t do that"), Map("a" -> "cy")) must not contain "messages.unescaped-quote"
+      rules(
+        Map("a" -> "Don''t do that"),
+        Map("a" -> "cy")
+      ) must not contain "messages.unescaped-quote"
     }
 
     "not flag a deliberate MessageFormat quoted section as broken" in {
       // MessageFormat reads '...' as a literal section, and it renders correctly.
       // Calling that an error would be wrong.
-      val found = rules(Map("a" -> "'x quoted x' by the supplier"), Map("a" -> "cy"))
+      val found =
+        rules(Map("a" -> "'x quoted x' by the supplier"), Map("a" -> "cy"))
       found must not contain "messages.unescaped-quote"
       found must not contain "messages.quoted-placeholder"
     }
 
     "flag a placeholder trapped inside a balanced quoted section" in {
-      rules(Map("a" -> "the value '{0}' is literal"), Map("a" -> "cy")) must contain("messages.quoted-placeholder")
+      rules(
+        Map("a" -> "the value '{0}' is literal"),
+        Map("a" -> "cy")
+      ) must contain("messages.quoted-placeholder")
     }
 
     "treat an unpaired quote before a placeholder as the more severe unbalanced case" in {
       // "It's {0} of {1}" renders as "Its {0} of {1}" — the quote is dropped and
       // both placeholders are shown raw. Unbalanced already says so.
-      rules(Map("a" -> "It's {0} of {1}"), Map("a" -> "cy")) must contain("messages.unescaped-quote")
+      rules(Map("a" -> "It's {0} of {1}"), Map("a" -> "cy")) must contain(
+        "messages.unescaped-quote"
+      )
     }
 
     "classify each MessageFormat case correctly" in {
       import io.github.frikit.twirlspec.messages.MessagesIntegrity.QuoteState._
-      MessagesIntegrity.quoteState("no quotes here")             mustBe Fine
-      MessagesIntegrity.quoteState("Don''t stop")                mustBe Fine
-      MessagesIntegrity.quoteState("Don't stop")                 mustBe Unbalanced
-      MessagesIntegrity.quoteState("'literal section' after")    mustBe DeliberatelyQuoted
-      MessagesIntegrity.quoteState("It's {0} of {1}")            mustBe Unbalanced
-      MessagesIntegrity.quoteState("the value '{0}' is literal") mustBe PlaceholderInQuotes
+      MessagesIntegrity.quoteState("no quotes here") mustBe Fine
+      MessagesIntegrity.quoteState("Don''t stop") mustBe Fine
+      MessagesIntegrity.quoteState("Don't stop") mustBe Unbalanced
+      MessagesIntegrity.quoteState(
+        "'literal section' after"
+      ) mustBe DeliberatelyQuoted
+      MessagesIntegrity.quoteState("It's {0} of {1}") mustBe Unbalanced
+      MessagesIntegrity.quoteState(
+        "the value '{0}' is literal"
+      ) mustBe PlaceholderInQuotes
     }
   }
 
   "placeholder parity" should {
 
     "flag a translation that drops a placeholder" in {
-      rules(Map("a" -> "{0} of {1}"), Map("a" -> "{0} o")) must contain("messages.placeholder-parity")
+      rules(Map("a" -> "{0} of {1}"), Map("a" -> "{0} o")) must contain(
+        "messages.placeholder-parity"
+      )
     }
 
     "accept placeholders reordered by grammar" in {
-      rules(Map("a" -> "{0} of {1}"), Map("a" -> "{1} o {0}")) must not contain "messages.placeholder-parity"
+      rules(
+        Map("a" -> "{0} of {1}"),
+        Map("a" -> "{1} o {0}")
+      ) must not contain "messages.placeholder-parity"
     }
   }
 
@@ -168,16 +219,18 @@ class MessagesIntegritySpec extends AnyWordSpec with Matchers with Bilingual wit
 
     "warn when too much of the welsh file is still english" in {
       val english = (1 to 10).map(i => s"k$i" -> s"value $i").toMap
-      val welsh   = english // nothing translated at all
-      val found   = MessagesIntegrity.check(api(english, welsh))
-      found.map(_.rule)                                                       must contain("messages.translation-coverage")
-      found.find(_.rule == "messages.translation-coverage").map(_.severity) mustBe
+      val welsh = english // nothing translated at all
+      val found = MessagesIntegrity.check(api(english, welsh))
+      found.map(_.rule) must contain("messages.translation-coverage")
+      found
+        .find(_.rule == "messages.translation-coverage")
+        .map(_.severity) mustBe
         Some(io.github.frikit.twirlspec.expect.Severity.Warning)
     }
 
     "not count url keys as untranslated" in {
       val english = Map("a.url" -> "/x", "b" -> "B")
-      val welsh   = Map("a.url" -> "/x", "b" -> "B cy")
+      val welsh = Map("a.url" -> "/x", "b" -> "B cy")
       rules(english, welsh) mustBe empty
     }
   }
@@ -186,19 +239,19 @@ class MessagesIntegritySpec extends AnyWordSpec with Matchers with Bilingual wit
 
     "find a key defined twice in one file" in {
       val file = Files.createTempFile("messages", "").toFile
-      val out  = new PrintWriter(file, "UTF-8")
+      val out = new PrintWriter(file, "UTF-8")
       try out.write("a = one\n# a comment\nb = two\na = three\n")
       finally out.close()
 
       val found = MessagesIntegrity.duplicateKeys(Seq(file))
       found.map(_.rule) mustBe Seq("messages.duplicate-key")
-      found.head.message  must include("`a` is defined 2 times")
+      found.head.message must include("`a` is defined 2 times")
       file.delete()
     }
 
     "pass a file with no duplicates" in {
       val file = Files.createTempFile("messages", "").toFile
-      val out  = new PrintWriter(file, "UTF-8")
+      val out = new PrintWriter(file, "UTF-8")
       try out.write("a = one\nb = two\n")
       finally out.close()
       MessagesIntegrity.duplicateKeys(Seq(file)) mustBe empty
@@ -206,7 +259,9 @@ class MessagesIntegritySpec extends AnyWordSpec with Matchers with Bilingual wit
     }
 
     "ignore a file that is not there" in {
-      MessagesIntegrity.duplicateKeys(Seq(new File("/nope/messages"))) mustBe empty
+      MessagesIntegrity.duplicateKeys(
+        Seq(new File("/nope/messages"))
+      ) mustBe empty
     }
   }
 
@@ -215,12 +270,13 @@ class MessagesIntegritySpec extends AnyWordSpec with Matchers with Bilingual wit
     "match what Play actually does with a lone apostrophe" in {
       // Documents the behaviour the rule exists for: Play runs every message
       // through MessageFormat, so an unescaped quote is not cosmetic.
-      val single  = new DefaultMessagesApi(
-        messages = Map("default" -> Map("q" -> "Don't stop", "qq" -> "Don''t stop")),
+      val single = new DefaultMessagesApi(
+        messages =
+          Map("default" -> Map("q" -> "Don't stop", "qq" -> "Don''t stop")),
         langs = new DefaultLangs(Seq(Lang("en")))
       )
-      val m       = single.preferred(Seq(Lang("en")))
-      val lone    = m("q")
+      val m = single.preferred(Seq(Lang("en")))
+      val lone = m("q")
       val doubled = m("qq")
 
       doubled mustBe "Don't stop"

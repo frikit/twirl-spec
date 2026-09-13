@@ -26,13 +26,13 @@ object Severity {
 
 /** A single thing that was wrong with a rendered page. */
 final case class Violation(
-  rule: String,
-  message: String,
-  expected: Option[String] = None,
-  actual: Option[String] = None,
-  where: Option[String] = None,
-  severity: Severity = Severity.Error,
-  hint: Option[String] = None
+    rule: String,
+    message: String,
+    expected: Option[String] = None,
+    actual: Option[String] = None,
+    where: Option[String] = None,
+    severity: Severity = Severity.Error,
+    hint: Option[String] = None
 ) {
 
   def at(location: String): Violation = copy(where = Some(location))
@@ -43,7 +43,7 @@ final case class Violation(
 
   /** Multi-line rendering used inside ScalaTest failure messages. */
   def render(indent: String = "  "): String = {
-    val head  = s"$indent${Violation.Cross} $rule — $message"
+    val head = s"$indent${Violation.Cross} $rule — $message"
     val lines = Seq(
       where.map(w => s"$indent      at        $w"),
       expected.map(e => s"$indent      expected  ${Violation.quote(e)}"),
@@ -67,11 +67,36 @@ object Violation {
     new Violation(rule, message, None, None, None, Severity.Error, None)
 
   /** The standard "expected X but got Y" violation. */
-  def mismatch(rule: String, expected: String, actual: String, message: String = "did not match"): Violation =
-    new Violation(rule, message, Some(expected), Some(actual), None, Severity.Error, None)
+  def mismatch(
+      rule: String,
+      expected: String,
+      actual: String,
+      message: String = "did not match"
+  ): Violation =
+    new Violation(
+      rule,
+      message,
+      Some(expected),
+      Some(actual),
+      None,
+      Severity.Error,
+      None
+    )
 
   /** Nothing matched a selector. */
-  def missing(rule: String, selector: String, message: String = "no element matched"): Violation =
-    new Violation(rule, message, Some(selector), None, None, Severity.Error, None)
+  def missing(
+      rule: String,
+      selector: String,
+      message: String = "no element matched"
+  ): Violation =
+    new Violation(
+      rule,
+      message,
+      Some(selector),
+      None,
+      None,
+      Severity.Error,
+      None
+    )
 
 }

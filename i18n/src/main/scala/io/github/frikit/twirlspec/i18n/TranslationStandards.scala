@@ -26,9 +26,9 @@ import scala.jdk.CollectionConverters._
   * from.
   */
 final case class TranslationRule(
-  id: String,
-  description: String,
-  severity: Severity = Severity.Error
+    id: String,
+    description: String,
+    severity: Severity = Severity.Error
 )(run: (Page, Page) => Seq[Violation]) {
 
   def check(base: Page, other: Page): Seq[Violation] =
@@ -43,7 +43,7 @@ final case class TranslationRule(
   *   units, anything not worth translating
   */
 final case class TranslationConfig(
-  sameTextIsFine: Set[String] = TranslationConfig.commonlyUntranslated
+    sameTextIsFine: Set[String] = TranslationConfig.commonlyUntranslated
 )
 
 object TranslationConfig {
@@ -69,16 +69,17 @@ object TranslationConfig {
 object TranslationStandards {
 
   def all(
-    config: TranslationConfig = TranslationConfig.default
+      config: TranslationConfig = TranslationConfig.default
   ): Seq[TranslationRule] = Seq(
     TranslationRule(
       "i18n-lang-attribute",
       "the page declares the language it was rendered in"
     ) { (_, other) =>
       other.htmlLang match {
-        case Some(declared) if declared.toLowerCase.startsWith(other.lang.code.toLowerCase) =>
+        case Some(declared)
+            if declared.toLowerCase.startsWith(other.lang.code.toLowerCase) =>
           Nil
-        case declared                                                                       =>
+        case declared =>
           Seq(
             Violation(
               "i18n-lang-attribute",
@@ -131,7 +132,7 @@ object TranslationStandards {
       "i18n-same-headings",
       "every language has the same heading structure"
     ) { (base, other) =>
-      val baseLevels  = base.headings.map(_._1)
+      val baseLevels = base.headings.map(_._1)
       val otherLevels = other.headings.map(_._1)
       if (baseLevels == otherLevels) Nil
       else
@@ -172,9 +173,9 @@ object TranslationStandards {
       "the page is translated, not copied",
       Severity.Warning
     ) { (base, other) =>
-      val baseText  = textByIdOf(base)
+      val baseText = textByIdOf(base)
       val otherText = textByIdOf(other)
-      val copied    = baseText.toSeq.sortBy(_._1).collect {
+      val copied = baseText.toSeq.sortBy(_._1).collect {
         case (id, text)
             if otherText
               .get(id)
@@ -192,8 +193,8 @@ object TranslationStandards {
   )
 
   private def worthTranslating(
-    text: String,
-    config: TranslationConfig
+      text: String,
+      config: TranslationConfig
   ): Boolean = {
     val trimmed = text.trim
     trimmed.length > 3 &&
@@ -217,15 +218,15 @@ object TranslationStandards {
     }.toMap
 
   private def missingAndExtra(
-    rule: String,
-    what: String,
-    base: Set[String],
-    other: Set[String],
-    lang: Lang
+      rule: String,
+      what: String,
+      base: Set[String],
+      other: Set[String],
+      lang: Lang
   ): Seq[Violation] = {
     val missing = (base -- other).toList.sorted
-    val extra   = (other -- base).toList.sorted
-    val gone    =
+    val extra = (other -- base).toList.sorted
+    val gone =
       if (missing.isEmpty) Nil
       else
         Seq(
@@ -236,7 +237,7 @@ object TranslationStandards {
             actual = Some("absent")
           )
         )
-    val added   =
+    val added =
       if (extra.isEmpty) Nil
       else
         Seq(
