@@ -1,5 +1,5 @@
 // Scala 3 only, on the LTS line: a consumer on any later Scala 3 can read what this produces.
-val scala3 = "3.3.8"
+val scala3 = "3.9.0"
 
 ThisBuild / organization := "io.github.frikit"
 ThisBuild / organizationName := "frikit"
