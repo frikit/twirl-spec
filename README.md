@@ -28,8 +28,8 @@ them on, or maintain them.
 
 [![Release](https://github.com/frikit/twirl-spec/actions/workflows/release.yml/badge.svg)](https://github.com/frikit/twirl-spec/actions/workflows/release.yml)
 [![Maven Central](https://img.shields.io/maven-central/v/io.github.frikit/twirl-spec-core_3)](https://central.sonatype.com/artifact/io.github.frikit/twirl-spec-core_3)
-[![Scala 3.3 LTS](https://img.shields.io/badge/scala-3.3%20LTS-red)](build.sbt)
-[![Apache 2.0](https://img.shields.io/badge/licence-Apache%202.0-blue)](LICENSE)
+[![Scala 3.3 LTS](https://img.shields.io/badge/scala-3.3%20LTS-red)](https://github.com/frikit/twirl-spec/blob/main/build.sbt)
+[![Apache 2.0](https://img.shields.io/badge/licence-Apache%202.0-blue)](https://github.com/frikit/twirl-spec/blob/main/LICENSE)
 [![Documentation](https://img.shields.io/badge/docs-frikit.github.io-brightgreen)](https://frikit.github.io/twirl-spec/)
 
 ## Documentation
@@ -867,7 +867,7 @@ settings of the HMRC bootstrap library; a plain Play application ignores them.
 
 ## Contributing
 
-`./run_all_tests.sh` formats, tests and holds the build to the coverage gate. [CONTRIBUTING.md](CONTRIBUTING.md) covers the pre-push hook,
+`./run_all_tests.sh` formats, tests and holds the build to the coverage gate. [CONTRIBUTING.md](https://github.com/frikit/twirl-spec/blob/main/CONTRIBUTING.md) covers the pre-push hook,
 the licence headers, how the rule tables above are kept true, dependency
 updates, and how a push to `main` becomes a release.
 

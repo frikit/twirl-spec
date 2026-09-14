@@ -90,6 +90,12 @@ to the built page, and `jekyll-optional-front-matter` means no page needs a
 front-matter block that would then show up on GitHub. Write ordinary Markdown
 with ordinary relative links and both places stay right.
 
+`DocsLinksSpec` holds the links to that arrangement: every relative link has
+to name a file that exists, and a published page has to reach an unpublished
+one — `CONTRIBUTING.md`, `LICENSE`, `build.sbt` — through its address on
+GitHub, because the site has no page to send the reader to. The spec also
+checks that the pages named in the site's navigation exist.
+
 The same workflow runs `sbt unidoc`, which renders every module's Scaladoc as
 one site, and puts it under `/api`. Run it locally with `sbt unidoc` and open
 `target/scala-3.3.8/unidoc/index.html`. Each module still publishes its own
