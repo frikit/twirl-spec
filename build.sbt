@@ -107,7 +107,7 @@ lazy val core = Project("twirl-spec-core", file("core"))
     description := "Page model, expectation DSL and ScalaTest matchers for testing Twirl views.",
     // The twirl-api this module depends on is the one Play 3.0.0 ships, so the
     // POM asks a consumer for nothing newer than their own Play already brings.
-    TwirlKeys.twirlVersion := "2.0.1",
+    TwirlKeys.twirlVersion := "2.0.9",
     // Twirl fixtures for the test suites, shared with the other modules via
     // test->test. They declare exactly the import every fixture uses, in place
     // of Twirl's defaults (Html, Txt, Xml, JavaScript and the helper objects),
