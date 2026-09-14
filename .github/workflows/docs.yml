@@ -49,6 +49,9 @@ jobs:
       - name: Put the API documentation under /api
         run: |
           set -euo pipefail
+          # jekyll-build-pages runs in a container as root, so the site it
+          # wrote is not ours to add to until we take it back.
+          sudo chown -R "$(id -u):$(id -g)" _site
           mkdir -p _site/api
           cp -R target/scala-*/unidoc/. _site/api/
           test -f _site/api/index.html
