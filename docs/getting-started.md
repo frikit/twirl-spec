@@ -164,8 +164,8 @@ form POST /register/name
 
 The first line counts the failures. Each finding names the expectation, says
 what went wrong, and where the library knows a fix, gives a hint. The outline
-underneath is the page as the library sees it. [Failure
-messages](failure-messages.md) goes through it in detail.
+underneath is the page as the library sees it.
+[Failure messages](failure-messages.md) goes through it in detail.
 
 ## 7. Configure the application once
 

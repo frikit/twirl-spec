@@ -60,5 +60,5 @@ class SignUpViewSpec extends AnyWordSpec with Matchers with TwirlSpec with AllCh
 ```
 
 That one `display` checks what it names and, because `AllChecks` is mixed in,
-runs every rule in the library over the page as well. [Getting
-started](getting-started.md) takes it from there.
+runs every rule in the library over the page as well.
+[Getting started](getting-started.md) takes it from there.

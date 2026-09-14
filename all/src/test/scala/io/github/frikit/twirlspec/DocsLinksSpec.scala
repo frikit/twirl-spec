@@ -122,6 +122,24 @@ class DocsLinksSpec extends AnyWordSpec with Matchers {
 
   }
 
+  "every link in the documentation" should {
+
+    "sit on one line" in {
+      val split = documentation.flatMap { path =>
+        MarkdownLink
+          .findAllMatchIn(read(path))
+          .map(_.group(0))
+          .filter(_.contains("\n"))
+          .map(link => s"$path: ${link.replace("\n", " ")}")
+      }
+      withClue(
+        "the site rewrites a link to a page only when it is written on one line" +
+          split.mkString("\n", "\n", "\n")
+      )(split mustBe empty)
+    }
+
+  }
+
   "the site's navigation" should {
 
     "list pages that exist" in {
