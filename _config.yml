@@ -1,0 +1,64 @@
+# The documentation site at https://frikit.github.io/twirl-spec/.
+#
+# The site is built from the repository itself rather than from a copy, so
+# there is one version of every page: the README is the home page, the `docs`
+# folder is the guide, and the links between them work both here and on GitHub.
+# The workflow adds the Scaladoc under /api after Jekyll has run.
+
+title: twirl-spec
+description: A ScalaTest toolkit for testing Twirl views, with rules that check
+  accessibility and markup without a browser.
+url: "https://frikit.github.io"
+baseurl: "/twirl-spec"
+
+theme: minima
+markdown: kramdown
+
+plugins:
+  - jekyll-seo-tag
+  - jekyll-optional-front-matter
+  - jekyll-readme-index
+  - jekyll-relative-links
+  - jekyll-titles-from-headings
+
+minima:
+  skin: auto
+
+# Every page is plain Markdown with no front matter, so these three plugins are
+# what make it a site: the README becomes the index of its folder, relative
+# links to .md files become links to the built pages, and the first heading
+# becomes the title.
+optional_front_matter:
+  remove_originals: false
+
+readme_index:
+  with_frontmatter: true
+
+relative_links:
+  enabled: true
+  collections: false
+
+titles_from_headings:
+  enabled: true
+  strip_title: true
+
+header_pages:
+  - docs/getting-started.md
+  - docs/writing-view-specs.md
+  - docs/rules-and-standards.md
+  - docs/troubleshooting.md
+  - CHANGELOG.md
+
+# Everything that is code or build output rather than documentation.
+exclude:
+  - "*/src"
+  - "*/target"
+  - project
+  - target
+  - "*.sbt"
+  - "*.sh"
+  - "*.conf"
+  - LICENSE
+  - Gemfile
+  - Gemfile.lock
+  - vendor

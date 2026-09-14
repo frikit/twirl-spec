@@ -6,8 +6,9 @@ the page, rule sets that check accessibility and markup without a browser, and
 failure messages that show what the template actually rendered.
 
 The [README](../README.md) is the reference: every expectation, matcher and
-rule is listed there, and the rule tables are held to the code by a test. These
-pages are the guide.
+rule is listed there, and the rule tables are held to the code by a test. The
+[API documentation](https://frikit.github.io/twirl-spec/api/) is the Scaladoc
+of all nine modules as one site. These pages are the guide.
 
 | Page | Read it when |
 |---|---|

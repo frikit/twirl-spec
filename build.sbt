@@ -78,7 +78,21 @@ Global / onLoad := {
 }
 
 lazy val root = Project("twirl-spec", file("."))
+  .enablePlugins(ScalaUnidocPlugin)
   .settings(name := "twirl-spec", publish / skip := true, licenceHeader)
+  .settings(
+    // `sbt unidoc` renders every module into one Scaladoc site, which the docs
+    // workflow publishes under /api. Each module still publishes its own
+    // javadoc jar; this is the browsable copy.
+    ScalaUnidoc / unidoc / scalacOptions ++= Seq(
+      "-project-version",
+      version.value,
+      "-social-links:github::https://github.com/frikit/twirl-spec",
+      "-source-links:github://frikit/twirl-spec",
+      "-revision",
+      "main"
+    )
+  )
   .aggregate(core, wcag, govuk, quality, messages, i18n, aria, html, all)
 
 /** The page model, the expectation DSL and the ScalaTest matchers. Carries no

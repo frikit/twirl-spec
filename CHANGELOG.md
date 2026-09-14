@@ -12,6 +12,13 @@ readable.
 
 ## [Unreleased]
 
+### Added
+
+- A documentation site at
+  [frikit.github.io/twirl-spec](https://frikit.github.io/twirl-spec/), built
+  from the repository itself, with the Scaladoc of every module rendered as one
+  site under `/api`.
+
 ## [2.0.1] - 2026-09-13
 
 ### Added

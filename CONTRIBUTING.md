@@ -78,6 +78,23 @@ and then sbt's scalafmt cache reported success on a file it had not looked at.
 The hook clears just the scalafmt caches — not the whole `target` — so being
 careful does not cost a full recompile on every push.
 
+## The documentation site
+
+[frikit.github.io/twirl-spec](https://frikit.github.io/twirl-spec/) is built by
+`.github/workflows/docs.yml` on every push to `main`, and there is no second
+copy of anything: Jekyll builds the site from the repository itself, so the
+README is the home page and `docs/*.md` are the guides. Three GitHub Pages
+plugins do the work of a copy — `jekyll-readme-index` makes a README the index
+of its folder, `jekyll-relative-links` turns a link to a `.md` file into a link
+to the built page, and `jekyll-optional-front-matter` means no page needs a
+front-matter block that would then show up on GitHub. Write ordinary Markdown
+with ordinary relative links and both places stay right.
+
+The same workflow runs `sbt unidoc`, which renders every module's Scaladoc as
+one site, and puts it under `/api`. Run it locally with `sbt unidoc` and open
+`target/scala-3.3.8/unidoc/index.html`. Each module still publishes its own
+javadoc jar; this is the copy a reader can browse.
+
 ## Releasing
 
 Every push to `main` is a release. `release.yml` runs the same checks as a

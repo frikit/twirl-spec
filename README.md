@@ -30,8 +30,14 @@ them on, or maintain them.
 [![Maven Central](https://img.shields.io/maven-central/v/io.github.frikit/twirl-spec-core_3)](https://central.sonatype.com/artifact/io.github.frikit/twirl-spec-core_3)
 [![Scala 3.3 LTS](https://img.shields.io/badge/scala-3.3%20LTS-red)](build.sbt)
 [![Apache 2.0](https://img.shields.io/badge/licence-Apache%202.0-blue)](LICENSE)
+[![Documentation](https://img.shields.io/badge/docs-frikit.github.io-brightgreen)](https://frikit.github.io/twirl-spec/)
 
 ## Documentation
+
+Everything below is published at
+[frikit.github.io/twirl-spec](https://frikit.github.io/twirl-spec/), together
+with the [API documentation](https://frikit.github.io/twirl-spec/api/) — the
+Scaladoc of all nine modules as one searchable site.
 
 This README is the reference: every expectation, matcher and rule. The
 [`docs`](docs/README.md) folder is the guide, from a first spec to adopting the
