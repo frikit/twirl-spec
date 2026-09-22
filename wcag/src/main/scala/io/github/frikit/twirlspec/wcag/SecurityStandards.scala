@@ -31,7 +31,10 @@ object SecurityStandards extends RuleSet {
     Rule("no-password-in-get", "a password is never submitted in a URL") {
       page =>
         page.document
-          .select("form[method=get]")
+          // A form with no method attribute submits by GET, which is the shape
+          // this is most likely to be found in: nobody writes method="get" on
+          // a sign-in form, they just leave the method off.
+          .select("form[method=get], form:not([method])")
           .asScala
           .toList
           .filter(_.select("input[type=password]").asScala.nonEmpty)
@@ -70,15 +73,20 @@ object SecurityStandards extends RuleSet {
       "a link opening a new tab cannot reach back",
       severity = Warning
     ) { page =>
+      // noreferrer severs window.opener as well as the referrer, so a link
+      // carrying it is already safe and must not be asked for noopener too.
+      val seversTheOpener = Set("noopener", "noreferrer")
       page.links.elements
         .filter(_.attr("target") == "_blank")
-        .filterNot(_.attr("rel").toLowerCase.split("\\s+").contains("noopener"))
+        .filterNot(
+          _.attr("rel").toLowerCase.split("\\s+").exists(seversTheOpener)
+        )
         .map(e =>
           Violation(
             "target-blank-is-safe",
             s"""a link opens a new tab without rel="noopener": "${Text
                 .preview(e.text(), 40)}"""",
-            expected = Some("""rel="noopener"""")
+            expected = Some("""rel="noopener" or rel="noreferrer"""")
           ).warn.withHint(
             "current browsers imply this for target=_blank; older ones let the new tab rewrite yours"
           )

@@ -235,7 +235,11 @@ Roles are resolved the way HTML-AAM defines them, implicit or explicit, and an
 element carrying an explicit `role` is matched only by that role — so
 `<a role="button">` is a button and not a link. The accessible name comes from
 `aria-labelledby`, `aria-label`, an associated `<label>`, a `<legend>`, `alt`,
-or the element's text, in that order.
+the `value` of a `button`, `submit` or `reset` input, the element's own text
+(or the `alt` of an image standing in for it), and finally `title` — in that
+order. A `<select>`, `<textarea>` or `<input>` is never named by its own
+content: that content is what the user entered, not what the control is
+called.
 
 When it fails it lists the names that *are* announced, which is usually enough
 to see the problem:
@@ -491,13 +495,13 @@ Accessibility: 21 rules each enforce a WCAG success criterion, and `one-h1` is a
 | `one-h1` | a page has exactly one <h1> | convention |
 | `title-present` | a page has a non-empty <title> | 2.4.2 Page Titled · A · WCAG 2.0 |
 | `html-lang` | the <html> element declares the rendered language | 3.1.1 Language of Page · A · WCAG 2.0 |
-| `main-landmark` | a page has a <main> landmark *(warning)* | 1.3.1 Info and Relationships · A · WCAG 2.0 |
+| `main-landmark` | a page has a main landmark *(warning)* | 1.3.1 Info and Relationships · A · WCAG 2.0 |
 | `heading-order` | heading levels are not skipped | 1.3.1 Info and Relationships · A · WCAG 2.0 |
 | `no-empty-headings` | headings have text | 2.4.6 Headings and Labels · AA · WCAG 2.0 |
 | `unique-ids` | element ids are unique | 4.1.2 Name, Role, Value · A · WCAG 2.0 |
 | `labelled-controls` | every form control has an accessible name | 3.3.2 Labels or Instructions · A · WCAG 2.0 |
 | `grouped-choices` | radios and checkboxes sit in a fieldset with a legend | 1.3.1 Info and Relationships · A · WCAG 2.0 |
-| `submit-has-name` | the submit control has visible text | 4.1.2 Name, Role, Value · A · WCAG 2.0 |
+| `submit-has-name` | the submit control has an accessible name | 4.1.2 Name, Role, Value · A · WCAG 2.0 |
 | `table-header-scope` | table headers declare a scope *(warning)* | 1.3.1 Info and Relationships · A · WCAG 2.0 |
 | `link-has-name` | every link has an accessible name | 2.4.4 Link Purpose (In Context) · A · WCAG 2.0 |
 | `link-text-is-meaningful` | link text makes sense out of context *(warning)* | 2.4.9 Link Purpose (Link Only) · AAA · WCAG 2.0 |

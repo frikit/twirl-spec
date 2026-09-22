@@ -85,6 +85,31 @@ class SafetyAndAriaSpec extends AnyWordSpec with Matchers with TwirlSpec {
         """<h1>A</h1><span aria-hidden="true">&times;</span>"""
       ) must not contain "no-aria-hidden-focusable"
     }
+
+    // The hint tells a reader to add tabindex="-1". Taking that advice has to
+    // satisfy the rule, so this case is the hint's own contract.
+    "be accepted once the advice in the hint has been taken" in {
+      fired(
+        """<h1>A</h1><div aria-hidden="true"><a href="/x" tabindex="-1">Out of reach</a></div>"""
+      ) must not contain "no-aria-hidden-focusable"
+      fired(
+        """<h1>A</h1><a href="/x" aria-hidden="true" tabindex="-1">Itself</a>"""
+      ) must not contain "no-aria-hidden-focusable"
+    }
+
+    "still be flagged when the tabindex is not a number" in {
+      fired(
+        """<h1>A</h1><a href="/x" aria-hidden="true" tabindex="nonsense">Itself</a>"""
+      ) must contain("no-aria-hidden-focusable")
+    }
+
+    // HTML allows the whitespace around an integer attribute that toInt does
+    // not, and a tabindex is an integer attribute.
+    "be accepted when the tabindex is padded with spaces" in {
+      fired(
+        """<h1>A</h1><a href="/x" aria-hidden="true" tabindex=" -1 ">Itself</a>"""
+      ) must not contain "no-aria-hidden-focusable"
+    }
   }
 
   "focus order" should {
@@ -103,6 +128,12 @@ class SafetyAndAriaSpec extends AnyWordSpec with Matchers with TwirlSpec {
       fired(
         """<h1>A</h1><div tabindex="nonsense">x</div>"""
       ) must not contain "no-positive-tabindex"
+    }
+
+    "read a tabindex that is padded with spaces" in {
+      fired("""<h1>A</h1><div tabindex=" 3 ">Jumped</div>""") must contain(
+        "no-positive-tabindex"
+      )
     }
   }
 
@@ -123,11 +154,165 @@ class SafetyAndAriaSpec extends AnyWordSpec with Matchers with TwirlSpec {
         contain("zoom-not-blocked")
     }
 
+    "be flagged when the cap is below the 200% WCAG 1.4.4 asks for" in {
+      fired(
+        "<h1>A</h1>",
+        head =
+          """<meta name="viewport" content="width=device-width, maximum-scale=1.5">"""
+      ) must
+        contain("zoom-not-blocked")
+    }
+
     "be accepted for an ordinary viewport" in {
       fired(
         "<h1>A</h1>",
         head =
           """<meta name="viewport" content="width=device-width, initial-scale=1">"""
+      ) must
+        not contain "zoom-not-blocked"
+    }
+
+    // maximum-scale=10 contains the text "maximum-scale=1" and allows ten
+    // times the size: the cap has to be read as a number, not matched.
+    "be accepted for a cap that allows zoom" in {
+      fired(
+        "<h1>A</h1>",
+        head =
+          """<meta name="viewport" content="width=device-width, maximum-scale=10">"""
+      ) must
+        not contain "zoom-not-blocked"
+      fired(
+        "<h1>A</h1>",
+        head =
+          """<meta name="viewport" content="width=device-width, maximum-scale=5">"""
+      ) must
+        not contain "zoom-not-blocked"
+    }
+
+    // Where a directive is given twice the last one applies, so reading the
+    // first would miss a cap added after a permissive one.
+    "be read from the last declaration when there are two" in {
+      fired(
+        "<h1>A</h1>",
+        head =
+          """<meta name="viewport" content="maximum-scale=10, maximum-scale=1">"""
+      ) must
+        contain("zoom-not-blocked")
+      fired(
+        "<h1>A</h1>",
+        head =
+          """<meta name="viewport" content="maximum-scale=1, maximum-scale=10">"""
+      ) must
+        not contain "zoom-not-blocked"
+    }
+
+    // The cap is read the way a browser reads it: the leading number if there
+    // is one, then the words it knows, and a word it does not know — or no
+    // value at all — is a cap of nothing, which is a page that will not zoom.
+    // Only a negative number caps nothing, because it translates to auto.
+    "be read the way the viewport algorithm reads it" in {
+      def capped(value: String) =
+        fired(
+          "<h1>A</h1>",
+          head = s"""<meta name="viewport" content="maximum-scale=$value">"""
+        )
+      capped("1e-1") must contain("zoom-not-blocked")
+      capped("+1") must contain("zoom-not-blocked")
+      capped("yes") must contain("zoom-not-blocked")
+      capped("1junk") must contain("zoom-not-blocked")
+      capped("10.e-1") must contain("zoom-not-blocked")
+      capped("nonsense") must contain("zoom-not-blocked")
+      capped("") must contain("zoom-not-blocked")
+      capped("1e5") must not contain "zoom-not-blocked"
+      capped("device-width") must not contain "zoom-not-blocked"
+      capped("10junk") must not contain "zoom-not-blocked"
+      capped("-1") must not contain "zoom-not-blocked"
+    }
+
+    // Whitespace ends a value rather than joining what surrounds it, so this
+    // declares a cap of 1 and must not be read as 10.
+    "not join a value back together across a space" in {
+      fired(
+        "<h1>A</h1>",
+        head = """<meta name="viewport" content="maximum-scale=1 0">"""
+      ) must
+        contain("zoom-not-blocked")
+    }
+
+    // Whitespace separates one directive from the next as a comma does.
+    "find a directive that only a space separates" in {
+      fired(
+        "<h1>A</h1>",
+        head =
+          """<meta name="viewport" content="width=device-width maximum-scale=1">"""
+      ) must
+        contain("zoom-not-blocked")
+    }
+
+    // A browser takes the property name up to the first separator and then
+    // scans on for the =, so the cap here belongs to maximum-scale. Looking
+    // for well-formed pairs instead would find "ignored=1" and miss it.
+    "keep the property name while scanning on for its value" in {
+      fired(
+        "<h1>A</h1>",
+        head = """<meta name="viewport" content="maximum-scale ignored=1">"""
+      ) must
+        contain("zoom-not-blocked")
+      fired(
+        "<h1>A</h1>",
+        head = """<meta name="viewport" content="maximum-scale = 1">"""
+      ) must
+        contain("zoom-not-blocked")
+    }
+
+    // An empty value ends at the comma. Reading past it would take the next
+    // property name as this one's value and lose the directive it named.
+    "not let an empty value swallow the directive after it" in {
+      fired(
+        "<h1>A</h1>",
+        head = """<meta name="viewport" content="width=, maximum-scale=1">"""
+      ) must
+        contain("zoom-not-blocked")
+    }
+
+    "ignore a directive that never reaches a value" in {
+      fired(
+        "<h1>A</h1>",
+        head = """<meta name="viewport" content="maximum-scale=1, trailing">"""
+      ) must
+        contain("zoom-not-blocked")
+      fired(
+        "<h1>A</h1>",
+        head = """<meta name="viewport" content="width, maximum-scale=1">"""
+      ) must
+        contain("zoom-not-blocked")
+    }
+
+    // The same translation again: a word it does not know turns scaling off,
+    // and so does any number between -1 and 1.
+    "read user-scalable the way the viewport algorithm reads it" in {
+      def scalable(value: String) =
+        fired(
+          "<h1>A</h1>",
+          head = s"""<meta name="viewport" content="user-scalable=$value">"""
+        )
+      scalable("no") must contain("zoom-not-blocked")
+      scalable("nope") must contain("zoom-not-blocked")
+      scalable("") must contain("zoom-not-blocked")
+      scalable("0") must contain("zoom-not-blocked")
+      scalable("yes") must not contain "zoom-not-blocked"
+      scalable("1") must not contain "zoom-not-blocked"
+      scalable("device-width") must not contain "zoom-not-blocked"
+    }
+
+    // The last declaration is the one that applies, whatever it says: a
+    // negative value there lifts the cap an earlier one set rather than
+    // being skipped over.
+    "let the last declaration lift a cap the first one set" in {
+      fired(
+        "<h1>A</h1>",
+        head =
+          """<meta name="viewport" content="maximum-scale=1, maximum-scale=-1">"""
       ) must
         not contain "zoom-not-blocked"
     }
@@ -207,6 +392,16 @@ class SafetyAndAriaSpec extends AnyWordSpec with Matchers with TwirlSpec {
         not contain "no-password-in-get"
     }
 
+    // A form that names no method submits by GET. That is the shape the
+    // mistake actually ships in, so it has to be the one that is caught.
+    "reject a password in a form that names no method" in {
+      fired(
+        """<h1>A</h1><form action="/login">
+              |<label for="p">Password</label><input type="password" id="p" name="p"></form>""".stripMargin
+      ) must
+        contain("no-password-in-get")
+    }
+
     "reject a javascript: link" in {
       fired(
         """<h1>A</h1><a href="javascript:doThing()">Do the thing</a>"""
@@ -224,6 +419,44 @@ class SafetyAndAriaSpec extends AnyWordSpec with Matchers with TwirlSpec {
         """<h1>A</h1><a href="/x" target="_blank" rel="noopener">Guidance (opens in new tab)</a>"""
       ) must
         not contain "target-blank-is-safe"
+    }
+
+    // noreferrer severs window.opener as well, so it is already the fix.
+    "accept a new tab held off by rel=noreferrer" in {
+      fired(
+        """<h1>A</h1><a href="/x" target="_blank" rel="noreferrer">Guidance (opens in new tab)</a>"""
+      ) must
+        not contain "target-blank-is-safe"
+    }
+  }
+
+  "an accessible name" should {
+
+    "be read the same way for a link, a submit control and a field" in {
+      val namedElsewhere = fired(
+        """<h1>A</h1><span id="n">Download the form</span>
+          |<a href="/x" aria-labelledby="n"></a>
+          |<button type="submit" aria-labelledby="n"></button>
+          |<input id="f" name="f" aria-labelledby="n">""".stripMargin
+      )
+      namedElsewhere must not contain "link-has-name"
+      namedElsewhere must not contain "submit-has-name"
+      namedElsewhere must not contain "labelled-controls"
+    }
+
+    "not be granted by a reference that points at nothing" in {
+      fired(
+        """<h1>A</h1><input id="f" name="f" aria-labelledby="ghost">"""
+      ) must contain("labelled-controls")
+    }
+
+    "not be granted to a link by a decorative image" in {
+      fired(
+        """<h1>A</h1><a href="/x"><img src="i.png" alt=""></a>"""
+      ) must contain("link-has-name")
+      fired(
+        """<h1>A</h1><a href="/x"><img src="i.png" alt="Download the form"></a>"""
+      ) must not contain "link-has-name"
     }
   }
 

@@ -139,9 +139,12 @@ Roles are resolved the way HTML-AAM defines them, implicit or explicit, and an
 element with an explicit `role` is matched only by that role, so
 `<a role="button">` is a button and not a link. The accessible name comes from
 `aria-labelledby`, `aria-label`, an associated `<label>`, a `<legend>`, `alt`,
-or the element's text, in that order. This is a working subset of the
-accessible name computation: one hop of `aria-labelledby`, and nothing that
-depends on CSS or JavaScript.
+the `value` of a `button`, `submit` or `reset` input, the element's own text
+(or the `alt` of an image standing in for it), and finally `title` — in that
+order. A `<select>`, `<textarea>` or `<input>` is never named by its own
+content, and neither is an image hidden from assistive technology. This is a
+working subset of the accessible name computation: one hop of
+`aria-labelledby`, and nothing that depends on CSS or JavaScript.
 
 ## Forms
 

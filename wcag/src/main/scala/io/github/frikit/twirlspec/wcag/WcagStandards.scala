@@ -20,7 +20,7 @@ import io.github.frikit.twirlspec.standards._
 
 import org.jsoup.nodes.Element
 import io.github.frikit.twirlspec.expect.Violation
-import io.github.frikit.twirlspec.page.{Page, Text}
+import io.github.frikit.twirlspec.page.Text
 import io.github.frikit.twirlspec.standards.Rule.Warning
 
 import scala.jdk.CollectionConverters._
@@ -118,18 +118,22 @@ object WcagStandards extends RuleSet {
     },
     Rule(
       "main-landmark",
-      "a page has a <main> landmark",
+      "a page has a main landmark",
       pageLevel = true,
       Warning,
       criterion = Some(
         Criterion("1.3.1", "Info and Relationships", Level.A, WcagVersion.V2_0)
       )
     ) { page =>
-      if (page.main.nonEmpty) Nil
+      // The selector `single-main` counts with, so the two rules cannot
+      // disagree about what a main landmark is. `page.main` is deliberately
+      // wider: it also answers to GOV.UK's #main-content, which scopes an
+      // assertion but is not itself a landmark.
+      if (page.document.select(MainLandmark).asScala.nonEmpty) Nil
       else
         Seq(
           Violation("main-landmark", "the page has no <main> landmark").warn
-            .withHint("WCAG 1.3.1")
+            .withHint("""WCAG 1.3.1 — <main> or role="main"""")
         )
     },
     Rule(
@@ -199,7 +203,7 @@ object WcagStandards extends RuleSet {
         Criterion("3.3.2", "Labels or Instructions", Level.A, WcagVersion.V2_0)
       )
     ) { page =>
-      page.formControls.filterNot(hasAccessibleName(page, _)).map { e =>
+      page.formControls.filter(page.accessibleName(_).isEmpty).map { e =>
         Violation(
           "labelled-controls",
           s"<${e.tagName()}${describeControl(e)}> has no label",
@@ -249,7 +253,7 @@ object WcagStandards extends RuleSet {
     },
     Rule(
       "submit-has-name",
-      "the submit control has visible text",
+      "the submit control has an accessible name",
       criterion =
         Some(Criterion("4.1.2", "Name, Role, Value", Level.A, WcagVersion.V2_0))
     ) { page =>
@@ -257,11 +261,7 @@ object WcagStandards extends RuleSet {
         .select("button[type=submit], input[type=submit], button:not([type])")
         .asScala
         .toList
-        .filter(e =>
-          Text.normalise(e.text()).isEmpty && e.attr("value").isEmpty && e
-            .attr("aria-label")
-            .isEmpty
-        )
+        .filter(e => page.accessibleName(e).isEmpty)
         .map(_ =>
           Violation(
             "submit-has-name",
@@ -302,15 +302,11 @@ object WcagStandards extends RuleSet {
       )
     ) { page =>
       page.links.elements
-        .filter(e =>
-          Text.normalise(e.text()).isEmpty && e.attr("aria-label").isEmpty && e
-            .select("img[alt]")
-            .isEmpty
-        )
+        .filter(e => page.accessibleName(e).isEmpty)
         .map(e =>
           Violation(
             "link-has-name",
-            "a link has no text",
+            "a link has no accessible name",
             actual = Some(Text.preview(e.outerHtml(), 100))
           )
             .withHint("WCAG 2.4.4")
@@ -434,11 +430,22 @@ object WcagStandards extends RuleSet {
         Some(Criterion("4.1.2", "Name, Role, Value", Level.A, WcagVersion.V2_0))
     ) { page =>
       val focusable = "a[href], button, input, select, textarea, [tabindex]"
+      // The hint below tells a reader to add tabindex="-1". That has to be
+      // enough to satisfy the rule, so an element taken out of the tab order
+      // no longer counts as focusable — otherwise following the advice leaves
+      // the test red.
+      def stillFocusable(e: Element): Boolean =
+        e.is(focusable) && !removedFromTabOrder(e)
       page.document
         .select("[aria-hidden=true]")
         .asScala
         .toList
-        .filter(e => e.is(focusable) || e.select(focusable).asScala.nonEmpty)
+        .filter(e =>
+          stillFocusable(e) || e
+            .select(focusable)
+            .asScala
+            .exists(stillFocusable)
+        )
         .map(e =>
           Violation(
             "no-aria-hidden-focusable",
@@ -457,9 +464,7 @@ object WcagStandards extends RuleSet {
         .select("[tabindex]")
         .asScala
         .toList
-        .filter(e =>
-          scala.util.Try(e.attr("tabindex").toInt).toOption.exists(_ > 0)
-        )
+        .filter(e => tabIndexOf(e).exists(_ > 0))
         .map(e =>
           Violation(
             "no-positive-tabindex",
@@ -483,10 +488,8 @@ object WcagStandards extends RuleSet {
         .select("meta[name=viewport]")
         .asScala
         .toList
-        .map(_.attr("content").toLowerCase.replaceAll("\\s", ""))
-        .filter(c =>
-          c.contains("user-scalable=no") || c.contains("maximum-scale=1")
-        )
+        .map(_.attr("content"))
+        .filter(c => scalingTurnedOff(c) || capsZoomBelow(c, MinimumZoom))
         .map(c =>
           Violation(
             "zoom-not-blocked",
@@ -530,7 +533,7 @@ object WcagStandards extends RuleSet {
         Criterion("1.3.1", "Info and Relationships", Level.A, WcagVersion.V2_0)
       )
     ) { page =>
-      val mains = page.document.select("main, [role=main]").asScala.toList
+      val mains = page.document.select(MainLandmark).asScala.toList
       if (mains.size <= 1) Nil
       else
         Seq(
@@ -595,14 +598,157 @@ object WcagStandards extends RuleSet {
       "more information"
     )
 
-  private def hasAccessibleName(page: Page, e: Element): Boolean = {
-    val id = e.id()
-    (id.nonEmpty && page.labelFor(id).nonEmpty) ||
-    e.attr("aria-label").nonEmpty ||
-    e.attr("aria-labelledby").nonEmpty ||
-    e.attr("title").nonEmpty ||
-    Option(e.closest("label")).isDefined
+  /** What both `main-landmark` and `single-main` count. GOV.UK's
+    * `#main-content` is not in here: it identifies the content area, and an id
+    * is not a landmark.
+    */
+  private val MainLandmark = "main, [role=main]"
+
+  /** WCAG 1.4.4 asks for text at 200%, so a viewport that caps the scale below
+    * 2 is the one that takes the zoom away.
+    */
+  private val MinimumZoom = 2.0
+
+  /** What ends a property name or a value: the separators a browser uses, plus
+    * the semicolon. A browser does not treat a semicolon as one, but nothing is
+    * written that way in a viewport except by someone who meant it to separate,
+    * and reading it as part of a value would swallow whatever came after.
+    */
+  private def isSeparator(c: Char): Boolean =
+    c.isWhitespace || c == '=' || c == ',' || c == ';'
+
+  /** The directives a viewport `content` declares, in the order it declares
+    * them, read the way a browser reads them.
+    *
+    * This is a scan, not a search for well-formed pairs, because the two
+    * disagree: a browser takes the property name up to the first separator and
+    * then scans forward for the `=`, so `maximum-scale ignored=1` caps the page
+    * at 1, where looking for pairs would find `ignored=1` and miss the cap.
+    * Whitespace separates one directive from the next as a comma does, and ends
+    * a value rather than joining what surrounds it, so `maximum-scale=1 0` is a
+    * cap of 1 and not of 10.
+    */
+  private def viewportDirectives(content: String): Seq[(String, String)] = {
+    val text = content.toLowerCase
+    val directives = Seq.newBuilder[(String, String)]
+    var at = 0
+
+    def skipSeparators(): Unit =
+      while (at < text.length && isSeparator(text(at))) at += 1
+
+    def takeToken(): String = {
+      val from = at
+      while (at < text.length && !isSeparator(text(at))) at += 1
+      text.substring(from, at)
+    }
+
+    // Only whitespace and a repeated `=` stand between a property and its
+    // value. A comma or semicolon ends the directive instead, leaving the
+    // value empty — skipping those too would take the next property name as
+    // this one's value and lose the directive it belonged to.
+    def skipToValue(): Unit =
+      while (at < text.length && (text(at).isWhitespace || text(at) == '='))
+        at += 1
+
+    // Every turn of this loop moves `at` on by at least one character: there
+    // is either a separator to skip or a token to take.
+    while (at < text.length) {
+      skipSeparators()
+      val key = takeToken()
+      while (
+        at < text.length && text(at) != '=' && text(at) != ','
+        && text(at) != ';'
+      ) at += 1
+      if (at < text.length && text(at) == '=') {
+        at += 1
+        skipToValue()
+        directives += (key -> takeToken())
+      }
+    }
+
+    directives.result()
   }
+
+  /** Whether a viewport `content` turns scaling off outright.
+    *
+    * By the same translation a browser applies: `yes`, `device-width`,
+    * `device-height` and a number at 1 or beyond in either direction all leave
+    * scaling on; a number between -1 and 1, and any value it does not know —
+    * including no value at all — turn it off.
+    */
+  private def scalingTurnedOff(content: String): Boolean =
+    viewportDirectives(content)
+      .collect { case ("user-scalable", value) => value }
+      .lastOption
+      .exists(scalingOff)
+
+  private def scalingOff(raw: String): Boolean =
+    NumericPrefix.findFirstIn(raw).flatMap(_.toDoubleOption) match {
+      case Some(number) => number > -1 && number < 1
+      case None         => !ScalableWords.contains(raw)
+    }
+
+  /** The words that leave scaling on. */
+  private val ScalableWords = Set("yes", "device-width", "device-height")
+
+  /** Whether a viewport `content` caps zoom below this factor.
+    *
+    * Read as a number rather than matched as text: `maximum-scale=10` contains
+    * `maximum-scale=1` but allows ten times the size. Where the directive is
+    * given more than once the last one is the one that applies — whatever it
+    * says, including a value that lifts the cap the earlier one set.
+    */
+  private def capsZoomBelow(content: String, factor: Double): Boolean =
+    viewportDirectives(content)
+      .collect { case ("maximum-scale", value) => value }
+      .lastOption
+      .flatMap(scaleValue)
+      .exists(_ < factor)
+
+  /** The words the viewport algorithm translates to a scale. `no`, and any
+    * other word it does not know, is not in here because it translates to 0 —
+    * see [[scaleValue]].
+    */
+  private val KeywordScales =
+    Map("yes" -> 1.0, "device-width" -> 10.0, "device-height" -> 10.0)
+
+  /** The leading number of a value, which is what the algorithm reads: "a
+    * prefix of property-value … converted to a number using strtod … the
+    * remainder of the string is ignored", so `maximum-scale=10junk` caps at 10.
+    * The grammar is strtod's, including the trailing point that makes `10.e-1`
+    * a tenth of ten rather than ten.
+    */
+  private val NumericPrefix =
+    "^[+-]?(?:[0-9]+\\.?[0-9]*|\\.[0-9]+)(?:e[+-]?[0-9]+)?".r
+
+  /** The cap a directive declares, where it declares one at all, by the five
+    * translations a browser applies: a non-negative number is itself, a
+    * negative number is auto and caps nothing, `yes` is 1, `device-width` and
+    * `device-height` are 10, and `no` — along with anything else at all,
+    * including nothing at all — is 0.
+    *
+    * So an unreadable value is restrictive rather than absent: Blink says "no
+    * and unknown values are translated to 0.0", clamped to 0.1, which is a page
+    * that will not zoom. The clamp is to 0.1–10 and is not modelled, because it
+    * cannot carry a value across a threshold of 2.
+    */
+  private def scaleValue(raw: String): Option[Double] =
+    NumericPrefix.findFirstIn(raw).flatMap(_.toDoubleOption) match {
+      case Some(number) => Option.when(number >= 0)(number)
+      case None         => Some(KeywordScales.getOrElse(raw, 0.0))
+    }
+
+  /** An element's tabindex, where it has one that parses. HTML allows the
+    * surrounding whitespace that `toInt` does not.
+    */
+  private def tabIndexOf(e: Element): Option[Int] =
+    scala.util.Try(e.attr("tabindex").trim.toInt).toOption
+
+  /** An element the author has taken out of the tab order, which is how you
+    * stop a hidden control being reachable without removing it.
+    */
+  private def removedFromTabOrder(e: Element): Boolean =
+    tabIndexOf(e).exists(_ < 0)
 
   private def describeControl(e: Element): String = {
     val id =

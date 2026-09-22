@@ -337,6 +337,132 @@ class CoreEdgeCasesSpec extends AnyWordSpec with Matchers with TwirlSpec {
       p.accessibleName(p.byId("g")(0)) mustBe "Given name"
       p.accessibleName(p.byId("f")(0)) mustBe "Family name"
     }
+
+    "come from an input's value only where the value is the name" in {
+      val p = pageOf(
+        """<h1>A</h1><input id="t" type="text" value="Jane">
+          |<input id="s" type="submit" value="Continue">""".stripMargin
+      )
+      p.accessibleName(p.byId("t")(0)) mustBe ""
+      p.accessibleName(p.byId("s")(0)) mustBe "Continue"
+    }
+
+    "not read a control's own content as its name" in {
+      val p = pageOf(
+        """<h1>A</h1><select id="c"><option>England</option></select>
+          |<textarea id="d">Typed earlier</textarea>""".stripMargin
+      )
+      p.accessibleName(p.byId("c")(0)) mustBe ""
+      p.accessibleName(p.byId("d")(0)) mustBe ""
+    }
+
+    "come from the alt text of an image standing in for the content" in {
+      val p = pageOf(
+        """<h1>A</h1><a id="l" href="/x"><img src="p.png" alt="Download the form"></a>
+          |<a id="e" href="/y"><img src="d.png" alt=""></a>""".stripMargin
+      )
+      p.accessibleName(p.byId("l")(0)) mustBe "Download the form"
+      p.accessibleName(p.byId("e")(0)) mustBe ""
+    }
+
+    // An id may contain a quote, which a selector string cannot carry: built
+    // into one it throws rather than failing to match, and every link and
+    // control on the page goes through here.
+    "survive an id that a selector string could not carry" in {
+      val p = pageOf(
+        """<h1>A</h1><label for="a&quot;b">Given name</label><input id="a&quot;b">"""
+      )
+      p.accessibleName(p.document.select("input").first()) mustBe "Given name"
+    }
+
+    "not let a wrapping label borrow the control's own content" in {
+      val p = pageOf(
+        """<h1>A</h1><label>Country <select id="c"><option>England</option></select></label>
+          |<label>Notes <textarea id="n">Typed earlier</textarea></label>""".stripMargin
+      )
+      p.accessibleName(p.byId("c")(0)) mustBe "Country"
+      p.accessibleName(p.byId("n")(0)) mustBe "Notes"
+    }
+
+    "not be taken from an image hidden from assistive technology" in {
+      val p = pageOf(
+        """<h1>A</h1><a id="h" href="/x"><img src="i.png" alt="Icon" aria-hidden="true"></a>
+          |<a id="d" href="/y"><img src="j.png" alt="Chevron" role="presentation"></a>""".stripMargin
+      )
+      p.accessibleName(p.byId("h")(0)) mustBe ""
+      p.accessibleName(p.byId("d")(0)) mustBe ""
+    }
+
+    // A screen reader never reaches the arrow, so it is not part of what the
+    // link is called.
+    "leave out content hidden from assistive technology" in {
+      val p = pageOf(
+        """<h1>A</h1><a id="n" href="/x">Next<span aria-hidden="true"> &rarr;</span></a>
+          |<a id="o" href="/y"><span aria-hidden="true">Only this</span></a>""".stripMargin
+      )
+      p.accessibleName(p.byId("n")(0)) mustBe "Next"
+      p.accessibleName(p.byId("o")(0)) mustBe ""
+    }
+
+    // `for` on anything but a label associates nothing, and an id reference
+    // is case-sensitive, so neither of these names the control.
+    "only be taken from a label, and only on an exact id" in {
+      val p = pageOf(
+        """<h1>A</h1><output for="o">42</output><input id="o" name="o">
+          |<label for="MIXED">Given name</label><input id="mixed" name="mixed">""".stripMargin
+      )
+      p.accessibleName(p.byId("o")(0)) mustBe ""
+      p.accessibleName(p.byId("mixed")(0)) mustBe ""
+    }
+
+    // A label is read the way it is announced, so the hidden part of it is
+    // not part of the name and a wholly hidden label names nothing.
+    "leave hidden content out of a label, a legend and a labelledby target" in {
+      val p = pageOf(
+        """<h1>A</h1><label for="a">Given name<span aria-hidden="true"> (required)</span></label><input id="a" name="a">
+          |<label for="b"><span aria-hidden="true">Required</span></label><input id="b" name="b">
+          |<fieldset id="f"><legend>Address<span aria-hidden="true"> now</span></legend></fieldset>
+          |<span id="lbl">Postcode<span aria-hidden="true"> here</span></span><input id="c" name="c" aria-labelledby="lbl">""".stripMargin
+      )
+      p.accessibleName(p.byId("a")(0)) mustBe "Given name"
+      p.accessibleName(p.byId("b")(0)) mustBe ""
+      p.accessibleName(p.byId("f")(0)) mustBe "Address"
+      p.accessibleName(p.byId("c")(0)) mustBe "Postcode"
+    }
+
+    // ACCNAME exempts the whole traversal when the referenced element was
+    // itself hidden: honouring the reference and then dropping half of what
+    // it points at would be incoherent.
+    "keep the whole subtree of a hidden element the name points at" in {
+      val p = pageOf(
+        """<h1>A</h1><span id="lbl" aria-hidden="true">Post<span aria-hidden="true">code</span></span>
+          |<input id="c" name="c" aria-labelledby="lbl">""".stripMargin
+      )
+      p.accessibleName(p.byId("c")(0)) mustBe "Postcode"
+    }
+
+    // aria-hidden covers everything under it, so the target is hidden here
+    // too, and the same exemption applies.
+    "count a root hidden by an ancestor as hidden" in {
+      val p = pageOf(
+        """<h1>A</h1><div aria-hidden="true"><span id="lbl">Post<span aria-hidden="true">code</span></span></div>
+          |<input id="c" name="c" aria-labelledby="lbl">""".stripMargin
+      )
+      p.accessibleName(p.byId("c")(0)) mustBe "Postcode"
+    }
+
+    "still name an element that is itself hidden" in {
+      val p = pageOf(
+        """<h1>A</h1><a id="s" href="/x" aria-hidden="true">Skip to content</a>"""
+      )
+      p.accessibleName(p.byId("s")(0)) mustBe "Skip to content"
+    }
+
+    "fall back to title when nothing else names the element" in {
+      val p =
+        pageOf("""<h1>A</h1><input id="t" type="text" title="Postcode">""")
+      p.accessibleName(p.byId("t")(0)) mustBe "Postcode"
+    }
   }
 
 }

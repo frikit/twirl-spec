@@ -49,6 +49,20 @@ class WcagInternalsSpec extends AnyWordSpec with Matchers with TwirlSpec {
       fired must contain("submit-has-name")
     }
 
+    // `main-landmark` and `single-main` have to count the same thing, or a
+    // page can be told at once that it has no main landmark and too many.
+    "accept a main landmark declared by role, as single-main does" in {
+      val byRole = Page.fromString(
+        """<!DOCTYPE html><html lang="en"><head><title>t</title></head>
+          |<body><div role="main"><h1>A</h1></div></body></html>""".stripMargin,
+        english,
+        messages
+      )
+      val firedByRole = standardsExpectation.check(byRole).map(_.rule)
+      firedByRole must not contain "main-landmark"
+      firedByRole must not contain "single-main"
+    }
+
     "quote the surrounding text when a Scala value leaks in" in {
       val leak = pageOf(
         "<h1>A</h1><p>Your name is Some(Ada) according to our records</p>"

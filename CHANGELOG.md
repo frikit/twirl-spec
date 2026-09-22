@@ -10,7 +10,12 @@ notes are its section here. Every release on the current major line is
 recorded in full; earlier lines are kept to one entry each, so the file stays
 readable.
 
-## [Unreleased]
+## [2.1.0] - 2026-09-22
+
+Rule verdicts change in this release. A page that passes today can fail after
+it — `no-password-in-get` in particular now sees a shape it used to miss — so
+this is a minor version rather than a patch, for the reason set out under
+*Versioning* in the README.
 
 ### Added
 
@@ -18,6 +23,87 @@ readable.
   [frikit.github.io/twirl-spec](https://frikit.github.io/twirl-spec/), built
   from the repository itself, with the Scaladoc of every module rendered as one
   site under `/api`.
+
+### Fixed
+
+- `no-password-in-get` sees a form that names no method. HTML submits such a
+  form by GET, and that is the shape the mistake ships in; the rule matched
+  only an explicit `method="get"`.
+- `no-aria-hidden-focusable` accepts the fix its own hint prescribes. An
+  element taken out of the tab order with `tabindex="-1"` no longer counts as
+  focusable, so following the advice clears the rule instead of leaving the
+  test red.
+- `zoom-not-blocked` reads `maximum-scale` as a number rather than matching it
+  as text. `maximum-scale=10`, which allows ten times the size, was reported as
+  blocking zoom because it contains `maximum-scale=1`. A cap below 2 is still
+  flagged: that is the 200% WCAG 1.4.4 asks for. The value is read the way a
+  browser reads it — the leading number if there is one, so `1e-1` is a tenth
+  and `10junk` is ten; then the words it knows, `yes` being 1 and
+  `device-width` 10; and then 0 for `no`, for a word it does not know, and for
+  no value at all, each of which is a page that will not zoom. Only a negative
+  number caps nothing, because it translates to auto. Where the directive
+  appears more than once the last one applies whatever it says, so a trailing
+  `maximum-scale=-1` lifts the cap an earlier one set. The content is read as
+  directives rather than having its whitespace stripped out, so
+  `maximum-scale=1 0` is a cap of 1 and not of 10, and the violation now
+  quotes the content as the page wrote it. Whitespace separates one directive
+  from the next as a comma does, so a cap in
+  `width=device-width maximum-scale=1` is no longer missed.
+- `user-scalable` is read by the same translation rather than matched as the
+  literal `no`: `yes`, `device-width`, `device-height` and a number at 1 or
+  beyond in either direction leave scaling on, while a number between -1 and 1
+  — and any value a browser does not know, including no value at all — turn it
+  off. `user-scalable=nope` and `user-scalable=0` are caught.
+- `target-blank-is-safe` accepts `rel="noreferrer"`, which severs
+  `window.opener` just as `rel="noopener"` does.
+- `link-has-name` no longer reads a decorative image as a link's name: an
+  `<img alt="">` inside an otherwise empty link named it, because the rule
+  asked whether an `alt` attribute was present rather than whether it said
+  anything. Neither does an image hidden from assistive technology with
+  `aria-hidden` or `role="presentation"`, which is announced to nobody.
+- Content hidden from assistive technology is no longer part of an element's
+  name. `<a>Next<span aria-hidden="true"> →</span></a>` is named "Next", and a
+  link whose only content is hidden is named by nothing, because that is what
+  a screen reader announces. Whether the element *itself* carries
+  `aria-hidden` is a separate question, and `no-aria-hidden-focusable`
+  answers it.
+- An id containing a quote no longer throws. The label lookup built the id
+  into a selector string, where `label[for="a"b"]` does not parse, and an
+  exception from a check is worse than a wrong answer from it.
+- A label wrapped around a `<select>` or `<textarea>` no longer borrows the
+  control's own content as its text, so a country picker is named "Country"
+  rather than by whichever option happens to be selected.
+- A control is associated only with a `<label>`, and only on an exact id.
+  `for` on anything else — `<output for="total">` — labels nothing, and an id
+  reference is case-sensitive, so `for="Total"` does not name `id="total"`.
+- Hidden content is left out of a name taken from elsewhere, not only one
+  taken from the element's own content: a label, a legend or the target of an
+  `aria-labelledby` is read the way it is announced, so a label reading only
+  `<span aria-hidden="true">Required</span>` names nothing. Where the
+  referenced element is itself hidden its whole subtree still counts, which is
+  what ACCNAME exempts and what makes pointing `aria-labelledby` at a hidden
+  element work at all.
+- A `tabindex` padded with spaces is read as the number HTML says it is, for
+  both `no-positive-tabindex` and `no-aria-hidden-focusable`.
+
+### Changed
+
+- One answer to "what is this element called". `link-has-name`,
+  `submit-has-name` and `labelled-controls` each computed an accessible name
+  their own way and disagreed with each other; all three now ask
+  `AccessibleName`, which is what `page.accessibleName` and role-and-name
+  matching already used. So a link or submit control named by
+  `aria-labelledby` is accepted, and an `aria-labelledby` that resolves to
+  nothing no longer names a control.
+- `AccessibleName` follows the name computation more closely: an `<input>`'s
+  `value` names it only where the value is the name (`button`, `submit` and
+  `reset`), a `<select>`'s options and a `<textarea>`'s content are no longer
+  read as its name, `title` is used when nothing else names the element, and so
+  is the alt text of an image standing in for a link's content.
+- `main-landmark` counts the landmark `single-main` counts — `<main>` or
+  `role="main"` — so a page can no longer be told at once that it has no main
+  landmark and too many. `page.main` is unchanged and still answers to GOV.UK's
+  `#main-content`, which scopes an assertion but is not itself a landmark.
 
 ## [2.0.1] - 2026-09-13
 

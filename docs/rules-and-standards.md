@@ -99,8 +99,9 @@ shown to a citizen, markup the parser had to repair, two controls submitting
 under one name, and a Scala value such as `Some(...)` reaching the page.
 
 **`SecurityStandards`** is ways a page can leak or be turned against its
-reader: a password in a GET form, a `javascript:` link, a new-tab link without
-`rel="noopener"`.
+reader: a password in a form that submits by GET — including one that names no
+method, which submits by GET too — a `javascript:` link, and a new-tab link
+carrying neither `rel="noopener"` nor `rel="noreferrer"`.
 
 **`GovukStandards`** is the Design System's error conventions: the title
 prefix, the visually hidden "Error:" on inline messages, the summary links
