@@ -206,6 +206,31 @@ class QualityStandardsSpec extends AnyWordSpec with Matchers with TwirlSpec {
       )
     }
 
+    "leave alone the head scripts a caller exempts, and only those" in {
+      val head =
+        """<meta charset="utf-8">
+          |<script src="/platform/consent.js" id="consent"></script>
+          |<script src="/assets/app.js"></script>""".stripMargin
+      val flagged = (rule: Rule) =>
+        Rule
+          .expectation(Seq(rule))
+          .check(page("<p>x</p>", head))
+          .flatMap(_.actual)
+
+      flagged(
+        PerformanceStandards.scriptsAreDeferredExcept()
+      ) must contain theSameElementsAs
+        Seq("/platform/consent.js", "/assets/app.js")
+      flagged(
+        PerformanceStandards.scriptsAreDeferredExcept("#consent")
+      ) mustBe Seq(
+        "/assets/app.js"
+      )
+      PerformanceStandards
+        .scriptsAreDeferredExcept("#consent")
+        .id mustBe "scripts-are-deferred"
+    }
+
     "name the rules about search results, all of them metadata rules" in {
       MetadataStandards.searchRules.map(
         _.id

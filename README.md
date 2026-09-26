@@ -491,7 +491,9 @@ run too, and `failOnWarnings` promotes them. See [Failure output](#failure-outpu
 `MetadataStandards.searchRules` — `not-noindex`, `has-meta-description` and
 `title-is-concise` — which would otherwise warn on every page of a service that
 is reached from GOV.UK, not from search, and titles its pages in the Design
-System's pattern.
+System's pattern. Its `scripts-are-deferred` also leaves alone HMRC's
+tracking-consent script, which the platform puts in the head on purpose, and
+still reports the service's own. Mix it in after any rule trait of your own.
 
 ### `WcagStandards`
 

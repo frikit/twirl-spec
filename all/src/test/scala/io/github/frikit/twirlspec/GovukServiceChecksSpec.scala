@@ -85,5 +85,85 @@ class GovukServiceChecksSpec
         "title-is-concise"
       )
     }
+
+    "leave the platform's tracking-consent script alone, and report the service's own" in {
+      val page = Page.fromString(
+        """<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>t</title>
+          |<script src="/tracking-consent/tracking.js" id="tracking-consent-script-tag" data-gtm-container="b"></script>
+          |<script src="/my-service/assets/app.js"></script></head>
+          |<body><main id="main-content"><h1>Hello</h1></main></body></html>""".stripMargin,
+        english,
+        messages
+      )
+      val blocking = standardsExpectation
+        .check(page)
+        .filter(_.rule == "scripts-are-deferred")
+        .flatMap(_.actual)
+      blocking mustBe Seq("/my-service/assets/app.js")
+      standardsRules.count(_.id == "scripts-are-deferred") mustBe 1
+    }
+  }
+}
+
+/** The built-in rule traits are already inside AllChecks, so mixing one in
+  * again, before or after, cannot bring the search rules back.
+  */
+class GovukServiceChecksMixedFirstSpec
+    extends AnyWordSpec
+    with Matchers
+    with Bilingual
+    with GovukServiceChecks
+    with io.github.frikit.twirlspec.quality.QualityChecks {
+
+  "GovukServiceChecks mixed in before QualityChecks" should {
+    "still leave the search rules out" in {
+      standardsRules.map(_.id) must contain noneOf (
+        "not-noindex",
+        "has-meta-description",
+        "title-is-concise"
+      )
+    }
+  }
+}
+
+class GovukServiceChecksMixedLastSpec
+    extends AnyWordSpec
+    with Matchers
+    with Bilingual
+    with io.github.frikit.twirlspec.quality.QualityChecks
+    with GovukServiceChecks {
+
+  "GovukServiceChecks mixed in after QualityChecks" should {
+    "leave the search rules out" in {
+      standardsRules.map(_.id) must contain noneOf (
+        "not-noindex",
+        "has-meta-description",
+        "title-is-concise"
+      )
+    }
+  }
+}
+
+/** A house trait of the spec's own, mixed in later, adds after the filter —
+  * which is why the documentation says to mix GovukServiceChecks in last.
+  */
+class GovukServiceChecksThenHouseRulesSpec
+    extends AnyWordSpec
+    with Matchers
+    with Bilingual
+    with GovukServiceChecks
+    with GovukServiceChecksThenHouseRulesSpec.HouseRules {
+
+  "a house trait mixed in after GovukServiceChecks" should {
+    "have its rules run, search rules included if it adds them" in {
+      standardsRules.map(_.id) must contain("has-meta-description")
+    }
+  }
+}
+
+object GovukServiceChecksThenHouseRulesSpec {
+  trait HouseRules extends TwirlSpecDsl {
+    override def standardsRules: Seq[Rule] =
+      super.standardsRules ++ MetadataStandards.searchRules
   }
 }
