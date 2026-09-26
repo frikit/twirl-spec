@@ -56,7 +56,13 @@ lazy val commonSettings = Seq(
   // This only serialises the suites within a module; the restriction below
   // does the same for the modules.
   Test / parallelExecution := false,
-  Test / testOptions += Tests.Argument(TestFrameworks.ScalaTest, "-oD")
+  Test / testOptions += Tests.Argument(TestFrameworks.ScalaTest, "-oD"),
+  // The README promises a stable public API within a major version. Each
+  // module is compared with the last release, which sbt-dynver reads from the
+  // tags; CI runs the comparison unless the commits since then carry #major.
+  mimaPreviousArtifacts := previousStableVersion.value
+    .map(v => organization.value %% moduleName.value % v)
+    .toSet
 )
 
 // Tests are not forked, so without this the modules' test tasks would run
@@ -79,7 +85,13 @@ Global / onLoad := {
 
 lazy val root = Project("twirl-spec", file("."))
   .enablePlugins(ScalaUnidocPlugin)
-  .settings(name := "twirl-spec", publish / skip := true, licenceHeader)
+  .settings(
+    name := "twirl-spec",
+    publish / skip := true,
+    licenceHeader,
+    // The aggregate publishes nothing, so there is nothing to compare.
+    mimaPreviousArtifacts := Set.empty
+  )
   .settings(
     // `sbt unidoc` renders every module into one Scaladoc site, which the docs
     // workflow publishes under /api. Each module still publishes its own

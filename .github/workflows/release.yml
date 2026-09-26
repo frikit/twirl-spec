@@ -31,7 +31,7 @@ jobs:
     permissions:
       contents: write # to push the tag and create the GitHub Release
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0 # dynver and the bump need every tag
 
@@ -80,14 +80,14 @@ jobs:
           echo "::add-mask::$encoded"
           echo "PGP_SECRET=$encoded" >> "$GITHUB_ENV"
 
-      - uses: actions/setup-java@v6
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         if: steps.guard.outputs.release == 'true'
         with:
           distribution: temurin
           java-version: '21'
           cache: sbt
 
-      - uses: sbt/setup-sbt@v1
+      - uses: sbt/setup-sbt@6158cb0903b8ceeae04f830055f3155e1b6a5ad7 # v1.5.11
         if: steps.guard.outputs.release == 'true'
 
       # The tag is made here but pushed only after publishing has succeeded, so a

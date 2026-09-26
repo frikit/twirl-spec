@@ -1,0 +1,14 @@
+# Scala Steward keeps the sbt build current; it does not touch the workflows,
+# whose actions are pinned by commit SHA and so need something to move them.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      # A workflow change ships nothing, so it does not spend a version.
+      prefix: "[skip release]"
