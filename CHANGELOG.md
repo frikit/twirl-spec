@@ -53,7 +53,8 @@ without its token, can fail after it.
   needs to add.
 - `TwirlSpec` clears a spec's coverage and exclusion records when its suite
   starts and when it finishes, so a spec run again in the same JVM cannot pass
-  on what an earlier run asserted.
+  on what an earlier run asserted. It does so through `SuiteLifecycle`, which a
+  spec base built on `TwirlSpecDsl` mixes in itself.
 - The CSRF token is signed once per test JVM, so a view renders the same
   markup each time it is rendered with the same arguments.
 - A page built directly with `Page.fromString` keeps a coverage record of its

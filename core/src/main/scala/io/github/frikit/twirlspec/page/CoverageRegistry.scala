@@ -24,9 +24,10 @@ import scala.collection.mutable
   * A spec renders the same page many times over — once per test — so the record
   * is kept per coverage group rather than per page instance. A page rendered
   * through the DSL belongs to its spec and, within it, to the renders that
-  * produce exactly its markup, unless the spec names a group with `coveredAs`;
-  * a page built directly is grouped by its markup alone. The key is
-  * `spec#group`, so a spec's records can be dropped together.
+  * produce exactly its markup, unless the spec names a group with `coveredAs`.
+  * The key is `spec#group`, so a spec's records can be dropped together. A page
+  * built directly belongs to no spec and keeps its record on itself, so it
+  * never appears here.
   */
 object CoverageRegistry {
 
