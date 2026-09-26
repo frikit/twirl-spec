@@ -6,8 +6,13 @@ each of them.
 
 ## Declaring the languages
 
-`TwirlSpec` builds its application with one language, `en`. A service that
-renders in more declares them, usually once on a spec base:
+A service has already declared its languages, in `play.i18n.langs` in
+`conf/application.conf`. `TwirlSpec` builds its application from that file, so
+a bilingual service's specs render in English and Welsh with nothing more to
+say. A service that declares nothing gets Play's default, `en`.
+
+To give the specs different languages from the service, override
+`applicationConfig`, usually once on a spec base:
 
 ```scala
 trait ViewSpecBase extends AnyWordSpec with Matchers with TwirlSpec with AllChecks {
@@ -17,6 +22,11 @@ trait ViewSpecBase extends AnyWordSpec with Matchers with TwirlSpec with AllChec
 ```
 
 `languages` is then every configured language, English first.
+
+A language that is not configured is refused. Play's own answer to
+`Lang("cy")` in an English-only application is English, so a Welsh spec would
+render the English page and pass; `inLanguage` and `renderIn` fail instead,
+naming the languages that are configured.
 
 ## Rendering in a language
 

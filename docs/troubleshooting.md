@@ -71,16 +71,34 @@ They can. The shared application is built once per configuration and never
 stopped until the JVM exits, and the coverage record is keyed by spec, so
 suites running side by side do not interfere.
 
-## The Welsh page compares equal to the English one
+## "cy is not a configured language"
 
-`inLanguage(Lang("cy"))` renders in Welsh only when `cy` is among the
-configured languages; otherwise Play falls back to the first configured
-language. Declare the languages through `applicationConfig` on the spec base.
+`inLanguage(Lang("cy"))` and `renderIn(Lang("cy"))` render in Welsh only when
+`cy` is among the configured languages. Play would otherwise answer with the
+first configured language, and a Welsh spec would pass on the English page, so
+the library fails instead. `TwirlSpec` takes the languages from `play.i18n.langs`
+in the service's `conf/application.conf`; declare Welsh there, or through
+`applicationConfig` on the spec base.
+
+## "No CSRF token was generated for this request"
+
+`TwirlSpec`'s `request` carries a CSRF token, so this comes from a request the
+spec built itself, usually a `fakeRequest` on a spec base that uses
+`TwirlSpecDsl`. Give it a token:
+
+```scala
+implicit val fakeRequest: Request[AnyContentAsEmpty.type] =
+  CSRFTokenHelper.addCSRFToken(FakeRequest("GET", "/"))
+```
+
+`formWithCSRF` from play-frontend-hmrc does not throw; it leaves the token
+field out, so a spec without a token renders a form a citizen never sees.
 
 ## A view needs an implicit the spec does not have
 
-`TwirlSpec` provides `messages`, `request` and `messagesApi`. Anything else a
-view takes implicitly, such as an `AppConfig`, the spec provides:
+`TwirlSpec` provides `messages`, `request` (with the language cookie and a
+CSRF token) and `messagesApi`. Anything else a view takes implicitly, such as
+an `AppConfig`, the spec provides:
 
 ```scala
 implicit val appConfig: AppConfig = inject[AppConfig]

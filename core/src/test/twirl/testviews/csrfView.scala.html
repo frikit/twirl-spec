@@ -1,0 +1,5 @@
+@()(implicit request: play.api.mvc.RequestHeader, messages: Messages)
+<form method="post" action="/save">
+  @views.html.helper.CSRF.formField
+  <button type="submit">@messages("site.continue")</button>
+</form>

@@ -10,6 +10,35 @@ notes are its section here. Every release on the current major line is
 recorded in full; earlier lines are kept to one entry each, so the file stays
 readable.
 
+## [2.2.0] - 2026-09-26
+
+What a spec renders changes in this release, so it is a minor version: a
+bilingual service's Welsh specs now render in Welsh, and a form now renders
+its CSRF token field. A spec that passed on the English page, or on a form
+without its token, can fail after it.
+
+### Fixed
+
+- `TwirlSpec` no longer overrides the service's languages.
+  `SharedApplication.viewTestDefaults` set `play.i18n.langs` to `en`, which
+  replaced the service's own `conf/application.conf`: a bilingual service's
+  `inLanguage(Lang("cy"))` rendered English, and every Welsh assertion passed
+  against the English page. The languages are now whatever the service
+  declares, and `applicationConfig` can still change them for the specs.
+- A language the application is not configured for is refused. `inLanguage`
+  and `renderIn` fail, naming the configured languages, instead of letting
+  Play render the first configured language in its place.
+- `TwirlSpec`'s request carries a signed CSRF token. A view that renders
+  Play's `@helper.CSRF.formField` threw "No CSRF token was generated for this
+  request", and play-frontend-hmrc's `formWithCSRF` left the token field out,
+  so a form rendered unlike the one a citizen sees. The token comes from
+  `play-filters-helpers`, now a `Provided` dependency of the core, which a
+  Play application built with the Play sbt plugin already has; without it on
+  the classpath the request carries no token, as before.
+- The message-file check no longer says a file is missing when Play simply
+  did not load it. Play reads `conf/messages.<lang>` only for the languages
+  `play.i18n.langs` declares, and the hint now says so.
+
 ## [2.1.0] - 2026-09-22
 
 Rule verdicts change in this release. A page that passes today can fail after

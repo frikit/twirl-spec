@@ -77,7 +77,12 @@ class MessagesIntegritySpec
         .check(monolingual)
         .filter(_.rule == "messages.translation-parity")
       found.map(_.message) mustBe List(
-        "no messages file exists for any language other than en"
+        "no messages are loaded for any language other than en"
+      )
+      // A service can have conf/messages.cy and still see this, when cy is not
+      // declared: the hint has to say why the file was not read.
+      found.flatMap(_.hint).head must include(
+        "only for the languages play.i18n.langs declares"
       )
       found.flatMap(_.hint).head must include("requireTranslations = false")
     }

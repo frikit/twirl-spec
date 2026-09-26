@@ -162,9 +162,11 @@ object MessagesIntegrity {
         Seq(
           Violation(
             "messages.translation-parity",
-            s"no messages file exists for any language other than ${config.baseLanguage}"
+            s"no messages are loaded for any language other than ${config.baseLanguage}"
           ).withHint(
-            "add conf/messages.<lang>, or set requireTranslations = false for a single-language service"
+            "Play loads conf/messages.<lang> only for the languages play.i18n.langs declares: " +
+              "declare them in conf/application.conf and add the file, or set " +
+              "requireTranslations = false for a single-language service"
           )
         )
       else Nil

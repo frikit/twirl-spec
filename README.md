@@ -774,6 +774,11 @@ silently compared against itself — which is what a plain
 `doc.title mustBe messages("x.y")` does, passing happily while the page shows a
 raw key.
 
+The languages are the ones the service's `conf/application.conf` declares in
+`play.i18n.langs`. A language that is not among them fails the spec rather than
+letting Play render English in its place, which would pass every Welsh
+assertion against the English page.
+
 ### Comparing languages
 
 `twirl-spec-messages` compares the message *files*. `twirl-spec-i18n` compares

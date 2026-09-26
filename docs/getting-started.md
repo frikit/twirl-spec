@@ -169,16 +169,22 @@ underneath is the page as the library sees it.
 
 ## 7. Configure the application once
 
-`TwirlSpec` builds its application with a few defaults: metrics and auditing
-off, one language, `en`, and no CSP nonce. A bilingual service declares its
-languages by overriding `applicationConfig`, usually once on a spec base:
+`TwirlSpec` builds its application from the service's own
+`conf/application.conf`, with metrics, auditing and the CSP nonce switched off.
+The languages are the ones `play.i18n.langs` declares there, so a bilingual
+service's specs render in Welsh with nothing more to configure. Anything a spec
+needs to differ from the service goes through `applicationConfig`, usually once
+on a spec base:
 
 ```scala
 trait ViewSpecBase extends AnyWordSpec with Matchers with TwirlSpec with AllChecks {
   override def applicationConfig: Map[String, Any] =
-    super.applicationConfig + ("play.i18n.langs" -> Seq("en", "cy"))
+    super.applicationConfig + ("some.feature.enabled" -> true)
 }
 ```
+
+The implicit `request` carries the language cookie and a signed CSRF token, so
+a form renders its token field as it does in production.
 
 Anything else the views need at construction, such as an `AppConfig`, comes
 from `inject[AppConfig]` and is passed to the view, or declared implicit in the
