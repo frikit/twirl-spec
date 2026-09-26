@@ -16,7 +16,7 @@
 
 package io.github.frikit.twirlspec.page
 
-import org.jsoup.nodes.{Document, Element}
+import org.jsoup.nodes.{Document, Element, TextNode}
 
 import scala.jdk.CollectionConverters._
 
@@ -112,15 +112,15 @@ object AccessibleName {
     if (ContentIsNotTheName.contains(e.tagName())) ""
     else {
       val said = announced(e)
-      val text = Text.normalise(said.text())
-      if (text.nonEmpty) text
-      else
-        said
-          .select(AnnouncedImage)
-          .asScala
-          .map(_.attr("alt"))
-          .filter(_.trim.nonEmpty)
-          .mkString(" ")
+      // An image's alt text is announced where the image stands, so it reads
+      // in document order with the text around it: "Download PDF", not "PDF".
+      // `said` is a copy, so the images can be swapped for their words.
+      said
+        .select(AnnouncedImage)
+        .asScala
+        .filter(_ ne said)
+        .foreach(img => img.replaceWith(new TextNode(s" ${img.attr("alt")} ")))
+      Text.normalise(said.text())
     }
 
   /** What is announced for an element, as a traversal starting at it.

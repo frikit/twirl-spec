@@ -33,6 +33,8 @@ without its token, can fail after it.
   picks its modules by hand and wants to leave them out too.
 - `PerformanceStandards.scriptsAreDeferredExcept(selectors*)`:
   `scripts-are-deferred`, leaving alone the head scripts the selectors match.
+- `page.formSubmission`: every name and value a browser would submit, in
+  document order, with a repeated name listed once per value.
 
 ### Fixed
 
@@ -61,6 +63,24 @@ without its token, can fail after it.
 - The message-file check no longer says a file is missing when Play simply
   did not load it. Play reads `conf/messages.<lang>` only for the languages
   `play.i18n.langs` declares, and the hint now says so.
+- A name taken from content reads an image's alt text where the image stands.
+  `<a><img alt="Download"> PDF</a>` was named "PDF", because the alt text was
+  consulted only when there was no text at all; it is now "Download PDF", as a
+  screen reader announces it.
+- `formValues` reads a form the way a browser submits it. A select with no
+  option marked submitted nothing and now submits its first enabled option; a
+  disabled control, or an option in a disabled group, submitted its value and
+  now submits nothing; a checked box without a value submitted an empty string
+  and now submits `on`; and of two ticked boxes sharing a name only the last
+  was seen, where now `formValues("tick" -> "a")` passes when `a` is among the
+  values. Reset and image inputs are no longer counted.
+- A control inside the first legend of a disabled fieldset is enabled, as HTML
+  has it, for `disabled`, `enabled` and the form values alike.
+- Whether markup is a whole page, which decides if page-level rules run, is
+  read from how the document opens. A page whose doctype came after two
+  thousand characters of whitespace or comments was taken for a fragment and
+  skipped those rules, and a fragment that merely mentioned `<html` was taken
+  for a page.
 
 ## [2.1.0] - 2026-09-22
 

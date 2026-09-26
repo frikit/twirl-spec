@@ -161,11 +161,37 @@ object Rule {
     new Rule(id, description, pageLevel, severity, criterion, run)
 
   /** Jsoup wraps every fragment in `<html><head><body>`, so the parsed tree
-    * cannot tell us whether the template included the layout.
+    * cannot tell us whether the template included the layout; the source can.
+    *
+    * A document opens with its doctype or its `html` element, and HTML allows
+    * only a byte order mark, whitespace and comments before either. So those
+    * are skipped however long they run, and a fragment that merely mentions
+    * `<html` further in is still a fragment.
     */
   private[twirlspec] def isFullPage(page: Page): Boolean = {
-    val head = page.source.take(2000).toLowerCase
-    head.contains("<!doctype html") || head.contains("<html")
+    val source = page.source
+    val start = openingOf(source)
+    source.regionMatches(true, start, "<!doctype html", 0, 14) ||
+    source.regionMatches(true, start, "<html", 0, 5)
+  }
+
+  /** Where the first thing that is not a byte order mark, whitespace or a
+    * comment begins.
+    */
+  private def openingOf(source: String): Int = {
+    var i = 0
+    var skipping = true
+    while (skipping) {
+      while (
+        i < source.length && (source.charAt(i).isWhitespace || source
+          .charAt(i) == '﻿')
+      ) i += 1
+      if (source.startsWith("<!--", i)) {
+        val end = source.indexOf("-->", i + 4)
+        i = if (end < 0) source.length else end + 3
+      } else skipping = false
+    }
+    i
   }
 
 }

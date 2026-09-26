@@ -126,25 +126,34 @@ trait FormExpectations {
       }
     }
 
-  /** Every named control holds these values, as a browser would submit them. */
+  /** Each name submits this value, as a browser would submit the form. For a
+    * name submitted more than once, such as a group of checkboxes, the value
+    * has to be among the ones it submits.
+    */
   def formValues(expected: (String, String)*): Expectation =
     Expectation("formValues") { page =>
-      val actual = page.formValues
+      val submitted = page.formSubmission
       expected.toSeq.flatMap { case (field, want) =>
-        actual.get(field) match {
-          case Some(got) if Text.same(got, want) => Nil
-          case Some(got)                         =>
-            Seq(Violation.mismatch(s"formValues($field)", want, got))
-          case None =>
+        submitted.collect { case (`field`, value) => value } match {
+          case values if values.exists(Text.same(_, want)) => Nil
+          case Nil                                         =>
             Seq(
               Violation(
                 s"formValues($field)",
                 "no control on the page submits under this name",
                 expected = Some(want),
                 actual = Some(
-                  if (actual.isEmpty) "(no named controls)"
-                  else actual.keys.toList.sorted.mkString(", ")
+                  if (submitted.isEmpty) "(no named controls)"
+                  else submitted.map(_._1).distinct.sorted.mkString(", ")
                 )
+              )
+            )
+          case values =>
+            Seq(
+              Violation.mismatch(
+                s"formValues($field)",
+                want,
+                values.mkString(", ")
               )
             )
         }
