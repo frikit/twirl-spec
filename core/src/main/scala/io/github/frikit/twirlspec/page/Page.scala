@@ -22,6 +22,7 @@ import org.jsoup.nodes.{Document, Element}
 import play.api.i18n.{Lang, Messages}
 import play.twirl.api.Html
 
+import scala.collection.mutable
 import scala.jdk.CollectionConverters._
 
 /** A rendered page, ready to be asked questions.
@@ -60,14 +61,37 @@ final class Page(
     */
   private var owner: String = ""
 
-  /** Which of the spec's pages this is: by default its exact markup, so every
+  /** Which of the spec's pages this is: empty for its exact markup, so every
     * render of one view in one state shares a record and a different view, or
-    * the same view in another state, does not.
+    * the same view in another state, does not; or the name a spec gave it.
     */
-  private var group: String = Integer.toHexString(source.hashCode)
+  private var group: String = ""
+
+  /** The markup, digested. A digest rather than `hashCode`, whose collisions
+    * are easy to come by, so two pages share a record only if their markup is
+    * the same.
+    */
+  private lazy val markupKey: String = java.util.HexFormat
+    .of()
+    .formatHex(
+      java.security.MessageDigest
+        .getInstance("SHA-256")
+        .digest(source.getBytes(java.nio.charset.StandardCharsets.UTF_8))
+    )
+
+  /** The record of a page built directly rather than rendered by a spec, which
+    * belongs to no spec and so is kept with the page: the same page read in
+    * another language shares it, and nothing else does.
+    */
+  private var ownRecord: mutable.Set[String] = mutable.Set.empty[String]
 
   private[twirlspec] def coverageGroup: String =
-    if (owner.isEmpty) group else s"$owner#$group"
+    s"$owner#${if (group.isEmpty) markupKey else group}"
+
+  /** Every anchor the assertions in this page's record have touched. */
+  private[twirlspec] def touchedAnchors: Set[String] =
+    if (owner.isEmpty) ownRecord.synchronized(ownRecord.toSet)
+    else CoverageRegistry.touched(coverageGroup)
 
   private[twirlspec] def belongingTo(spec: String): this.type = {
     if (spec.nonEmpty) owner = spec
@@ -84,10 +108,15 @@ final class Page(
     * }}}
     *
     * Without it, a page is grouped with the renders that produce exactly its
-    * markup.
+    * markup. Only a page a spec rendered can share a record; one built directly
+    * keeps its own.
     */
   def coveredAs(name: String): this.type = {
     require(name.nonEmpty, "a coverage group needs a name")
+    require(
+      owner.nonEmpty,
+      "only a page a spec rendered can share a coverage record"
+    )
     group = s"named:$name"
     this
   }
@@ -105,11 +134,11 @@ final class Page(
   }
 
   private[twirlspec] def record(elements: List[Element]): Unit =
-    if (recording && elements.nonEmpty)
-      CoverageRegistry.record(
-        coverageGroup,
-        elements.flatMap(e => Anchors.namesOf(e))
-      )
+    if (recording && elements.nonEmpty) {
+      val names = elements.flatMap(e => Anchors.namesOf(e))
+      if (owner.isEmpty) ownRecord.synchronized(ownRecord ++= names)
+      else CoverageRegistry.record(coverageGroup, names)
+    }
 
   /** Every element matching this CSS selector. */
   def css(selector: String): Selection = named(selector, selector)
@@ -610,9 +639,16 @@ final class Page(
     */
   def outline: String = withRecordingPaused(Outline.of(this))
 
-  /** The same page, read in another language. */
-  def withLang(newLang: Lang, newMessages: Messages): Page =
-    new Page(document, newLang, newMessages, source, parseErrors)
+  /** The same page, read in another language. It is the same page for coverage
+    * too: what is asserted on either counts for both.
+    */
+  def withLang(newLang: Lang, newMessages: Messages): Page = {
+    val read = new Page(document, newLang, newMessages, source, parseErrors)
+    read.owner = owner
+    read.group = group
+    read.ownRecord = ownRecord
+    read
+  }
 
   override def toString: String =
     s"Page(lang=${lang.code}, title=${Text.preview(title, 60)})"

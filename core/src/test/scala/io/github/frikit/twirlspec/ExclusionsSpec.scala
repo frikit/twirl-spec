@@ -145,15 +145,53 @@ class ExclusionsSpec extends AnyWordSpec with Matchers with TwirlSpec {
       ExclusionRegistry.unused(classOf[Inner].getName) mustBe empty
     }
 
-    "leave them alone when it runs one named test" in {
+    "clear them for a run of one named test too" in {
       val inner = new Inner
       inner
         .run(Some("inner should record what it touches"), Args(silent))
+        .succeeds() mustBe true
+      inner.recorded mustBe true
+      CoverageRegistry.touched(inner.group) mustBe empty
+    }
+
+    "leave them alone in the run OneInstancePerTest makes for each test" in {
+      val inner = new Inner
+      inner
+        .run(
+          Some("inner should record what it touches"),
+          Args(silent, runTestInNewInstance = true)
+        )
         .succeeds() mustBe true
       CoverageRegistry.touched(inner.group) must contain("#x")
       ExclusionRegistry.unused(classOf[Inner].getName) mustBe Seq("some-rule")
       CoverageRegistry.forget(classOf[Inner].getName)
       ExclusionRegistry.forget(classOf[Inner].getName)
+    }
+  }
+
+  "a page's coverage key" should {
+
+    "tell apart markup whose hash codes collide" in {
+      val a = """<p id="x">Aa</p>"""
+      val b = """<p id="x">BB</p>"""
+      a.hashCode mustBe b.hashCode
+      render(Html(a)).coverageGroup must not be render(Html(b)).coverageGroup
+    }
+
+    "keep a page built directly to itself, and share it with the page in another language" in {
+      val built = Page.fromString("""<p id="x">x</p>""", english, messages)
+      built.byId("x")
+      built.touchedAnchors mustBe Set("#x")
+      built.withLang(english, messages).touchedAnchors mustBe Set("#x")
+      Page
+        .fromString("""<p id="x">x</p>""", english, messages)
+        .touchedAnchors mustBe empty
+      an[IllegalArgumentException] must be thrownBy built.coveredAs("any")
+    }
+
+    "keep a rendered page's spec and group in another language" in {
+      val page = render(Html("""<p id="y">y</p>""")).coveredAs("y-page")
+      page.withLang(english, messages).coverageGroup mustBe page.coverageGroup
     }
   }
 }
