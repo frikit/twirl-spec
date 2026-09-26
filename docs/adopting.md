@@ -8,6 +8,7 @@ library replaces that scaffolding, and can do so gradually.
 
 ## A spec base to replace the old one
 
+<!-- compiled: all/src/test/scala/snippets/AdoptingSpecBase.scala -->
 ```scala
 package views
 
@@ -129,12 +130,19 @@ tree, and a new spec can start loose and tighten:
 
 ## Moving from 1.x to 2.x
 
-2.0.0 is published for Scala 3 only, on the 3.3 LTS line. A service on
-Scala 2.13 stays on 1.0.x. On Scala 3, the API is source-compatible with
-1.0.x, with one exception: `new HtmlStandards(...)` takes its attribute
-prefixes explicitly, and the `HtmlStandards` object remains the set with none.
-Play 3.0.0 is now the floor rather than 3.0.11, so a service on any 3.0.x
-resolves the artifacts without upgrading Play.
+2.0.0 is published for Scala 3 only, on the 3.3 LTS line. On Scala 3, the API
+is source-compatible with 1.0.x, with one exception: `new HtmlStandards(...)`
+takes its attribute prefixes explicitly, and the `HtmlStandards` object remains
+the set with none. Play 3.0.0 is now the floor rather than 3.0.11, so a service
+on any 3.0.x resolves the artifacts without upgrading Play.
+
+A service on Scala 2.13 cannot use 2.x, and 1.0.0 is not a place to adopt in
+the meantime. It is historical and receives no fixes: it still reports
+`rel="noreferrer"`, `tabindex="-1"` and `maximum-scale=10` as problems when
+they are not, misses a password field in a form that names no method, names a
+control differently from rule to rule, and renders a bilingual service's Welsh
+specs in English. Adopt 2.x as part of the service's move to Scala 3, which
+touches the build anyway.
 
 ## Moving from a 0.x snapshot
 
