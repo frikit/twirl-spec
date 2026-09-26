@@ -86,7 +86,13 @@ in the service's `conf/application.conf`; declare Welsh there, or through
 on the classpath, as it is in any application built with the Play sbt plugin.
 So this comes either from a request the spec built itself, usually a
 `fakeRequest` on a spec base that uses `TwirlSpecDsl`, or from a project
-without that library. Give the request a token:
+without that library. A project without it adds it first:
+
+```scala
+libraryDependencies += "org.playframework" %% "play-filters-helpers" % play.core.PlayVersion.current % Test
+```
+
+A spec that builds its own request then gives it a token:
 
 ```scala
 implicit val fakeRequest: Request[AnyContentAsEmpty.type] =

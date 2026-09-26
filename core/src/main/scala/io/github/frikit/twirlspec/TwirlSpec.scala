@@ -116,9 +116,10 @@ trait TwirlSpec extends TwirlSpecDsl { self: Suite with Alerting =>
     * The language must be one the application is configured for. Play would
     * otherwise render the first configured language in its place, and a Welsh
     * spec would pass on English text, so an unconfigured language fails the
-    * test instead. The block runs in the configured form of the language: `cy`
-    * in a configured `cy-GB`, and `en-GB` in a configured `en`, which is how
-    * Play itself narrows a region.
+    * test instead. The block runs in the configured form of the language: a
+    * request for `cy` runs in `cy-GB` where that is what is configured, and a
+    * request for `en-GB` runs in `en` where only `en` is, which is how Play
+    * itself narrows a region.
     */
   def inLanguage[A](lang: Lang)(block: => A): A = {
     val chosen = configuredMessages(lang, messagesApiInstance).lang
