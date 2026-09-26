@@ -82,9 +82,11 @@ in the service's `conf/application.conf`; declare Welsh there, or through
 
 ## "No CSRF token was generated for this request"
 
-`TwirlSpec`'s `request` carries a CSRF token, so this comes from a request the
-spec built itself, usually a `fakeRequest` on a spec base that uses
-`TwirlSpecDsl`. Give it a token:
+`TwirlSpec`'s `request` carries a CSRF token whenever `play-filters-helpers` is
+on the classpath, as it is in any application built with the Play sbt plugin.
+So this comes either from a request the spec built itself, usually a
+`fakeRequest` on a spec base that uses `TwirlSpecDsl`, or from a project
+without that library. Give the request a token:
 
 ```scala
 implicit val fakeRequest: Request[AnyContentAsEmpty.type] =
@@ -96,8 +98,8 @@ field out, so a spec without a token renders a form a citizen never sees.
 
 ## A view needs an implicit the spec does not have
 
-`TwirlSpec` provides `messages`, `request` (with the language cookie and a
-CSRF token) and `messagesApi`. Anything else a view takes implicitly, such as
+`TwirlSpec` provides `messages`, `request` (with the language cookie and,
+where `play-filters-helpers` is present, a CSRF token) and `messagesApi`. Anything else a view takes implicitly, such as
 an `AppConfig`, the spec provides:
 
 ```scala

@@ -59,20 +59,30 @@ trait TwirlSpec extends TwirlSpecDsl { self: Suite with Alerting =>
   /** The English `Lang`, the base language for everything here. */
   val english: Lang = Lang("en")
 
-  /** Every language the application is configured for, English first. */
+  /** Every language the application is configured for, English first — `en` or
+    * a regional English such as `en-GB`.
+    */
   def languages: Seq[Lang] = {
     // Play's reference.conf always defines this, so there is no fallback to write.
     val configured =
       app.configuration.get[Seq[String]]("play.i18n.langs").map(Lang(_))
-    configured.sortBy(l => if (l.code == "en") 0 else 1)
+    configured.sortBy(l => if (l.language == "en") 0 else 1)
   }
 
-  private val currentLanguage = new DynamicVariable[Lang](english)
+  /** The block's language, once [[inLanguage]] has chosen one. */
+  private val currentLanguage = new DynamicVariable[Option[Lang]](None)
 
-  /** The language the current block runs in: [[english]] unless inside
-    * [[inLanguage]].
+  /** English as the application is configured for it: `en`, or `en-GB` where
+    * that is what `play.i18n.langs` declares.
     */
-  def currentLang: Lang = currentLanguage.value
+  private lazy val baseLanguage: Lang =
+    configuredMessages(english, messagesApiInstance).lang
+
+  /** The language the current block runs in: English unless inside
+    * [[inLanguage]], and always the configured form of it, so the page, its
+    * messages and the request's language cookie agree.
+    */
+  def currentLang: Lang = currentLanguage.value.getOrElse(baseLanguage)
 
   /** `Messages` for the current language, implicitly, so a view can be applied
     * directly.
@@ -83,11 +93,11 @@ trait TwirlSpec extends TwirlSpecDsl { self: Suite with Alerting =>
   /** A GET request carrying the language cookie for the current language,
     * implicitly, for a view that takes one.
     *
-    * It also carries a signed CSRF token, so a form renders its token field as
-    * it does in production: Play's `@helper.CSRF.formField` throws without one,
-    * and `formWithCSRF` leaves the field out. The token needs
-    * `play-filters-helpers`, which a Play application built with the Play sbt
-    * plugin has; without it the request carries no token.
+    * Where `play-filters-helpers` is on the classpath, as it is in a Play
+    * application built with the Play sbt plugin, it also carries a signed CSRF
+    * token, so a form renders its token field as it does in production: Play's
+    * `@helper.CSRF.formField` throws without one, and `formWithCSRF` leaves the
+    * field out. Without that library the request carries no token.
     */
   implicit def request: Request[AnyContentAsEmpty.type] =
     CsrfToken.add(
@@ -106,11 +116,13 @@ trait TwirlSpec extends TwirlSpecDsl { self: Suite with Alerting =>
     * The language must be one the application is configured for. Play would
     * otherwise render the first configured language in its place, and a Welsh
     * spec would pass on English text, so an unconfigured language fails the
-    * test instead.
+    * test instead. The block runs in the configured form of the language: `cy`
+    * in a configured `cy-GB`, and `en-GB` in a configured `en`, which is how
+    * Play itself narrows a region.
     */
   def inLanguage[A](lang: Lang)(block: => A): A = {
-    configuredMessages(lang, messagesApiInstance)
-    currentLanguage.withValue(lang)(block)
+    val chosen = configuredMessages(lang, messagesApiInstance).lang
+    currentLanguage.withValue(Some(chosen))(block)
   }
 
   /** Run the same block once per configured language. */

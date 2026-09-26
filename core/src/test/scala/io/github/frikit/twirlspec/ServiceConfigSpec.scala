@@ -110,5 +110,69 @@ class UnconfiguredLanguageSpec
     "leave a configured language alone" in {
       inEnglish(currentLang) mustBe english
     }
+
+    "narrow a region to the configured language, as Play does" in {
+      inLanguage(Lang("en-GB"))(currentLang) mustBe english
+    }
+  }
+}
+
+/** A suite whose application names its languages with regions, Welsh first. */
+class RegionalLanguagesSpec extends AnyWordSpec with Matchers with TwirlSpec {
+
+  override def applicationConfig: Map[String, Any] =
+    super.applicationConfig + ("play.i18n.langs" -> Seq("cy-GB", "en-GB"))
+
+  "regional languages" should {
+
+    "still put English first" in {
+      languages.map(_.code) mustBe Seq("en-GB", "cy-GB")
+    }
+
+    "run outside any block in the configured English" in {
+      currentLang mustBe Lang("en-GB")
+      request.cookies.get(messagesApi.langCookieName).map(_.value) mustBe Some(
+        "en-GB"
+      )
+    }
+
+    "satisfy a language without a region with its configured form" in {
+      inLanguage(Lang("cy"))(currentLang) mustBe Lang("cy-GB")
+      inLanguage(Lang("cy"))(
+        request.cookies.get(messagesApi.langCookieName).map(_.value)
+      ) mustBe Some("cy-GB")
+      renderIn(Lang("cy"))(_ => Html("<p>x</p>")).lang mustBe Lang("cy-GB")
+    }
+
+    "refuse a region that is not configured" in {
+      val e = the[IllegalArgumentException] thrownBy
+        inLanguage(Lang("en-US"))(())
+      e.getMessage must include(
+        "en-US is not a configured language (play.i18n.langs: cy-GB, en-GB)"
+      )
+    }
+  }
+}
+
+/** A suite whose application offers Welsh alone, so English, the base language,
+  * is not configured.
+  */
+class WelshOnlySpec extends AnyWordSpec with Matchers with TwirlSpec {
+
+  override def applicationConfig: Map[String, Any] =
+    super.applicationConfig + ("play.i18n.langs" -> Seq("cy"))
+
+  "an application without English" should {
+
+    "render Welsh when asked" in {
+      inLanguage(Lang("cy"))(currentLang) mustBe Lang("cy")
+    }
+
+    "say so rather than render Welsh as the English default" in {
+      val e = the[IllegalArgumentException] thrownBy currentLang
+      e.getMessage must include(
+        "en is not a configured language (play.i18n.langs: cy)"
+      )
+    }
   }
 }
