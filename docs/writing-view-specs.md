@@ -206,7 +206,7 @@ HTML:
 ```scala
 formValues("email" -> "ada@example.com", "country" -> "GB", "contact" -> "email")
 
-disabled("locked")                       // on itself, or through an enclosing fieldset
+disabled("locked")                       // on itself, or through an enclosing fieldset (not in its first legend)
 enabled("email")
 required("email")                        // required attribute or aria-required
 invalid("email")                         // aria-invalid
@@ -273,7 +273,8 @@ page.byId("value").attr("aria-describedby")
 page.summaryRows                         // (key, value, action texts)
 page.fieldErrors                         // field -> inline message
 page.errorSummaryLinks                   // (target id, text)
-page.formValues
+page.formValues                          // name -> value, the last one for a repeated name
+page.formSubmission                      // every (name, value) a browser would send, in order
 page.accessibleName(page.byId("submit")(0))
 page.outline                             // the skeleton, printable and stable enough to snapshot
 ```

@@ -118,10 +118,16 @@ final class Page(
     document.getAllElements.indexOf(e)
 
   /** Disabled as a browser sees it: on the control, or inherited from a
-    * fieldset.
+    * disabled fieldset — except inside that fieldset's first legend, which HTML
+    * leaves enabled so a legend can hold the control that switches the rest on.
     */
   def isDisabled(e: org.jsoup.nodes.Element): Boolean =
-    e.hasAttr("disabled") || Option(e.closest("fieldset[disabled]")).isDefined
+    e.hasAttr("disabled") || e.parents.asScala.exists(ancestor =>
+      ancestor.tagName() == "fieldset" && ancestor.hasAttr("disabled") &&
+        !ancestor.children.asScala
+          .find(_.tagName() == "legend")
+          .exists(legend => e.parents.contains(legend))
+    )
 
   /** The description an assistive technology reads after the name. */
   def accessibleDescription(e: org.jsoup.nodes.Element): String =
@@ -134,35 +140,64 @@ final class Page(
         .mkString(" ")
     )
 
-  /** Current value of every named control, as a browser would submit it. */
-  def formValues: Map[String, String] = {
-    val simple = document
-      .select(
-        "input:not([type=checkbox]):not([type=radio]):not([type=submit]):not([type=button]), textarea, select"
-      )
+  /** What a browser would submit for the controls on this page, as name and
+    * value pairs in document order.
+    *
+    * A checkbox or radio counts only when it is checked, and says `on` when it
+    * has no value. A select sends its selected options, and a single select
+    * with none marked sends the first option that is not disabled, which is
+    * what a browser shows as chosen. A disabled control sends nothing, and
+    * neither do buttons, reset controls or image inputs. A name can appear more
+    * than once, as a group of checkboxes does.
+    */
+  def formSubmission: Seq[(String, String)] =
+    document
+      .select("input, select, textarea")
       .asScala
       .toList
-      .filter(_.attr("name").nonEmpty)
-      .map { e =>
-        val v =
-          if (e.tagName() == "textarea") Text.normalise(e.text())
-          else if (e.tagName() == "select")
-            e.select("option[selected]")
-              .asScala
-              .headOption
-              .map(_.attr("value"))
-              .getOrElse("")
-          else e.attr("value")
-        e.attr("name") -> v
+      .filter(e => e.attr("name").nonEmpty && !isDisabled(e))
+      .flatMap { e =>
+        val name = e.attr("name")
+        e.tagName() match {
+          case "textarea" => List(name -> Text.normalise(e.text()))
+          case "select"   => selectedOptions(e).map(o => name -> optionValue(o))
+          case _          =>
+            e.attr("type").toLowerCase match {
+              case "checkbox" | "radio" =>
+                if (!e.hasAttr("checked")) Nil
+                else if (e.hasAttr("value")) List(name -> e.attr("value"))
+                else List(name -> "on")
+              case "submit" | "button" | "reset" | "image" => Nil
+              case _ => List(name -> e.attr("value"))
+            }
+        }
       }
-    val chosen = document
-      .select("input[type=checkbox][checked], input[type=radio][checked]")
-      .asScala
-      .toList
-      .filter(_.attr("name").nonEmpty)
-      .map(e => e.attr("name") -> e.attr("value"))
-    (simple ++ chosen).toMap
+
+  /** The value each name submits: [[formSubmission]] as a map, keeping the last
+    * value for a name that is submitted more than once.
+    */
+  def formValues: Map[String, String] = formSubmission.toMap
+
+  /** The options a select submits: the marked ones for a multiple select; for a
+    * single select the last marked one, or else the first a browser would pick.
+    * A disabled option, or one in a disabled group, is never submitted.
+    */
+  private def selectedOptions(select: org.jsoup.nodes.Element) = {
+    val options = select.select("option").asScala.toList
+    val usable = options.filterNot(o =>
+      o.hasAttr("disabled") || Option(o.closest("optgroup[disabled]")).isDefined
+    )
+    val marked = options.filter(_.hasAttr("selected"))
+    val displaySize = select.attr("size").trim.toIntOption.filter(_ > 0)
+    if (select.hasAttr("multiple")) marked.filter(usable.contains)
+    else if (marked.nonEmpty) marked.lastOption.filter(usable.contains).toList
+    else if (displaySize.forall(_ == 1)) usable.headOption.toList
+    else Nil
   }
+
+  /** An option's value, or its text where it has none. */
+  private def optionValue(o: org.jsoup.nodes.Element): String =
+    if (o.hasAttr("value")) o.attr("value") else o.text()
 
   /** The name an assistive technology would announce for an element. */
   def accessibleName(e: org.jsoup.nodes.Element): String =

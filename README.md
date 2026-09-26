@@ -269,7 +269,7 @@ need a browser.
 ```scala
 formValues("email" -> "ada@example.com", "country" -> "GB", "contact" -> "email")
 
-disabled("locked")     // including a control disabled by an ancestor fieldset
+disabled("locked")     // including a control disabled by an ancestor fieldset, outside its first legend
 enabled("email")
 required("email")      // required attribute or aria-required
 invalid("email")       // aria-invalid
@@ -277,6 +277,11 @@ describedAs("email", "signUp.email.hint")
 
 appearsBefore(".govuk-error-summary", "form")
 ```
+
+`formValues` reads the form the way a browser submits it: a select with nothing
+marked sends its first option, a disabled control sends nothing, and a checkbox
+group sends every ticked box, so `formValues("tick" -> "b")` passes when `b` is
+among them. `page.formSubmission` lists every name and value in order.
 
 `appearsBefore` is the one worth calling out: reading order is not cosmetic. An
 error summary announced after the form it describes is announced too late to be
@@ -430,7 +435,7 @@ listed again here.
 | `button` | The button with this id says this. |
 | `formPostsTo` | The form is a POST to this action. |
 | `formGetsFrom` | The form is a GET to this action. |
-| `formValues` | Every named control holds these values, as a browser would submit them. |
+| `formValues` | Each name submits this value, as a browser would submit the form; for a name submitted more than once, the value is among its values. |
 | `disabled` | The control is disabled, on itself or through an enclosing fieldset. |
 | `enabled` | This control is not disabled. |
 | `required` | This control is marked required. |
