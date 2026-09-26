@@ -42,6 +42,30 @@ object ExclusionsSpec {
 
   val silent: Reporter = new Reporter { def apply(event: Event): Unit = () }
 
+  /** A spec base on the DSL alone, with the lifecycle mixed in by hand. */
+  @DoNotDiscover
+  class DslInner
+      extends AnyWordSpec
+      with Matchers
+      with TwirlSpecDsl
+      with SuiteLifecycle {
+    implicit val messages: play.api.i18n.Messages =
+      new play.api.i18n.DefaultMessagesApi()
+        .preferred(Seq(play.api.i18n.Lang("en")))
+    @volatile var group: String = ""
+    @volatile var recorded: Boolean = false
+
+    "dsl inner" should {
+      "record what it touches" in {
+        val page = render(Html("""<p id="z">z</p>"""))
+        page.byId("z")
+        group = page.coverageGroup
+        recorded = CoverageRegistry.touched(group).contains("#z")
+        succeed
+      }
+    }
+  }
+
   /** A suite run by hand, to watch what it leaves behind. */
   @DoNotDiscover
   class Inner extends AnyWordSpec with Matchers with TwirlSpec {
@@ -143,6 +167,13 @@ class ExclusionsSpec extends AnyWordSpec with Matchers with TwirlSpec {
       inner.recorded mustBe true
       CoverageRegistry.touched(inner.group) mustBe empty
       ExclusionRegistry.unused(classOf[Inner].getName) mustBe empty
+    }
+
+    "clear them for a spec base on the DSL that mixes the lifecycle in" in {
+      val inner = new DslInner
+      inner.run(None, Args(silent)).succeeds() mustBe true
+      inner.recorded mustBe true
+      CoverageRegistry.touched(inner.group) mustBe empty
     }
 
     "clear them for a run of one named test too" in {

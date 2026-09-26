@@ -169,7 +169,7 @@ implicits and builds no application, so it cannot clash with the `messages`,
 `fakeRequest` or application you already have.
 
 ```scala
-trait ViewSpecBase extends AnyWordSpec with Matchers with GuiceOneAppPerSuite with TwirlSpecDsl
+trait ViewSpecBase extends AnyWordSpec with Matchers with GuiceOneAppPerSuite with TwirlSpecDsl with SuiteLifecycle
 ```
 
 **Greenfield.** Mix in `TwirlSpec` for the application, the implicits and

@@ -79,7 +79,7 @@ mix in `TwirlSpecDsl` rather than `TwirlSpec`. The DSL declares no implicits
 and builds no application, so nothing clashes:
 
 ```scala
-trait ViewSpecBase extends AnyWordSpec with Matchers with GuiceOneAppPerSuite with TwirlSpecDsl with GovukServiceChecks {
+trait ViewSpecBase extends AnyWordSpec with Matchers with GuiceOneAppPerSuite with TwirlSpecDsl with SuiteLifecycle with GovukServiceChecks {
   implicit val messages: Messages = ...   // yours, as before
 }
 ```

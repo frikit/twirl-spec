@@ -55,7 +55,7 @@ it cannot clash with yours; you pass your own `Messages` where the DSL needs
 them.
 
 ```scala
-trait ViewSpecBase extends AnyWordSpec with Matchers with GuiceOneAppPerSuite with TwirlSpecDsl
+trait ViewSpecBase extends AnyWordSpec with Matchers with GuiceOneAppPerSuite with TwirlSpecDsl with SuiteLifecycle
 ```
 
 Both work with ScalaTest's `must` and `should` matchers. The examples here use
