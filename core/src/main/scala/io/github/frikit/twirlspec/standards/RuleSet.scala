@@ -24,12 +24,30 @@ trait RuleSet {
   /** Every rule in this set, at its natural severity. */
   def all: Seq[Rule]
 
-  /** Every rule but the ones with these ids. */
-  def allExcept(ids: String*): Seq[Rule] =
-    all.filterNot(r => ids.toSet.contains(r.id))
+  /** Every rule but the ones with these ids, each of which must be in the set.
+    */
+  def allExcept(ids: String*): Seq[Rule] = {
+    requireKnown(ids)
+    all.filterNot(r => ids.contains(r.id))
+  }
 
-  /** Only the rules with these ids. */
-  def only(ids: String*): Seq[Rule] = all.filter(r => ids.toSet.contains(r.id))
+  /** Only the rules with these ids, each of which must be in the set. */
+  def only(ids: String*): Seq[Rule] = {
+    requireKnown(ids)
+    all.filter(r => ids.contains(r.id))
+  }
+
+  /** A misspelt id would select or exclude nothing without saying so, so it is
+    * refused, with the ids the set does have.
+    */
+  private def requireKnown(ids: Seq[String]): Unit = {
+    val unknown = ids.filterNot(id => all.exists(_.id == id)).distinct
+    if (unknown.nonEmpty)
+      throw new IllegalArgumentException(
+        s"${getClass.getSimpleName.stripSuffix("$")} has no rule " +
+          s"${unknown.mkString(", ")}; its rules are ${all.map(_.id).mkString(", ")}"
+      )
+  }
 
   /** This set, or any subset of it, as one expectation. */
   def expectation(rules: Seq[Rule] = all): Expectation = Rule.expectation(rules)

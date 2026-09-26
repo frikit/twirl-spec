@@ -31,8 +31,23 @@ When something was missed:
 
 Assertions are recorded by what they touch, not by the selector they used, so
 asserting `#action-list > *` does not count as asserting `#action-list`.
-Renders of the same view in different states add up: a spec that checks a
-valid form in one test and an invalid one in the next is measured as a whole.
+
+They count for the page they were made on: every render, in any test of the
+spec, that produces exactly that markup. A different view, or the same view in
+another state, is a different page with a record of its own, so asserting
+`#value` on the page with errors does not cover `#value` on the page without,
+and one view's assertions never pass another view that happens to share its
+ids. To measure a view's states as a whole, give them one name:
+
+```scala
+render(view(form)).coveredAs("name-page")
+render(view(form.bind(Map("value" -> "")))).coveredAs("name-page")
+```
+
+`TwirlSpec` starts each suite with an empty record and clears it when the
+suite finishes, so a spec run again in the same JVM cannot pass on what an
+earlier run asserted.
+
 Assertions made through the page model, `page.byId`, `page.css` and the
 component accessors, count the same as DSL expectations. Rule sets do not
 count: they sweep the whole page, and what they touch says nothing about what

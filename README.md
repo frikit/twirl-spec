@@ -738,9 +738,11 @@ already run.
 ```
 
 Assertions are recorded by what they touch, not by the selector they used, so
-asserting `#action-list > *` does not count as asserting `#action-list`. Renders
-of the same view in different states add up, so a spec that checks a valid form
-in one test and an invalid one in the next is measured as a whole.
+asserting `#action-list > *` does not count as asserting `#action-list`. They
+count for the page they were made on — every render of exactly that markup —
+so one view's assertions never pass another view that shares its ids. States of
+one view that should be measured as a whole share a name:
+`render(view(form)).coveredAs("name-page")`.
 
 Three things are adjustable, usually once on a project's spec base:
 

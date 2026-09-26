@@ -35,6 +35,30 @@ without its token, can fail after it.
   `scripts-are-deferred`, leaving alone the head scripts the selectors match.
 - `page.formSubmission`: every name and value a browser would submit, in
   document order, with a repeated name listed once per value.
+- `page.coveredAs(name)`: count the assertions on several pages of a spec as
+  one record, for the states of one view that should be measured as a whole.
+- `meetStandardsExcept(ruleIds, because = "...")`: an exclusion with its
+  reason, which a failure reports.
+- `unusedExclusions`: the rules a spec has excluded that found nothing on any
+  page they were excluded from, for a last test that keeps exclusions honest.
+
+### Changed
+
+- Coverage counts assertions for the page they were made on: every render of
+  exactly that markup, in any test of the spec. It used to pool every page a
+  spec rendered, so one view's assertions could pass `assertEverything` on
+  another view that shared its ids, or on a page the spec never asserted at
+  all. The states of one view are now separate records unless the spec names
+  them together with `coveredAs`, which a spec that relied on the pooling
+  needs to add.
+- `TwirlSpec` clears a spec's coverage and exclusion records when its suite
+  starts and when it finishes, so a spec run again in the same JVM cannot pass
+  on what an earlier run asserted.
+- The CSRF token is signed once for the run, so a view renders the same markup
+  each time it is rendered with the same arguments.
+- `meetStandardsExcept` fails on an id that names no rule the spec runs, and
+  `RuleSet.only` and `allExcept` throw on an id the set does not have. Each
+  used to exclude or select nothing without saying so.
 
 ### Fixed
 

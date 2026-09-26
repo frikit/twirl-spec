@@ -58,6 +58,27 @@ here hides the rule on every page it is applied to. `standardsExpectation` is
 the active set as one expectation, for asserting on the result rather than
 failing.
 
+An exclusion has to name a rule the spec runs: a misspelt id, or one for a
+module the spec does not mix in, fails the match rather than excluding
+nothing, and `only` and `allExcept` on a rule set refuse an id the set does not
+have. An exclusion can carry its reason, which a failure then reports:
+
+```scala
+page must meetStandardsExcept(Seq("one-h1"), because = "legacy page, see JIRA-123")
+```
+
+Exclusions outlive the fixes that make them unnecessary. The excluded rules
+still run, silently, and `unusedExclusions` names the ones that found nothing
+on any page they were excluded from. Asking it in a spec's last test keeps the
+exclusions honest; it knows only the tests that ran, so it belongs in a full
+run of the spec rather than a single test:
+
+```scala
+"need every exclusion it makes" in {
+  unusedExclusions mustBe empty
+}
+```
+
 ## Page-level rules and fragments
 
 Jsoup wraps every fragment in `<html><head><body>`, so a component rendered

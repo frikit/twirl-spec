@@ -60,6 +60,10 @@ class ServiceLanguagesSpec extends AnyWordSpec with Matchers with TwirlSpec {
       )
     }
 
+    "render the same token every time, so the same page renders the same markup" in {
+      render(csrfView()).source mustBe render(csrfView()).source
+    }
+
     "let a view render Play's CSRF field instead of throwing" in {
       render(csrfView())
         .css("input[type=hidden][name=csrfToken]")

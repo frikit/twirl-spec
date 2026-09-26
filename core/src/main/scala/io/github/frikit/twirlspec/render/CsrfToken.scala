@@ -56,8 +56,25 @@ private[twirlspec] object CsrfToken {
     * added and never on a classpath that lacks it.
     */
   private object Helper {
+
+    /** One token, signed once for the run. Play signs a fresh one per request,
+      * and a view rendered twice with the same arguments would then differ in
+      * its token field, so two renders of one page could not be recognised as
+      * the same page.
+      */
+    private lazy val token: play.filters.csrf.CSRF.Token =
+      play.filters.csrf.CSRF
+        .getToken(
+          play.api.test.CSRFTokenHelper
+            .addCSRFToken(play.api.test.FakeRequest())
+        )
+        .get
+
     def add[A](request: Request[A]): Request[A] =
-      play.api.test.CSRFTokenHelper.addCSRFToken(request)
+      request.addAttr(
+        play.filters.csrf.CSRF.Token.InfoAttr,
+        play.filters.csrf.CSRF.TokenInfo(token)
+      )
   }
 
 }
