@@ -74,8 +74,12 @@ import io.github.frikit.twirlspec.govuk.GovukChecks
 class MyViewSpec extends AnyWordSpec with Matchers with TwirlSpec with WcagChecks with GovukChecks
 ```
 
-`AllChecks`, from `twirl-spec-all`, is every trait at once. Without a rule
-trait, `display` checks exactly what you asked and nothing else.
+`AllChecks`, from `twirl-spec-all`, is every trait at once. For a GOV.UK
+transactional service, `GovukServiceChecks` is the better start: every trait,
+less the three rules about search results (`not-noindex`,
+`has-meta-description`, `title-is-concise`), which a service reached from
+GOV.UK would see warn on every page. Without a rule trait, `display` checks
+exactly what you asked and nothing else.
 
 ## 4. Write the first spec
 

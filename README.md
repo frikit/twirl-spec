@@ -486,6 +486,13 @@ project is only judged against what it actually uses.
 A rule is blocking unless marked a warning; warnings are reported on a green
 run too, and `failOnWarnings` promotes them. See [Failure output](#failure-output).
 
+`AllChecks` runs every set. A GOV.UK transactional service wants
+`GovukServiceChecks` instead: the same rules less
+`MetadataStandards.searchRules` — `not-noindex`, `has-meta-description` and
+`title-is-concise` — which would otherwise warn on every page of a service that
+is reached from GOV.UK, not from search, and titles its pages in the Design
+System's pattern.
+
 ### `WcagStandards`
 
 Accessibility: 21 rules each enforce a WCAG success criterion, and `one-h1` is a structural convention WCAG does not require but almost everyone wants.

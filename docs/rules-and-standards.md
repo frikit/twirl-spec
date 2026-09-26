@@ -19,6 +19,7 @@ Each module ships a trait. Mix it in and every `display(...)` runs its rules:
 | `AriaChecks` | `twirl-spec-aria` | `AriaStandards` |
 | `HtmlChecks` | `twirl-spec-html` | `HtmlStandards` |
 | `AllChecks` | `twirl-spec-all` | all of the above, plus `CoverageChecks`, `I18nChecks` and `MessagesMatchers` |
+| `GovukServiceChecks` | `twirl-spec-all` | `AllChecks` less `MetadataStandards.searchRules`, for a GOV.UK transactional service |
 
 The traits compose; `with WcagChecks with GovukChecks` runs both sets. They
 all work by extending `standardsRules`, so a spec can see or replace the

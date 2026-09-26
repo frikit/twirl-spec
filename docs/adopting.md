@@ -11,13 +11,14 @@ library replaces that scaffolding, and can do so gradually.
 ```scala
 package views
 
-import io.github.frikit.twirlspec.{AllChecks, TwirlSpec}
+import io.github.frikit.twirlspec.{GovukServiceChecks, TwirlSpec}
 import io.github.frikit.twirlspec.i18n.TranslationConfig
 import io.github.frikit.twirlspec.messages.MessagesIntegrity
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
-trait ViewSpecBase extends AnyWordSpec with Matchers with TwirlSpec with AllChecks {
+// every rule, less the search-result ones a GOV.UK service has no use for
+trait ViewSpecBase extends AnyWordSpec with Matchers with TwirlSpec with GovukServiceChecks {
 
   // the languages come from play.i18n.langs in conf/application.conf
 
@@ -78,7 +79,7 @@ mix in `TwirlSpecDsl` rather than `TwirlSpec`. The DSL declares no implicits
 and builds no application, so nothing clashes:
 
 ```scala
-trait ViewSpecBase extends AnyWordSpec with Matchers with GuiceOneAppPerSuite with TwirlSpecDsl with AllChecks {
+trait ViewSpecBase extends AnyWordSpec with Matchers with GuiceOneAppPerSuite with TwirlSpecDsl with GovukServiceChecks {
   implicit val messages: Messages = ...   // yours, as before
 }
 ```
@@ -106,7 +107,8 @@ tree, and a new spec can start loose and tighten:
 2. Add `WcagChecks`. Fix what it finds in the templates; it is usually labels
    and error-summary links. `meetStandardsExcept` and `displayOnly` are there
    for the page that genuinely cannot comply yet.
-3. Add the rest of the traits, or `AllChecks`.
+3. Add the rest of the traits, or `GovukServiceChecks` (`AllChecks` less the
+   search-result rules).
 4. Add `assertEverything` as the last test, and delete the assertions the
    coverage report shows to be redundant.
 5. Add the message-file checks once, in one spec, and
