@@ -30,14 +30,17 @@ jobs:
       - name: Check formatting and licence headers
         run: sbt scalafmtCheckAll scalafmtSbtCheck headerCheckAll
 
+      - name: Check the release plan
+        run: .github/scripts/test-release-plan.sh
+
       # The public API is stable within a major version, so every module has to
-      # stay binary compatible with the last release. A #major in any commit
-      # since then is what lets it change.
+      # stay binary compatible with the last release, unless the release this
+      # change would make is a major: the same plan release.yml publishes by.
       - name: Check binary compatibility with the last release
         run: |
-          last="$(git describe --tags --abbrev=0 --match 'v*' 2>/dev/null || true)"
-          if [ -n "$last" ] && git log --no-merges --format=%B "$last..HEAD" | grep -qi '#major'; then
-            echo "::notice::A commit since $last says #major, so the API may change."
+          bump="$(.github/scripts/release-plan.sh | sed -n 's/^bump=//p')"
+          if [ "$bump" = "major" ]; then
+            echo "::notice::The commits since the last release make a major, so the API may change."
           else
             sbt mimaReportBinaryIssues
           fi
