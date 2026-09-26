@@ -33,6 +33,35 @@ object PerformanceStandards extends RuleSet {
   /** Beyond this, an inline data URI or style block is worth extracting. */
   private val InlineBudgetBytes = 10000
 
+  /** `scripts-are-deferred`, leaving alone the head scripts these CSS selectors
+    * match: ones a platform puts in the head on purpose and a service cannot
+    * move, such as a consent script that has to run before any other. With no
+    * selectors it is the rule [[all]] carries.
+    */
+  def scriptsAreDeferredExcept(selectors: String*): Rule =
+    Rule(
+      "scripts-are-deferred",
+      "scripts in the head do not block rendering",
+      severity = Warning
+    ) { page =>
+      page.document
+        .select("head script[src]")
+        .asScala
+        .toList
+        .filterNot(e =>
+          e.hasAttr("defer") || e.hasAttr("async") || e.attr("type") == "module"
+        )
+        .filterNot(e => selectors.exists(e.is))
+        .map(e =>
+          Violation(
+            "scripts-are-deferred",
+            "a script in the head blocks rendering",
+            actual = Some(e.attr("src"))
+          ).warn
+            .withHint("add defer, or move it to the end of the body")
+        )
+    }
+
   lazy val all: Seq[Rule] = Seq(
     Rule(
       "images-have-dimensions",
@@ -53,27 +82,7 @@ object PerformanceStandards extends RuleSet {
           )
         )
     },
-    Rule(
-      "scripts-are-deferred",
-      "scripts in the head do not block rendering",
-      severity = Warning
-    ) { page =>
-      page.document
-        .select("head script[src]")
-        .asScala
-        .toList
-        .filterNot(e =>
-          e.hasAttr("defer") || e.hasAttr("async") || e.attr("type") == "module"
-        )
-        .map(e =>
-          Violation(
-            "scripts-are-deferred",
-            "a script in the head blocks rendering",
-            actual = Some(e.attr("src"))
-          ).warn
-            .withHint("add defer, or move it to the end of the body")
-        )
-    },
+    scriptsAreDeferredExcept(),
     Rule(
       "no-oversized-data-uri",
       "large assets are files, not attributes",

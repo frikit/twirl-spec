@@ -24,10 +24,15 @@ without its token, can fail after it.
   results. `has-meta-description` fires on every page the GOV.UK template
   renders, since the template writes no description; `title-is-concise` on
   most titles in the Design System's "Page - Service - GOV.UK" pattern; and
-  `not-noindex` on a service that keeps itself out of search on purpose.
-  `AllChecks` is unchanged.
+  `not-noindex` on a service that keeps itself out of search on purpose. Its
+  `scripts-are-deferred` also leaves alone the tracking-consent script
+  play-frontend-hmrc puts in the head wherever `tracking-consent-frontend` is
+  configured, which has to run first, and still reports the service's own
+  head scripts. `AllChecks` is unchanged.
 - `MetadataStandards.searchRules`, those three rules, for a spec base that
   picks its modules by hand and wants to leave them out too.
+- `PerformanceStandards.scriptsAreDeferredExcept(selectors*)`:
+  `scripts-are-deferred`, leaving alone the head scripts the selectors match.
 
 ### Fixed
 

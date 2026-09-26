@@ -86,12 +86,12 @@ exactly what you asked and nothing else.
 A GOV.UK question page with one text input:
 
 ```scala
-import io.github.frikit.twirlspec.{AllChecks, TwirlSpec}
+import io.github.frikit.twirlspec.{GovukServiceChecks, TwirlSpec}
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import views.html.WhatIsYourNameView
 
-class WhatIsYourNameViewSpec extends AnyWordSpec with Matchers with TwirlSpec with AllChecks {
+class WhatIsYourNameViewSpec extends AnyWordSpec with Matchers with TwirlSpec with GovukServiceChecks {
 
   private val view = inject[WhatIsYourNameView]
   private val form = inject[WhatIsYourNameFormProvider].apply()
@@ -181,7 +181,7 @@ needs to differ from the service goes through `applicationConfig`, usually once
 on a spec base:
 
 ```scala
-trait ViewSpecBase extends AnyWordSpec with Matchers with TwirlSpec with AllChecks {
+trait ViewSpecBase extends AnyWordSpec with Matchers with TwirlSpec with GovukServiceChecks {
   override def applicationConfig: Map[String, Any] =
     super.applicationConfig + ("some.feature.enabled" -> true)
 }
