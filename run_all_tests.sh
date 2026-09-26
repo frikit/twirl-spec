@@ -20,4 +20,4 @@ trap report EXIT
 # stops headerCreateAll rewriting an existing header after the licence changes.
 sbt clean headerCreateAll scalafmtSbt scalafmtAll
 sbt scalafmtCheckAll scalafmtSbtCheck headerCheckAll
-sbt coverage test coverageOff coverageReport dependencyUpdates
+sbt mimaReportBinaryIssues coverage test coverageOff coverageReport dependencyUpdates

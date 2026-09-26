@@ -1,0 +1,23 @@
+@this()
+@(form: Form[String])(implicit request: RequestHeader, messages: Messages)
+<!DOCTYPE html>
+<html lang="@messages.lang.code">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>@messages("name.heading") - @messages("service.name") - GOV.UK</title>
+</head>
+<body>
+<main id="main-content">
+  <h1 class="govuk-heading-l">@messages("name.heading")</h1>
+  @helper.form(action = Call("POST", "/name")) {
+    @helper.CSRF.formField
+    <div class="govuk-form-group">
+      <label class="govuk-label" for="value">@messages("name.heading")</label>
+      <input class="govuk-input" id="value" name="value" type="text" autocomplete="name">
+    </div>
+    <button type="submit" class="govuk-button" data-module="govuk-button">@messages("site.continue")</button>
+  }
+</main>
+</body>
+</html>

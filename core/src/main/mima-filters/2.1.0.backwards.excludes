@@ -1,0 +1,20 @@
+# TwirlSpec gained SuiteLifecycle, and with it ScalaTest's SuiteMixin, in 2.2.0.
+#
+# None of this breaks a suite compiled against 2.1.0. TwirlSpec's self-type
+# makes every class that mixes it in a Suite, so SuiteMixin's abstract methods
+# are always implemented; and such a class has no forwarder for the new run, so
+# its run still resolves to the Suite's own and the super accessor is never
+# called. It simply gains the lifecycle when it is next compiled.
+ProblemFilters.exclude[InheritedNewAbstractMethodProblem]("io.github.frikit.twirlspec.TwirlSpec.runNestedSuites(org.scalatest.Args)org.scalatest.Status")
+ProblemFilters.exclude[InheritedNewAbstractMethodProblem]("io.github.frikit.twirlspec.TwirlSpec.runTests(scala.Option,org.scalatest.Args)org.scalatest.Status")
+ProblemFilters.exclude[InheritedNewAbstractMethodProblem]("io.github.frikit.twirlspec.TwirlSpec.runTest(java.lang.String,org.scalatest.Args)org.scalatest.Status")
+ProblemFilters.exclude[InheritedNewAbstractMethodProblem]("io.github.frikit.twirlspec.TwirlSpec.suiteName()java.lang.String")
+ProblemFilters.exclude[InheritedNewAbstractMethodProblem]("io.github.frikit.twirlspec.TwirlSpec.suiteId()java.lang.String")
+ProblemFilters.exclude[InheritedNewAbstractMethodProblem]("io.github.frikit.twirlspec.TwirlSpec.testDataFor(java.lang.String,org.scalatest.ConfigMap)org.scalatest.TestData")
+ProblemFilters.exclude[InheritedNewAbstractMethodProblem]("io.github.frikit.twirlspec.TwirlSpec.testNames()scala.collection.immutable.Set")
+ProblemFilters.exclude[InheritedNewAbstractMethodProblem]("io.github.frikit.twirlspec.TwirlSpec.nestedSuites()scala.collection.immutable.IndexedSeq")
+ProblemFilters.exclude[InheritedNewAbstractMethodProblem]("io.github.frikit.twirlspec.TwirlSpec.tags()scala.collection.immutable.Map")
+ProblemFilters.exclude[InheritedNewAbstractMethodProblem]("io.github.frikit.twirlspec.TwirlSpec.expectedTestCount(org.scalatest.Filter)Int")
+ProblemFilters.exclude[InheritedNewAbstractMethodProblem]("io.github.frikit.twirlspec.TwirlSpec.rerunner()scala.Option")
+ProblemFilters.exclude[InheritedNewAbstractMethodProblem]("io.github.frikit.twirlspec.TwirlSpec.styleName()java.lang.String")
+ProblemFilters.exclude[InheritedNewAbstractMethodProblem]("io.github.frikit.twirlspec.TwirlSpec.io$github$frikit$twirlspec$SuiteLifecycle$$super$run(scala.Option,org.scalatest.Args)org.scalatest.Status")
