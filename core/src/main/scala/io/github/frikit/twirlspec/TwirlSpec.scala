@@ -23,7 +23,7 @@ import play.api.mvc.{AnyContentAsEmpty, Cookie, Request}
 import play.api.test.FakeRequest
 import play.twirl.api.Html
 import io.github.frikit.twirlspec.page.Page
-import io.github.frikit.twirlspec.render.SharedApplication
+import io.github.frikit.twirlspec.render.{CsrfToken, SharedApplication}
 
 import scala.reflect.ClassTag
 import scala.util.DynamicVariable
@@ -82,10 +82,19 @@ trait TwirlSpec extends TwirlSpecDsl { self: Suite with Alerting =>
 
   /** A GET request carrying the language cookie for the current language,
     * implicitly, for a view that takes one.
+    *
+    * It also carries a signed CSRF token, so a form renders its token field as
+    * it does in production: Play's `@helper.CSRF.formField` throws without one,
+    * and `formWithCSRF` leaves the field out. The token needs
+    * `play-filters-helpers`, which a Play application built with the Play sbt
+    * plugin has; without it the request carries no token.
     */
   implicit def request: Request[AnyContentAsEmpty.type] =
-    FakeRequest("GET", "/").withCookies(
-      Cookie(messagesApiInstance.langCookieName, currentLang.code)
+    CsrfToken.add(
+      FakeRequest("GET", "/").withCookies(
+        Cookie(messagesApiInstance.langCookieName, currentLang.code)
+      ),
+      CsrfToken.available
     )
 
   /** Run a block in English, whatever language the enclosing block is in. */
@@ -93,9 +102,16 @@ trait TwirlSpec extends TwirlSpecDsl { self: Suite with Alerting =>
 
   /** Render this block with `messages` and a request for the given language in
     * scope.
+    *
+    * The language must be one the application is configured for. Play would
+    * otherwise render the first configured language in its place, and a Welsh
+    * spec would pass on English text, so an unconfigured language fails the
+    * test instead.
     */
-  def inLanguage[A](lang: Lang)(block: => A): A =
+  def inLanguage[A](lang: Lang)(block: => A): A = {
+    configuredMessages(lang, messagesApiInstance)
     currentLanguage.withValue(lang)(block)
+  }
 
   /** Run the same block once per configured language. */
   def inEachLanguage(block: Lang => Unit): Unit =

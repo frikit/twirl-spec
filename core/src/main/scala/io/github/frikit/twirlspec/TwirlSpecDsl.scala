@@ -40,12 +40,38 @@ trait TwirlSpecDsl
   def render(html: Html, lang: Lang, messages: Messages): Page =
     Page(html, lang, messages).belongingTo(getClass.getName)
 
-  /** Render the same view in a given language. */
+  /** Render the same view in a given language, which must be one the
+    * application is configured for.
+    */
   def renderIn(
       lang: Lang
   )(html: Messages => Html)(implicit messagesApi: MessagesApi): Page = {
-    val messages = messagesApi.preferred(Seq(lang))
+    val messages = configuredMessages(lang, messagesApi)
     Page(html(messages), lang, messages).belongingTo(getClass.getName)
+  }
+
+  /** `Messages` for a language, refusing the fallback Play makes when the
+    * language is not configured. Play would hand back the first configured
+    * language instead, and a spec meant for Welsh would pass on English text.
+    */
+  private[twirlspec] def configuredMessages(
+      lang: Lang,
+      messagesApi: MessagesApi
+  ): Messages = {
+    val messages = messagesApi.preferred(Seq(lang))
+    if (messages.lang.language != lang.language) {
+      val configured = messagesApi.messages.keySet
+        .filterNot(_.startsWith("default"))
+        .toList
+        .sorted
+        .mkString(", ")
+      throw new IllegalArgumentException(
+        s"${lang.code} is not a configured language (play.i18n.langs: $configured), " +
+          s"so Play would render ${messages.lang.code} in its place. Declare it in " +
+          "conf/application.conf, or through applicationConfig."
+      )
+    }
+    messages
   }
 
   /** Text expectations take message keys by default; wrap a string in `literal`

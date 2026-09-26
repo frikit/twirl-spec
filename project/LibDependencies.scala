@@ -34,7 +34,15 @@ object LibDependencies {
     "org.scalatest" %% "scalatest" % scalatestVersion
   )
 
-  val core: Seq[ModuleID] = shared :+ ("org.jsoup" % "jsoup" % jsoupVersion)
+  /** The core also signs a CSRF token onto the request `TwirlSpec` renders
+    * with, using `play-filters-helpers`, which a Play application built with
+    * the Play sbt plugin already has. `TwirlSpec` checks for it before using
+    * it.
+    */
+  val core: Seq[ModuleID] = shared ++ Seq(
+    "org.playframework" %% "play-filters-helpers" % playVersion % Provided,
+    "org.jsoup" % "jsoup" % jsoupVersion
+  )
 
   val rules: Seq[ModuleID] = shared
   val messages: Seq[ModuleID] = shared

@@ -18,9 +18,7 @@ import org.scalatest.wordspec.AnyWordSpec
 
 trait ViewSpecBase extends AnyWordSpec with Matchers with TwirlSpec with AllChecks {
 
-  // the languages the service renders in
-  override def applicationConfig: Map[String, Any] =
-    super.applicationConfig + ("play.i18n.langs" -> Seq("en", "cy"))
+  // the languages come from play.i18n.langs in conf/application.conf
 
   // what every page inherits from the layout, so coverage does not ask each spec for it
   override def coverageIgnored: Set[String] = Set("#report-technical-issue", "#hmrc-timeout")
@@ -87,6 +85,11 @@ messages)` takes explicit ones for another language. The one thing
 `TwirlSpecDsl` cannot offer is `inLanguage` and `renderInEachLanguage`, which
 need the application; build the pages for each language yourself and pass
 them to `translateConsistently`.
+
+The request is the spec base's own too. Most existing spec bases already build
+it with `withCSRFToken`; keep that, because a view that renders
+`CSRF.formField` throws without a token, and `formWithCSRF` quietly renders a
+form with no token field.
 
 ## Adopting one view at a time
 

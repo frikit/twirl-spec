@@ -25,12 +25,17 @@ import play.api.inject.guice.GuiceApplicationBuilder
 object SharedApplication {
 
   /** Configuration every view test wants: no metrics, no auditing, no CSP
-    * nonce. Languages are the service's to declare.
+    * nonce.
+    *
+    * Languages are deliberately absent. They are the service's to declare, and
+    * it already has: `play.i18n.langs` in its `conf/application.conf`, or
+    * Play's own default of `en` where it says nothing. A value here would
+    * override the service's file, and every Welsh spec would then render in
+    * English and pass.
     */
   val viewTestDefaults: Map[String, Any] = Map(
     "metrics.enabled" -> false,
     "auditing.enabled" -> false,
-    "play.i18n.langs" -> Seq("en"),
     "play.filters.csp.nonce.enabled" -> false
   )
 
