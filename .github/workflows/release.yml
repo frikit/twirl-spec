@@ -1,12 +1,15 @@
 name: Release
 
-# Every push to main is a release. The commit is tagged with the next version,
-# published to Maven Central through the Sonatype Central Portal, and given a
-# GitHub Release whose notes are generated from the commits since the last one.
+# Every push to main is a release, unless every commit since the last release
+# asks for none. The commit is tagged with the next version, published to Maven
+# Central through the Sonatype Central Portal, and given a GitHub Release whose
+# notes are the version's section of CHANGELOG.md.
 #
-# The bump is a patch unless the commit message says otherwise: a message
-# containing "#minor" bumps the minor version, "#major" the major. With no tag
-# in the repository yet, the first release is v1.0.0.
+# What to release is read from every commit since the last release, by
+# .github/scripts/release-plan.sh, from each commit's subject line: the bump is
+# a patch unless a subject says #minor or #major, the highest winning, and the
+# push releases nothing when every subject says [skip release]. With no tag in
+# the repository yet, the first release is v1.0.0.
 #
 # The four secrets carry the same names as in frikit/krandom, so the same values
 # serve both repositories.
@@ -21,27 +24,38 @@ concurrency:
   group: release
   cancel-in-progress: false
 
+permissions:
+  contents: read
+
 jobs:
   verify:
     uses: ./.github/workflows/ci.yml
 
   release:
     needs: verify
+    # A manual run on another branch must not tag and publish unmerged code.
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: write # to push the tag and create the GitHub Release
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 0 # dynver and the bump need every tag
+          fetch-depth: 0 # the plan and dynver need every tag
 
-      # Two reasons not to release: the repository is not set up for it, or the
-      # commit says it changes nothing a user could depend on. A version on Maven
-      # Central can never be taken back or altered, so a workflow or documentation
-      # change should not have to spend one.
+      - name: Plan the release
+        id: plan
+        run: .github/scripts/release-plan.sh | tee -a "$GITHUB_OUTPUT"
+
+      # Reasons not to publish: this commit is already a release (a re-run, or
+      # a manual run on a released commit), every commit asks for no release,
+      # or the repository is not set up to publish. A version on Maven Central
+      # can never be taken back or altered, so none of these may spend one.
       #
       # All four secrets are required, not some: a half-configured repository
-      # would otherwise fail deep inside sbt with a message about something else.
+      # would otherwise fail deep inside sbt with a message about something
+      # else. Their absence fails the run here, where a green run that
+      # published nothing would pass unnoticed, and is only a notice in a fork.
       - name: Decide whether to release
         id: guard
         env:
@@ -49,17 +63,42 @@ jobs:
           CENTRAL_PORTAL_PASSWORD: ${{ secrets.CENTRAL_PORTAL_PASSWORD }}
           GPG_SIGNING_KEY: ${{ secrets.GPG_SIGNING_KEY }}
           GPG_SIGNING_PASSWORD: ${{ secrets.GPG_SIGNING_PASSWORD }}
+          SKIP: ${{ steps.plan.outputs.skip }}
         run: |
-          if [ "$GITHUB_EVENT_NAME" = "push" ] &&
-             git log -1 --pretty=%B | grep -qiF '[skip release]'; then
-            echo "::notice::The commit asks for no release; verified only."
+          set -euo pipefail
+          tagged="$(git tag --points-at HEAD --list 'v*' | head -n 1)"
+          echo "tagged=$tagged" >> "$GITHUB_OUTPUT"
+          if [ -n "$tagged" ]; then
+            echo "::notice::This commit is already released as $tagged; its GitHub Release is made sure of, and nothing is published."
+            echo "release=false" >> "$GITHUB_OUTPUT"
+          elif [ "$GITHUB_EVENT_NAME" = "push" ] && [ "$SKIP" = "true" ]; then
+            echo "::notice::Every commit since the last release says [skip release]; verified only."
             echo "release=false" >> "$GITHUB_OUTPUT"
           elif [ -z "$CENTRAL_PORTAL_USERNAME" ] || [ -z "$CENTRAL_PORTAL_PASSWORD" ] ||
                [ -z "$GPG_SIGNING_KEY" ] || [ -z "$GPG_SIGNING_PASSWORD" ]; then
+            if [ "$GITHUB_REPOSITORY" = "frikit/twirl-spec" ]; then
+              echo "::error::The publishing secrets are missing, so this release cannot be published."
+              exit 1
+            fi
             echo "::notice::Publishing secrets are not configured; verified but not released."
             echo "release=false" >> "$GITHUB_OUTPUT"
           else
             echo "release=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # The GitHub Release's notes are the changelog's section for the version,
+      # and a forgotten #minor or #major would publish the wrong number for
+      # good, so the newest section has to name the version being released.
+      - name: Check the changelog names this version
+        if: steps.guard.outputs.release == 'true'
+        env:
+          NEXT: ${{ steps.plan.outputs.next }}
+        run: |
+          set -euo pipefail
+          newest="$(grep -m1 -oE '^## \[[0-9]+\.[0-9]+\.[0-9]+\]' CHANGELOG.md || true)"
+          if [ "$newest" != "## [${NEXT#v}]" ]; then
+            echo "::error::This release is ${NEXT#v}, but the changelog's newest section is '${newest:-none}'. Add a '## [${NEXT#v}] - date' section, or mark the commits #minor or #major."
+            exit 1
           fi
 
       # sbt-ci-release wants the signing key base64-encoded; Gradle's
@@ -93,34 +132,29 @@ jobs:
       # The tag is made here but pushed only after publishing has succeeded, so a
       # failed publish leaves nothing behind and the next attempt computes the same
       # version again.
-      - name: Work out the next version and tag it
+      - name: Tag the version
         if: steps.guard.outputs.release == 'true'
-        id: version
+        env:
+          NEXT: ${{ steps.plan.outputs.next }}
+          LAST: ${{ steps.plan.outputs.last }}
         run: |
           set -euo pipefail
-          last="$(git tag --list 'v*' --sort=-v:refname | head -n 1)"
-          if [ -z "$last" ]; then
-            next="v1.0.0"
-          else
-            IFS=. read -r major minor patch <<< "${last#v}"
-            message="$(git log -1 --pretty=%B)"
-            if   grep -qi '#major' <<< "$message"; then next="v$((major + 1)).0.0"
-            elif grep -qi '#minor' <<< "$message"; then next="v$major.$((minor + 1)).0"
-            else                                          next="v$major.$minor.$((patch + 1))"
-            fi
-          fi
-          echo "previous: ${last:-none}   next: $next"
+          echo "previous: ${LAST:-none}   next: $NEXT"
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag -a "$next" -m "Release $next"
-          echo "tag=$next" >> "$GITHUB_OUTPUT"
-          echo "previous=${last:-}" >> "$GITHUB_OUTPUT"
+          git tag -a "$NEXT" -m "Release $NEXT"
 
-      # sbt-ci-release publishes a stable release only when GITHUB_REF names a tag.
-      # The runner sets it to the branch, because the tag above was made in this
-      # job rather than pushed, so the sbt process is handed the tag instead. The
-      # plugin exits 0 when it decides there is nothing to publish; that is an
-      # error here, not a green run.
+      # A re-run after publishing succeeded but the tag push did not finds the
+      # version on Central already, and goes straight on to the tag and the
+      # release. Central refuses a version it already holds, so a re-run that
+      # races Central's own sync fails rather than publishing twice; run it
+      # again once the version shows on repo1.
+      #
+      # sbt-ci-release publishes a stable release only when GITHUB_REF names a
+      # tag. The runner sets it to the branch, because the tag above was made in
+      # this job rather than pushed, so the sbt process is handed the tag
+      # instead. The plugin exits 0 when it decides there is nothing to publish;
+      # that is an error here, not a green run.
       - name: Publish to Maven Central
         if: steps.guard.outputs.release == 'true'
         env:
@@ -128,26 +162,37 @@ jobs:
           SONATYPE_PASSWORD: ${{ secrets.CENTRAL_PORTAL_PASSWORD }}
           PGP_PASSPHRASE: ${{ secrets.GPG_SIGNING_PASSWORD }}
           # PGP_SECRET comes from the step above, via GITHUB_ENV
-          RELEASE_TAG: ${{ steps.version.outputs.tag }}
+          RELEASE_TAG: ${{ steps.plan.outputs.next }}
         run: |
           set -euo pipefail
+          version="${RELEASE_TAG#v}"
+          pom="https://repo1.maven.org/maven2/io/github/frikit/twirl-spec-core_3/$version/twirl-spec-core_3-$version.pom"
+          if curl -sfI "$pom" > /dev/null; then
+            echo "::notice::$version is already on Maven Central; it is tagged and released without publishing again."
+            exit 0
+          fi
           GITHUB_REF="refs/tags/$RELEASE_TAG" sbt ci-release | tee ci-release.log
           if grep -q 'doing nothing' ci-release.log; then
             echo "::error::sbt ci-release decided not to publish; its reason is in the output above"
             exit 1
           fi
 
-      - name: Push the tag and create the GitHub Release
+      - name: Push the tag
         if: steps.guard.outputs.release == 'true'
         env:
+          RELEASE_TAG: ${{ steps.plan.outputs.next }}
+        # --no-verify: the pre-push hook would otherwise run the whole suite
+        # again here, after publishing, when the checks have already passed.
+        run: git push --no-verify origin "$RELEASE_TAG"
+
+      - name: Make sure the GitHub Release exists
+        if: steps.guard.outputs.release == 'true' || steps.guard.outputs.tagged != ''
+        env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ steps.version.outputs.tag }}
-          PREVIOUS_TAG: ${{ steps.version.outputs.previous }}
+          RELEASE_TAG: ${{ steps.guard.outputs.tagged || steps.plan.outputs.next }}
         run: |
           set -euo pipefail
-          # --no-verify: the pre-push hook would otherwise run the whole suite
-          # again here, after publishing, when the checks have already passed.
-          git push --no-verify origin "$RELEASE_TAG"
+          previous="$(git describe --tags --abbrev=0 --match 'v*' "$RELEASE_TAG^" 2>/dev/null || true)"
 
           # The notes are the changelog's section for this version when it has
           # one. GitHub's generated notes list pull requests, and a push straight
@@ -160,7 +205,7 @@ jobs:
           ' CHANGELOG.md > release-notes.md
           if [ -s release-notes.md ]; then
             printf '\n**Full Changelog**: https://github.com/%s/compare/%s...%s\n' \
-              "$GITHUB_REPOSITORY" "${PREVIOUS_TAG:-$RELEASE_TAG}" "$RELEASE_TAG" >> release-notes.md
+              "$GITHUB_REPOSITORY" "${previous:-$RELEASE_TAG}" "$RELEASE_TAG" >> release-notes.md
             notes=(--notes-file release-notes.md)
           else
             notes=(--generate-notes)

@@ -20,4 +20,10 @@ trap report EXIT
 # stops headerCreateAll rewriting an existing header after the licence changes.
 sbt clean headerCreateAll scalafmtSbt scalafmtAll
 sbt scalafmtCheckAll scalafmtSbtCheck headerCheckAll
-sbt mimaReportBinaryIssues coverage test coverageOff coverageReport dependencyUpdates
+
+# Binary compatibility with the last release is required unless the commits
+# since then make a major, the same plan CI and the release go by.
+.github/scripts/test-release-plan.sh > /dev/null
+mima="mimaReportBinaryIssues"
+if [ "$(.github/scripts/release-plan.sh | sed -n 's/^bump=//p')" = "major" ]; then mima=""; fi
+sbt $mima coverage test coverageOff coverageReport dependencyUpdates

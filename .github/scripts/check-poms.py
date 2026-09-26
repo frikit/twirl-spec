@@ -17,28 +17,50 @@ import xml.etree.ElementTree as ET
 
 MODULES = 9
 NS = {"m": "http://maven.apache.org/POM/4.0.0"}
+PLAY = "3.0.0"
 PROVIDED = {"play_3", "play-test_3", "play-guice_3", "play-filters-helpers_3"}
+
+# What every module's POM must declare, and what the core's must declare as
+# well: (group, artifact) -> (scope, version, or None for any version).
+EVERY_MODULE = {
+    ("org.playframework", "play_3"): ("provided", PLAY),
+    ("org.playframework", "play-test_3"): ("provided", PLAY),
+    ("org.playframework", "play-guice_3"): ("provided", PLAY),
+    ("org.scalatest", "scalatest_3"): ("compile", None),
+}
+CORE_ONLY = {
+    ("org.playframework", "play-filters-helpers_3"): ("provided", PLAY),
+    ("org.playframework.twirl", "twirl-api_3"): ("compile", "2.0.1"),
+    ("org.jsoup", "jsoup"): ("compile", None),
+}
 
 
 def problems_in(path):
     found = []
     root = ET.parse(path).getroot()
+    declared = {}
     for dep in root.findall("m:dependencies/m:dependency", NS):
         group = dep.findtext("m:groupId", "", NS)
         artifact = dep.findtext("m:artifactId", "", NS)
         version = dep.findtext("m:version", "", NS)
         scope = dep.findtext("m:scope", "compile", NS)
+        declared[(group, artifact)] = (scope, version)
         name = f"{group}:{artifact}:{version} ({scope})"
-        if group == "org.playframework" and artifact in PROVIDED and scope != "provided":
-            found.append(f"{name} should be provided")
-        if group == "org.playframework.twirl" and artifact == "twirl-api_3" and (
-            scope != "compile" or version != "2.0.1"
-        ):
-            found.append(f"{name} should be a compile dependency at 2.0.1")
+        if group == "org.playframework" and artifact in PROVIDED and (scope != "provided" or version != PLAY):
+            found.append(f"{name} should be provided at {PLAY}")
         if group == "org.scala-lang" and artifact == "scala3-library_3" and not version.startswith("3.3."):
             found.append(f"{name} should be on the 3.3 LTS line")
         if scope == "test":
             found.append(f"{name} is a test dependency in a published POM")
+    required = dict(EVERY_MODULE)
+    if "/twirl-spec-core_3-" in path.replace("\\", "/"):
+        required.update(CORE_ONLY)
+    for (group, artifact), (scope, version) in required.items():
+        got = declared.get((group, artifact))
+        if got is None:
+            found.append(f"{group}:{artifact} is missing")
+        elif got[0] != scope or (version is not None and got[1] != version):
+            found.append(f"{group}:{artifact} is {got[1]} ({got[0]}), should be {version or 'any'} ({scope})")
     return found
 
 
