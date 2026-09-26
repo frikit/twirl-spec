@@ -183,8 +183,10 @@ trait ViewSpecBase extends AnyWordSpec with Matchers with TwirlSpec with AllChec
 }
 ```
 
-The implicit `request` carries the language cookie and a signed CSRF token, so
-a form renders its token field as it does in production.
+The implicit `request` carries the language cookie and, where
+`play-filters-helpers` is on the classpath (it is in any application built with
+the Play sbt plugin), a signed CSRF token, so a form renders its token field as
+it does in production.
 
 Anything else the views need at construction, such as an `AppConfig`, comes
 from `inject[AppConfig]` and is passed to the view, or declared implicit in the

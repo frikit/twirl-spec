@@ -47,30 +47,40 @@ trait TwirlSpecDsl
       lang: Lang
   )(html: Messages => Html)(implicit messagesApi: MessagesApi): Page = {
     val messages = configuredMessages(lang, messagesApi)
-    Page(html(messages), lang, messages).belongingTo(getClass.getName)
+    Page(html(messages), messages.lang, messages).belongingTo(getClass.getName)
   }
 
   /** `Messages` for a language, refusing the fallback Play makes when the
     * language is not configured. Play would hand back the first configured
     * language instead, and a spec meant for Welsh would pass on English text.
+    *
+    * Play matches a language the way RFC 4647 lookup does: it narrows a request
+    * (`en-GB` finds a configured `en`) but never widens one (`cy` does not find
+    * `cy-GB`). So a request without a region is first pointed at the configured
+    * form of its language, and then whatever Play settles on is accepted as
+    * long as it is the language asked for. The `Messages` returned are for the
+    * configured form, so a caller can render and label the page in it.
     */
   private[twirlspec] def configuredMessages(
       lang: Lang,
       messagesApi: MessagesApi
   ): Messages = {
-    val messages = messagesApi.preferred(Seq(lang))
-    if (messages.lang.language != lang.language) {
-      val configured = messagesApi.messages.keySet
-        .filterNot(_.startsWith("default"))
-        .toList
-        .sorted
-        .mkString(", ")
+    val configured = messagesApi.messages.keySet
+      .filterNot(_.startsWith("default"))
+      .toList
+      .sorted
+      .map(Lang(_))
+    val target =
+      if (lang.country.nonEmpty || configured.contains(lang)) lang
+      else configured.find(_.language == lang.language).getOrElse(lang)
+    val messages = messagesApi.preferred(Seq(target))
+    if (messages.lang.language != lang.language)
       throw new IllegalArgumentException(
-        s"${lang.code} is not a configured language (play.i18n.langs: $configured), " +
-          s"so Play would render ${messages.lang.code} in its place. Declare it in " +
+        s"${lang.code} is not a configured language (play.i18n.langs: " +
+          s"${configured.map(_.code).mkString(", ")}), so Play would render " +
+          s"${messages.lang.code} in its place. Declare it in " +
           "conf/application.conf, or through applicationConfig."
       )
-    }
     messages
   }
 

@@ -27,7 +27,13 @@ without its token, can fail after it.
   declares, and `applicationConfig` can still change them for the specs.
 - A language the application is not configured for is refused. `inLanguage`
   and `renderIn` fail, naming the configured languages, instead of letting
-  Play render the first configured language in its place.
+  Play render the first configured language in its place. Regions follow
+  Play's own lookup, which narrows `en-GB` to a configured `en`; a language
+  asked for without a region is also found in its configured regional form
+  (`cy` in `cy-GB`), which that lookup alone would miss. The page, its
+  messages and the request's language cookie then all use the configured
+  form, and `languages` puts a regional English such as `en-GB` first, as it
+  did `en`.
 - `TwirlSpec`'s request carries a signed CSRF token. A view that renders
   Play's `@helper.CSRF.formField` threw "No CSRF token was generated for this
   request", and play-frontend-hmrc's `formWithCSRF` left the token field out,

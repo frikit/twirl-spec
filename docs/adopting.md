@@ -12,6 +12,7 @@ library replaces that scaffolding, and can do so gradually.
 package views
 
 import io.github.frikit.twirlspec.{AllChecks, TwirlSpec}
+import io.github.frikit.twirlspec.i18n.TranslationConfig
 import io.github.frikit.twirlspec.messages.MessagesIntegrity
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
@@ -37,6 +38,8 @@ trait ViewSpecBase extends AnyWordSpec with Matchers with TwirlSpec with AllChec
 A view spec then reads like the page:
 
 ```scala
+import play.api.i18n.Lang
+
 class WhatIsYourNameViewSpec extends ViewSpecBase {
 
   private val view = inject[WhatIsYourNameView]
