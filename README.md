@@ -22,9 +22,10 @@ class SignUpViewSpec extends AnyWordSpec with Matchers with TwirlSpec {
 }
 ```
 
-With the `twirl-spec-wcag` module mixed in, that block also runs 29
-accessibility, rendering and safety rules over the page. You do not list them, switch
-them on, or maintain them.
+Mix in `WcagChecks`, from the `twirl-spec-wcag` module, and that block also runs
+29 accessibility, rendering and safety rules over the page — or `GovukServiceChecks`
+for every rule a GOV.UK service wants. You do not list them, switch them on, or
+maintain them.
 
 [![Release](https://github.com/frikit/twirl-spec/actions/workflows/release.yml/badge.svg)](https://github.com/frikit/twirl-spec/actions/workflows/release.yml)
 [![Maven Central](https://img.shields.io/maven-central/v/io.github.frikit/twirl-spec-core_3)](https://central.sonatype.com/artifact/io.github.frikit/twirl-spec-core_3)

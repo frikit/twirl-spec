@@ -193,8 +193,9 @@ the branch, so the workflow hands the sbt process the tag it has just made.
 ### Secrets
 
 Four repository secrets, named as in `frikit/krandom` so the same values serve
-both. Until all four are present, a push is verified but not released, with a
-notice rather than a failure.
+both. On this repository a release fails when any of the four is missing, so a
+run that publishes nothing cannot pass unnoticed. A fork without them verifies
+each push and publishes nothing, with a notice rather than a failure.
 
 | Secret | What it is |
 |---|---|
@@ -224,7 +225,10 @@ gpg --keyserver keyserver.ubuntu.com --send-keys <KEY_ID>      # Central checks 
 ```
 
 A release can also be started by hand from the Actions tab (`workflow_dispatch`)
-on `main`, without a code change.
+on `main`, without a code change: it publishes the commits since the last
+release even where each of them says `[skip release]`. On a commit that is
+already a release it publishes nothing and only makes sure of its GitHub
+Release.
 
 ## Continuity
 

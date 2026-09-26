@@ -5,8 +5,8 @@ All notable changes to this project are recorded here. The format follows
 [Semantic Versioning](https://semver.org/) from 1.0.0 — see *Versioning* in the
 README for what a minor release may and may not do.
 
-Every push to `main` is a release, and each one has a GitHub Release whose
-notes are its section here. Every release on the current major line is
+Every push to `main` that changes something a user could depend on is a
+release, and each one has a GitHub Release whose notes are its section here. Every release on the current major line is
 recorded in full; earlier lines are kept to one entry each, so the file stays
 readable.
 
@@ -70,10 +70,11 @@ Fixed sections say how.
 - The README says what is supported: any Scala 3.3.0 or later, tested on
   3.3.0, 3.3.6, 3.3.7 and 3.9.0. It used to say a project below 3.3.8 could
   not use the library, which was never so.
-- Every release is held to binary compatibility with the one before it, and CI
-  runs a Play service's view specs against the published artifacts, on Scala
-  3.3.7 with Play 3.0.10 and on Scala 3.9.0 with Play 3.0.11. New rules will
-  arrive as warnings first, and be made blocking in a later minor.
+- Every release within a major line is held to binary compatibility with the
+  one before it, and CI runs a Play service's view specs against the published
+  artifacts, on Scala 3.3.7 with Play 3.0.10 and on Scala 3.9.0 with Play
+  3.0.11. New rules will arrive as warnings first, and be made blocking in a
+  later minor.
 
 ### Fixed
 
