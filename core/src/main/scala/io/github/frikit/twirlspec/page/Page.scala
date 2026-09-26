@@ -162,7 +162,7 @@ final class Page(
       .select("input[type=radio][checked]")
       .asScala
       .toList
-      .groupBy(r => (Option(r.closest("form")), r.attr("name")))
+      .groupBy(r => (formOwner(r), r.attr("name")))
       .values
       .map(_.last)
       .toSet
@@ -190,6 +190,18 @@ final class Page(
         }
       }
   }
+
+  /** The form a control belongs to. A `form` attribute names it by id, and then
+    * it is that form or, where the id names no form, none at all; without one
+    * it is the form the control sits in.
+    */
+  private def formOwner(
+      e: org.jsoup.nodes.Element
+  ): Option[org.jsoup.nodes.Element] =
+    if (e.hasAttr("form"))
+      Option(document.getElementById(e.attr("form")))
+        .filter(_.tagName() == "form")
+    else Option(e.closest("form"))
 
   /** What a checked box or radio submits: its value, or `on` without one. */
   private def checkedValue(e: org.jsoup.nodes.Element): String =

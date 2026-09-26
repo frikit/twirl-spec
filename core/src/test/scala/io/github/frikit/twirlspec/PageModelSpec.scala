@@ -121,6 +121,26 @@ class PageModelSpec extends AnyWordSpec with Matchers with TwirlSpec {
       twoForms.formSubmission mustBe Seq("size" -> "s", "size" -> "l")
     }
 
+    "group radios by the form they belong to, which a form attribute can name" in {
+      val owners = render(
+        Html(
+          """<form id="a"></form><form id="b"></form><div id="not-a-form"></div>
+            |<input type="radio" name="size" value="s" form="a" checked>
+            |<input type="radio" name="size" value="m" form="b" checked>
+            |<form id="c"><input type="radio" name="size" value="l" form="a" checked></form>
+            |<input type="radio" name="pick" value="x" form="not-a-form" checked>
+            |<input type="radio" name="pick" value="y" form="missing" checked>""".stripMargin
+        )
+      )
+      // s and l both belong to form a, so only l survives; m belongs to b; the
+      // two picks name no form, so they share the formless group.
+      owners.formSubmission mustBe Seq(
+        "size" -> "m",
+        "size" -> "l",
+        "pick" -> "y"
+      )
+    }
+
     "keep the last value per name in formValues" in {
       form.formValues("tick") mustBe "b"
       form.formValues.keySet must not contain "ref"
