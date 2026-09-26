@@ -22,14 +22,18 @@ import scala.collection.mutable
 /** Remembers which elements a spec's assertions actually looked at.
   *
   * A spec renders the same page many times over — once per test — so the record
-  * is keyed by the page's own html rather than by a instance. Two renders that
-  * produce identical markup are the same page, and their assertions add up.
+  * is kept per coverage group rather than per page instance. A page rendered
+  * through the DSL belongs to its spec and, within it, to the renders that
+  * produce exactly its markup, unless the spec names a group with `coveredAs`;
+  * a page built directly is grouped by its markup alone. The key is
+  * `spec#group`, so a spec's records can be dropped together.
   */
 object CoverageRegistry {
 
   private val touchedBySource = TrieMap.empty[String, mutable.Set[String]]
 
-  /** Remember that an assertion for this spec touched these anchors. */
+  /** Remember that an assertion in this coverage group touched these anchors.
+    */
   def record(sourceKey: String, paths: Iterable[String]): Unit =
     if (paths.nonEmpty) {
       val set =
@@ -37,12 +41,20 @@ object CoverageRegistry {
       set.synchronized(set ++= paths)
     }
 
-  /** Every anchor an assertion for this spec has touched so far. */
+  /** Every anchor an assertion in this coverage group has touched so far. */
   def touched(sourceKey: String): Set[String] =
     touchedBySource
       .get(sourceKey)
       .map(s => s.synchronized(s.toSet))
       .getOrElse(Set.empty)
+
+  /** Forget every record a spec made, so a spec run again in the same JVM
+    * starts clean and a finished one leaves nothing behind.
+    */
+  def forget(spec: String): Unit =
+    touchedBySource.keys
+      .filter(_.startsWith(s"$spec#"))
+      .foreach(touchedBySource.remove)
 
   /** Forget everything, for a spec that measures itself from a clean slate. */
   def reset(): Unit = touchedBySource.clear()

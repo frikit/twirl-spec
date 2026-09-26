@@ -16,7 +16,9 @@
 
 package io.github.frikit.twirlspec
 
-import org.scalatest.{Alerting, Suite}
+import org.scalatest.{Alerting, Args, Status, Suite, SuiteMixin}
+import io.github.frikit.twirlspec.page.CoverageRegistry
+import io.github.frikit.twirlspec.standards.ExclusionRegistry
 import play.api.Application
 import play.api.i18n.{Lang, Messages, MessagesApi}
 import play.api.mvc.{AnyContentAsEmpty, Cookie, Request}
@@ -31,7 +33,29 @@ import scala.util.DynamicVariable
 /** The batteries-included entry point: an application, the implicits a Twirl
   * view needs, and language switching, on top of the [[TwirlSpecDsl]] surface.
   */
-trait TwirlSpec extends TwirlSpecDsl { self: Suite with Alerting =>
+trait TwirlSpec extends TwirlSpecDsl with SuiteMixin {
+  self: Suite with Alerting =>
+
+  /** Runs the suite with a clean coverage and exclusion record, and drops both
+    * once it has finished, so a spec run again in the same JVM — from an sbt
+    * shell, say — cannot pass on what an earlier run asserted. A run of one
+    * named test, which is how `OneInstancePerTest` runs each test on its own
+    * instance, leaves the records alone, since the suite's other tests are
+    * still adding to them.
+    */
+  abstract override def run(testName: Option[String], args: Args): Status =
+    if (testName.isDefined) super.run(testName, args)
+    else {
+      val spec = getClass.getName
+      val forget = () => {
+        CoverageRegistry.forget(spec)
+        ExclusionRegistry.forget(spec)
+      }
+      forget()
+      val status = super.run(testName, args)
+      status.whenCompleted(_ => forget())
+      status
+    }
 
   /** Extra configuration for this suite's application. */
   def applicationConfig: Map[String, Any] = Map.empty

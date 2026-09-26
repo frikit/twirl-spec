@@ -19,7 +19,7 @@ package io.github.frikit.twirlspec
 import org.scalatest.matchers.{MatchResult, Matcher}
 import io.github.frikit.twirlspec.expect._
 import io.github.frikit.twirlspec.page.Page
-import io.github.frikit.twirlspec.standards.Rule
+import io.github.frikit.twirlspec.standards.{ExclusionRegistry, Rule}
 
 import scala.util.control.NonFatal
 
@@ -57,16 +57,84 @@ trait TwirlMatchers { self: TwirlSpecDsl =>
 
   /** The standards, minus the named rules. Prefer fixing the page: an exclusion
     * here hides the rule on every page it is applied to.
+    *
+    * Every id must name an active rule. A misspelt id, or one for a rule this
+    * spec does not run, would exclude nothing, so it fails the match instead.
+    * The excluded rules still run, silently, so [[unusedExclusions]] can tell
+    * an exclusion that is still needed from one that has outlived its reason.
     */
   def meetStandardsExcept(ruleIds: String*): Matcher[Page] =
-    matcherFor(
-      Seq(
-        Rule.expectation(
-          standardsRules.filterNot(r => ruleIds.toSet.contains(r.id))
-        )
-      ),
-      "page"
-    )
+    exclusionMatcher(ruleIds, None)
+
+  /** As `meetStandardsExcept`, with the reason for the exclusion, which a
+    * failure then reports alongside the ids:
+    *
+    * {{{
+    * page must meetStandardsExcept(Seq("one-h1"), because = "legacy page, see JIRA-123")
+    * }}}
+    */
+  def meetStandardsExcept(
+      ruleIds: Seq[String],
+      because: String
+  ): Matcher[Page] =
+    exclusionMatcher(ruleIds, Some(because))
+
+  /** The rules this spec has excluded with `meetStandardsExcept` that found
+    * nothing on any page they were excluded from, and so exclude nothing.
+    *
+    * Ask it in the spec's last test, once every exclusion has run:
+    *
+    * {{{
+    * "need every exclusion it makes" in { unusedExclusions mustBe empty }
+    * }}}
+    *
+    * It knows only the tests that have run, so a run of one test can report an
+    * exclusion that another test needs.
+    */
+  def unusedExclusions: Seq[String] = ExclusionRegistry.unused(getClass.getName)
+
+  private def exclusionMatcher(
+      ruleIds: Seq[String],
+      because: Option[String]
+  ): Matcher[Page] = {
+    // The spec's name, taken here: inside the matcher, getClass is the matcher.
+    val spec = getClass.getName
+    new Matcher[Page] {
+      def apply(page: Page): MatchResult = {
+        val active = standardsRules
+        val unknown =
+          ruleIds.filterNot(id => active.exists(_.id == id)).distinct
+        if (unknown.nonEmpty)
+          MatchResult(
+            false,
+            s"meetStandardsExcept names ${unknown.mkString(", ")}, which is not " +
+              "among the rules this spec runs, so excluding it would do nothing. " +
+              s"The rules it runs: ${active.map(_.id).distinct.sorted.mkString(", ")}",
+            "every excluded rule was an active one"
+          )
+        else {
+          val (excluded, kept) = active.partition(r => ruleIds.contains(r.id))
+          excluded.foreach(r =>
+            ExclusionRegistry.record(
+              spec,
+              r.id,
+              page.withRecordingPaused(r.check(page)).nonEmpty
+            )
+          )
+          val result =
+            matcherFor(Seq(Rule.expectation(kept)), "page").apply(page)
+          because.fold(result)(reason =>
+            MatchResult(
+              result.matches,
+              result.failureMessage +
+                s"\n\n  excluded: ${ruleIds.mkString(", ")} — $reason",
+              result.negatedFailureMessage
+            )
+          )
+        }
+      }
+    }
+  }
 
   /** The active rule set as one expectation, for asserting on the result. */
   def standardsExpectation: Expectation = Rule.expectation(standardsRules)

@@ -55,15 +55,40 @@ final class Page(
 
   // ------------------------------------------------------------- coverage
 
-  /** Which spec this page belongs to, so several renders of one view share a
-    * coverage record.
+  /** The spec that rendered this page, so one spec's assertions never count for
+    * another's; empty for a page built directly.
+    */
+  private var owner: String = ""
+
+  /** Which of the spec's pages this is: by default its exact markup, so every
+    * render of one view in one state shares a record and a different view, or
+    * the same view in another state, does not.
     */
   private var group: String = Integer.toHexString(source.hashCode)
 
-  private[twirlspec] def coverageGroup: String = group
+  private[twirlspec] def coverageGroup: String =
+    if (owner.isEmpty) group else s"$owner#$group"
 
-  private[twirlspec] def belongingTo(newGroup: String): this.type = {
-    if (newGroup.nonEmpty) group = newGroup
+  private[twirlspec] def belongingTo(spec: String): this.type = {
+    if (spec.nonEmpty) owner = spec
+    this
+  }
+
+  /** Count this page's assertions together with those on every other page this
+    * spec covers under the same name — the states of one view, say, so that
+    * what was asserted on the page with errors counts for the page without:
+    *
+    * {{{
+    * render(view(form)).coveredAs("name-page")
+    * render(view(formWithErrors)).coveredAs("name-page")
+    * }}}
+    *
+    * Without it, a page is grouped with the renders that produce exactly its
+    * markup.
+    */
+  def coveredAs(name: String): this.type = {
+    require(name.nonEmpty, "a coverage group needs a name")
+    group = s"named:$name"
     this
   }
 
@@ -81,7 +106,10 @@ final class Page(
 
   private[twirlspec] def record(elements: List[Element]): Unit =
     if (recording && elements.nonEmpty)
-      CoverageRegistry.record(group, elements.flatMap(e => Anchors.namesOf(e)))
+      CoverageRegistry.record(
+        coverageGroup,
+        elements.flatMap(e => Anchors.namesOf(e))
+      )
 
   /** Every element matching this CSS selector. */
   def css(selector: String): Selection = named(selector, selector)

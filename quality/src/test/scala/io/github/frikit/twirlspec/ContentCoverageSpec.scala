@@ -184,20 +184,23 @@ class ContentCoverageSpec
     "not record what the standards rules touch" in {
       val page = pageIn("i")
       page.withRecordingPaused(page.byId("intro"))
-      CoverageRegistry.touched("i") mustBe empty
+      CoverageRegistry.touched(page.coverageGroup) mustBe empty
     }
 
-    "keep its group when handed an empty one" in {
+    "keep its spec when handed an empty one" in {
       val page = pageIn("j")
       page.belongingTo("")
+      page.coverageGroup must startWith("j#")
       page.byId("intro")
-      CoverageRegistry.touched("j") must contain("#intro")
+      CoverageRegistry.touched(page.coverageGroup) must contain("#intro")
     }
 
     "record what a role lookup touches" in {
       val page = pageIn("k")
       page.byRole("link")
-      CoverageRegistry.touched("k") must contain("""link "Go somewhere"""")
+      CoverageRegistry.touched(page.coverageGroup) must contain(
+        """link "Go somewhere""""
+      )
     }
   }
 
@@ -233,7 +236,7 @@ class ContentCoverageSpec
     "not mark anything as asserted" in {
       val page = pageIn("p")
       page.outline
-      CoverageRegistry.touched("p") mustBe empty
+      CoverageRegistry.touched(page.coverageGroup) mustBe empty
     }
   }
 
