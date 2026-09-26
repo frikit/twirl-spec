@@ -1,0 +1,34 @@
+name: A rule gets a page wrong
+description: A rule reports a problem that is not one, or misses one that is.
+body:
+  - type: input
+    id: rule
+    attributes:
+      label: Rule id
+      description: As the failure names it, such as labelled-controls.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: twirl-spec version
+    validations:
+      required: true
+  - type: textarea
+    id: markup
+    attributes:
+      label: The markup
+      description: The smallest rendered HTML that shows it, not the template.
+      render: html
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What the rule should say, and why
+      description: >-
+        The source that settles it: a WCAG success criterion, the HTML or ARIA
+        specification, how a browser or screen reader behaves, or GOV.UK Design
+        System guidance.
+    validations:
+      required: true

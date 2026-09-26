@@ -12,10 +12,13 @@ readable.
 
 ## [2.2.0] - 2026-09-26
 
-What a spec renders changes in this release, so it is a minor version: a
-bilingual service's Welsh specs now render in Welsh, and a form now renders
-its CSRF token field. A spec that passed on the English page, or on a form
-without its token, can fail after it.
+What a spec renders, and what coverage and exclusions accept, change in this
+release, so it is a minor version. A bilingual service's Welsh specs now
+render in Welsh, a form renders its CSRF token field, names and form values
+follow the browser, `assertEverything` counts assertions for the page they
+were made on, and `meetStandardsExcept` refuses an id it does not know. A spec
+that passed on any of the old behaviour can fail after it; the Changed and
+Fixed sections say how.
 
 ### Added
 
@@ -64,6 +67,13 @@ without its token, can fail after it.
 - `meetStandardsExcept` fails on an id that names no rule the spec runs, and
   `RuleSet.only` and `allExcept` throw on an id the set does not have. Each
   used to exclude or select nothing without saying so.
+- The README says what is supported: any Scala 3.3.0 or later, tested on
+  3.3.0, 3.3.6, 3.3.7 and 3.9.0. It used to say a project below 3.3.8 could
+  not use the library, which was never so.
+- Every release is held to binary compatibility with the one before it, and CI
+  runs a Play service's view specs against the published artifacts, on Scala
+  3.3.7 with Play 3.0.10 and on Scala 3.9.0 with Play 3.0.11. New rules will
+  arrive as warnings first, and be made blocking in a later minor.
 
 ### Fixed
 

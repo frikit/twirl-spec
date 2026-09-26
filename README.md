@@ -116,27 +116,41 @@ nothing else.
 
 ## Compatibility
 
-Each release is built and tested against exactly these. The POM of a given
-release is the authority for that release; this table is kept for the current
-line.
+Each release is built against exactly these. The POM of a given release is the
+authority for that release; this table is kept for the current line.
 
 | twirl-spec | Play | Twirl | Scala | Java | ScalaTest | jsoup |
 |---|---|---|---|---|---|---|
-| 2.0.x | 3.0.0 | 2.0.1 | 3.3.8 | 21 | 3.2.20 | 1.23.2 |
+| 2.x | 3.0.0 | 2.0.1 | 3.3.8 | 21 | 3.2.20 | 1.23.2 |
+
+CI also runs a Play service's view specs against the published artifacts, as a
+service gets them: on Scala 3.3.7 compiled with `-release 11` and Play 3.0.10,
+and on Scala 3.9.0 with `-release 21` and Play 3.0.11.
 
 What that means for a project on something close but not identical:
 
 **Play** is `Provided`: your project supplies `play`, `play-test` and
-`play-guice`, and this library never moves your Play version. Built against
-3.0.0, the first 3.0 release, so any 3.0.x works without an upgrade. **Play 2.9
-and earlier are not supported** — they predate the Pekko move and are not
-tested.
+`play-guice`, and `play-filters-helpers` for the CSRF token `TwirlSpec` signs,
+which any application built with the Play sbt plugin already has. This library
+never moves your Play version. Built against 3.0.0, the first 3.0 release, so
+any 3.0.x works without an upgrade. **Play 2.9 and earlier are not supported** —
+they predate the Pekko move and are not tested.
 
-**Scala.** Published for Scala 3 only, built with 3.3.8, the LTS line. Scala 3
-is forward-compatible, so a project on 3.3.8 or anything later uses the
-artifact. A project below 3.3.8, or on Scala 2.13, cannot.
+**Twirl.** `twirl-api` is a normal dependency at 2.0.1, the version Play 3.0.0
+ships, so sbt resolves it upward to whatever your Play brings and it never moves
+your Twirl either.
 
-**Java.** Compiled with `-release 21`, so 21 is the floor and later JDKs are fine.
+**Scala.** Published for Scala 3 only, built with 3.3.8 on the LTS line, and
+supported from Scala 3.3.0: every later Scala 3 reads what 3.3 compiles, and
+every 3.3 patch reads the same TASTy. Tested on 3.3.0, 3.3.6, 3.3.7 and 3.9.0,
+with 3.3.7 and 3.9.0 kept tested in CI. A project on a 3.3 patch below 3.3.8
+gets scala3-library 3.3.8 on its test classpath, which sbt resolves without a
+warning. A project on Scala 2.13 cannot use 2.x; see
+[Moving from 1.x to 2.x](docs/adopting.md#moving-from-1x-to-2x).
+
+**Java.** Compiled with `-release 21`, so the specs run on Java 21 or later. A
+project may still compile its own code with `-release 11`, as many service builds
+do by default.
 
 **ScalaTest** is a normal dependency, not `Provided`, so it resolves upward
 against whatever your project already has; 3.2.20 is the floor.
@@ -153,14 +167,19 @@ Semantic versioning from 1.0.0, with one wrinkle that matters for a library of
 checks.
 
 Within a major version the public API is stable: DSL methods and matchers, rule
-ids, package names, and the fields of every `Config`. Deprecations stand for at
-least one minor version before removal.
+ids, package names, and the fields of every `Config`. CI holds every module to
+binary compatibility with the last release. Deprecations stand for at least one
+minor version before removal.
 
-**A minor version may add rules.** A new rule can turn a page that passed red,
-which is the point of it, but it is not what "minor" usually promises. Pin to a
-minor version if a green build matters more to you than the newest checks, and
-read the changelog before moving. Rule wording, hints and failure-message layout
-may change in any release; assert on rule ids, not on message text.
+**A minor version may change verdicts.** A fix that makes a rule see what it
+used to miss can turn a page that passed red, which is the point of it, but it
+is not what "minor" usually promises. **A new rule arrives as a warning** in the
+minor that adds it, so it shows on a green run first, and becomes blocking in a
+later minor; the changelog lists both under a Rules heading, by rule id. A spec
+with `failOnWarnings = true` has chosen to meet new rules at once. Pin to a minor
+version if a green build matters more to you than the newest checks, and read the
+changelog before moving. Rule wording, hints and failure-message layout may
+change in any release; assert on rule ids, not on message text.
 
 ## Two ways in
 

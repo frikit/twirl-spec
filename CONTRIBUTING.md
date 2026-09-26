@@ -6,9 +6,27 @@
 ./run_all_tests.sh
 ```
 
-Adds any missing licence header, formats, tests under coverage against a 100%
+Adds any missing licence header, formats, tests the release plan, checks binary
+compatibility with the last release, tests under coverage against a 100%
 statement and branch gate, and lists dependency updates. The library is built
 for Scala 3 only, on the 3.3 LTS line, so there is no cross-build.
+
+Binary compatibility is MiMa's, against the last release tag (fetch the tags,
+or it compares with an older one). A change it flags is either a break, which
+needs a `#major`, or one that cannot break a compiled caller, which is accepted
+in `<module>/src/main/mima-filters/<last version>.backwards.excludes` with the
+reasoning written above the filter. A file for a version stops applying once
+the next release is made.
+
+`consumer/` is a separate build: two Play applications whose view specs run
+against the library as a service gets it. CI runs it on the combinations in
+`.github/workflows/ci.yml`; locally:
+
+```sh
+sbt 'set ThisBuild / version := "0.0.0-CONSUMER"' publishLocal makePom
+python3 .github/scripts/check-poms.py 0.0.0-CONSUMER
+cd consumer && sbt test
+```
 
 An unused import is a compile error, through `-Wunused:imports` and `-Wconf`
 in `build.sbt`. The Twirl test fixtures therefore declare exactly the imports
@@ -35,7 +53,18 @@ time within a module and test tasks one module at a time.
 
 `src/test/resources/captured/` holds markup captured verbatim from a real GOV.UK
 Design System implementation, so the Design System rules are checked against
-genuine output without this library depending on any component package.
+genuine output without this library depending on any component package. It
+was rendered by play-frontend-hmrc's Twirl components in August 2026; the
+exact versions were not recorded, but the service-navigation markup dates it
+to govuk-frontend 5.7 or later. To recapture it — after a govuk-frontend
+major, say — render the same components with the messages in
+`core/src/test/resources` in a scratch Play application (a name form with a
+hint and autocomplete, the lives-in-the-UK radios, the date of birth, a
+summary row and the continue button; with no errors, with errors, and with
+errors in Welsh), save the output verbatim, put the play-frontend-hmrc and
+govuk-frontend versions in an HTML comment on the first line of each file,
+and run `GovukFrontendMarkupSpec`. A failure there is either a rule that has
+to follow the new markup or a change worth understanding first.
 
 ## Licence headers
 
@@ -63,7 +92,17 @@ repository allows Actions to create pull requests, a setting under Settings,
 Actions, General that the workflow needs. With the workflow's own token, GitHub
 does not start CI on the pull requests it opens; a fine-grained personal access
 token with contents and pull-requests write access, stored as the
-`SCALA_STEWARD_TOKEN` secret, lifts that.
+`SCALA_STEWARD_TOKEN` secret, lifts that. Without it, start CI on a bot's branch
+by hand: `gh workflow run ci.yml --ref <branch>`.
+
+`.scala-steward.conf` holds Steward to the deliberate pins: Scala to 3.3, sbt to
+1.x, and Play and twirl-api left alone. It also reads the `consumer/` build,
+and marks every commit `[skip release]`, so an update ships with the next
+change that needs a release rather than spending a version of its own.
+Dependabot moves the actions, which are pinned by commit SHA, weekly and
+grouped, with the same marker. Merge a bot's pull request with a merge commit
+or by rebasing, which keep its commit's subject; a squash takes the pull
+request's title, which for Steward carries the marker too.
 
 ## The pre-push hook
 
@@ -103,26 +142,47 @@ javadoc jar; this is the copy a reader can browse.
 
 ## Releasing
 
-Every push to `main` is a release. `release.yml` runs the same checks as a
-pull request and, if they pass, tags the commit with the next version, publishes
-every module to Maven Central through the Sonatype Central Portal, and only then
-pushes the tag and creates a GitHub Release. Its notes are the version's
-section of `CHANGELOG.md`, so a change arrives with its changelog entry; when
-the changelog has no section for the version, GitHub's generated notes are used
-instead. A publish that fails leaves no tag behind, so the next attempt gets
-the same version. There are no snapshots.
+Every push to `main` is a release, unless nothing in it needs one.
+`release.yml` runs the same checks as a pull request, the consumer build and
+the binary compatibility check among them, and, if they pass, tags the commit
+with the next version, publishes every module to Maven Central through the
+Sonatype Central Portal, and only then pushes the tag and creates a GitHub
+Release. Its notes are the version's section of `CHANGELOG.md`, and the release
+stops before tagging when the changelog's newest section does not name the
+version it is about to publish, so a change arrives with its changelog entry
+and a forgotten marker cannot publish the wrong number. A publish that fails
+leaves no tag behind, so the next attempt gets the same version. There are no
+snapshots.
 
 The changelog records every release on the current major line in full and
 keeps each earlier line to one entry, so the history stays readable.
 
-The bump is a patch unless the commit message asks for more: a message
-containing `#minor` bumps the minor version, `#major` the major. The first
-release, with no tag yet in the repository, is `v1.0.0`.
+What to release is read from every commit since the last release, by
+`.github/scripts/release-plan.sh`, and only from each commit's subject line:
+the bump is a patch unless a subject says `#minor` or `#major`, as a whole word,
+the highest winning; and the push publishes nothing when every subject says
+`[skip release]`. A commit body can describe the markers freely. Merge commits
+are not read but the commits they bring in are, so a pull request merged with a
+merge commit or by rebasing keeps its markers, while a squash keeps only the
+pull request's title. To see what a push would do:
 
-A commit message containing `[skip release]` is verified but not published, for
-a change to the workflows or the documentation that no user could depend on. A
-version on Maven Central can never be withdrawn or altered, so it is worth not
-spending one on a change that alters no artifact.
+```sh
+.github/scripts/release-plan.sh
+```
+
+The first release, with no tag yet in the repository, is `v1.0.0`.
+
+`[skip release]` is for a change to the workflows, the build or the
+documentation that no user could depend on. A version on Maven Central can
+never be withdrawn or altered, so it is worth not spending one on a change that
+alters no artifact.
+
+A re-run is safe. A commit that is already a release only has its GitHub
+Release made sure of; a version already on Maven Central is tagged and released
+without publishing again; and Central refuses a version it already holds, so a
+re-run that races Central's own sync fails instead of publishing twice. The
+release runs only on `main`, and missing publishing secrets fail it on this
+repository rather than letting it pass without publishing.
 
 The version is the tag, read by `sbt-ci-release` through `sbt-dynver`, so
 `build.sbt` does not carry one. Locally, `sbt version` gives a derived value such
@@ -164,4 +224,24 @@ gpg --keyserver keyserver.ubuntu.com --send-keys <KEY_ID>      # Central checks 
 ```
 
 A release can also be started by hand from the Actions tab (`workflow_dispatch`)
-without a code change.
+on `main`, without a code change.
+
+## Continuity
+
+A library that services depend on for years has to outlive any one person's
+access to it. What that takes, and where it stands:
+
+- **A second maintainer** with admin rights on the repository and access to
+  the `io.github.frikit` namespace in the Central Portal, so a release does not
+  wait on one account.
+- **The signing key** backed up offline, with its revocation certificate kept
+  beside it (`gpg --gen-revoke <KEY_ID>`). A key that is lost is replaced as
+  above and its successor's public half published; one that is compromised is
+  revoked with that certificate first.
+- **The Portal token** is replaced by making a new one in the Portal, updating
+  the two `CENTRAL_PORTAL_*` secrets, and only then revoking the old token, so
+  no release runs without credentials.
+- **Security reports** go through GitHub's private vulnerability reporting, as
+  [SECURITY.md](SECURITY.md) says, and a rule that gets a page wrong through
+  the "A rule gets a page wrong" issue form, which asks for what settles it:
+  the rule id, the markup, the verdict expected and the source behind it.
