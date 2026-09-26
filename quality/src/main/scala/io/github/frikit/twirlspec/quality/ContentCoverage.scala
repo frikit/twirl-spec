@@ -16,7 +16,7 @@
 
 package io.github.frikit.twirlspec.quality
 
-import io.github.frikit.twirlspec.page.{Anchors, CoverageRegistry, Page}
+import io.github.frikit.twirlspec.page.{Anchors, Page}
 import org.jsoup.nodes.Element
 
 import scala.jdk.CollectionConverters._
@@ -78,7 +78,7 @@ object ContentCoverage {
       trackedAttributes: Set[String] = defaultTrackedAttributes,
       scope: String = defaultScope
   ): List[Anchor] = {
-    val touched = CoverageRegistry.touched(page.coverageGroup)
+    val touched = page.touchedAnchors
     val ignoredIds = ignored.map(_.stripPrefix("#"))
     within(page, scope)
       .filterNot(insideIgnored(_, ignoredIds))

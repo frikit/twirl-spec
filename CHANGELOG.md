@@ -54,8 +54,12 @@ without its token, can fail after it.
 - `TwirlSpec` clears a spec's coverage and exclusion records when its suite
   starts and when it finishes, so a spec run again in the same JVM cannot pass
   on what an earlier run asserted.
-- The CSRF token is signed once for the run, so a view renders the same markup
-  each time it is rendered with the same arguments.
+- The CSRF token is signed once per test JVM, so a view renders the same
+  markup each time it is rendered with the same arguments.
+- A page built directly with `Page.fromString` keeps a coverage record of its
+  own instead of sharing one, across specs, with any page of the same markup;
+  and `withLang` keeps a page's record, so the same page read in another
+  language counts as the same page.
 - `meetStandardsExcept` fails on an id that names no rule the spec runs, and
   `RuleSet.only` and `allExcept` throw on an id the set does not have. Each
   used to exclude or select nothing without saying so.

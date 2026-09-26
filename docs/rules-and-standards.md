@@ -70,8 +70,9 @@ page must meetStandardsExcept(Seq("one-h1"), because = "legacy page, see JIRA-12
 Exclusions outlive the fixes that make them unnecessary. The excluded rules
 still run, silently, and `unusedExclusions` names the ones that found nothing
 on any page they were excluded from. Asking it in a spec's last test keeps the
-exclusions honest; it knows only the tests that ran, so it belongs in a full
-run of the spec rather than a single test:
+exclusions honest; it knows only the tests that ran before it, so it belongs in
+a full run of a spec whose tests run in order — ScalaTest's default, and not
+`ParallelTestExecution`:
 
 ```scala
 "need every exclusion it makes" in {

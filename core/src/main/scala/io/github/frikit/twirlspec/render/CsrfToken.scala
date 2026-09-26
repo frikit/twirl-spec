@@ -57,10 +57,11 @@ private[twirlspec] object CsrfToken {
     */
   private object Helper {
 
-    /** One token, signed once for the run. Play signs a fresh one per request,
-      * and a view rendered twice with the same arguments would then differ in
-      * its token field, so two renders of one page could not be recognised as
-      * the same page.
+    /** One token, signed once for as long as this library is loaded — once per
+      * test JVM when tests are forked. Play signs a fresh one per request, and
+      * a view rendered twice with the same arguments would then differ in its
+      * token field, so two renders of one page could not be recognised as the
+      * same page. Each request gets its own `TokenInfo` around it.
       */
     private lazy val token: play.filters.csrf.CSRF.Token =
       play.filters.csrf.CSRF

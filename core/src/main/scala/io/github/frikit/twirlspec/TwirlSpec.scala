@@ -38,13 +38,16 @@ trait TwirlSpec extends TwirlSpecDsl with SuiteMixin {
 
   /** Runs the suite with a clean coverage and exclusion record, and drops both
     * once it has finished, so a spec run again in the same JVM — from an sbt
-    * shell, say — cannot pass on what an earlier run asserted. A run of one
-    * named test, which is how `OneInstancePerTest` runs each test on its own
-    * instance, leaves the records alone, since the suite's other tests are
-    * still adding to them.
+    * shell, say — cannot pass on what an earlier run asserted.
+    *
+    * The run `OneInstancePerTest` (and so `ParallelTestExecution`) makes for
+    * each test on its own instance leaves the records alone, since the suite's
+    * other tests are still adding to them; ScalaTest marks that run with
+    * `runTestInNewInstance`. A `BeforeAndAfterAll` mixed in after this trait
+    * runs its `afterAll` once the records have been dropped.
     */
   abstract override def run(testName: Option[String], args: Args): Status =
-    if (testName.isDefined) super.run(testName, args)
+    if (args.runTestInNewInstance) super.run(testName, args)
     else {
       val spec = getClass.getName
       val forget = () => {

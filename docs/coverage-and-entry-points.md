@@ -46,7 +46,13 @@ render(view(form.bind(Map("value" -> "")))).coveredAs("name-page")
 
 `TwirlSpec` starts each suite with an empty record and clears it when the
 suite finishes, so a spec run again in the same JVM cannot pass on what an
-earlier run asserted.
+earlier run asserted. A page built directly with `Page.fromString`, rather than
+rendered by a spec, keeps a record of its own.
+
+`assertEverything` sees only the tests that ran before it, so a spec that uses
+it runs its tests in order, which is ScalaTest's default. Under
+`ParallelTestExecution` there is no last test, and the check can run before
+the assertions it depends on.
 
 Assertions made through the page model, `page.byId`, `page.css` and the
 component accessors, count the same as DSL expectations. Rule sets do not
