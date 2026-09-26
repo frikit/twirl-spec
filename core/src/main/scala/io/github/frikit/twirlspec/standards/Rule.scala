@@ -171,9 +171,20 @@ object Rule {
   private[twirlspec] def isFullPage(page: Page): Boolean = {
     val source = page.source
     val start = openingOf(source)
-    source.regionMatches(true, start, "<!doctype html", 0, 14) ||
-    source.regionMatches(true, start, "<html", 0, 5)
+    opens(source, start, "<!doctype html") || opens(source, start, "<html")
   }
+
+  /** Whether the source has this opening at this point, as a whole name:
+    * `<html>` and `<html lang="en">` do, `<htmlish>` does not.
+    */
+  private def opens(source: String, at: Int, opening: String): Boolean =
+    source.regionMatches(true, at, opening, 0, opening.length) && {
+      val next = at + opening.length
+      next == source.length || {
+        val c = source.charAt(next)
+        c.isWhitespace || c == '>' || c == '/'
+      }
+    }
 
   /** Where the first thing that is not a byte order mark, whitespace or a
     * comment begins.

@@ -44,6 +44,19 @@ class PageModelSpec extends AnyWordSpec with Matchers with TwirlSpec {
       p.accessibleName(p.byId("d")(0)) mustBe "Start"
       p.accessibleName(p.byId("e")(0)) mustBe "Next"
     }
+
+    "read an image's alt text in a label or a labelledby target too" in {
+      val p = render(
+        Html(
+          """<label for="q"><img src="s.png" alt="Search"></label><input id="q" name="q">
+            |<span id="lbl"><img src="c.png" alt="Close"></span><button id="x" aria-labelledby="lbl"></button>
+            |<img id="help-icon" src="h.png" alt="Help"><a id="h" href="/help" aria-labelledby="help-icon"></a>""".stripMargin
+        )
+      )
+      p.accessibleName(p.byId("q")(0)) mustBe "Search"
+      p.accessibleName(p.byId("x")(0)) mustBe "Close"
+      p.accessibleName(p.byId("h")(0)) mustBe "Help"
+    }
   }
 
   "a form" should {
@@ -63,8 +76,11 @@ class PageModelSpec extends AnyWordSpec with Matchers with TwirlSpec {
           |<input type="checkbox" name="tick" value="a" checked><input type="checkbox" name="tick" value="b" checked><input type="checkbox" name="tick" value="c">
           |<input type="checkbox" name="agree" checked>
           |<input type="radio" name="colour" value="red"><input type="radio" name="colour" value="blue" checked>
+          |<input type="radio" name="size" value="s" checked><input type="radio" name="size" value="m" checked>
+          |<input type="radio" name="dis" value="x" checked><input type="radio" name="dis" value="y" checked disabled>
           |<input type="submit" name="go" value="Go"><input type="button" name="btn" value="B"><input type="reset" name="rst"><input type="image" name="img" src="x.png">
           |<input type="hidden" name="csrfToken" value="t0k3n">
+          |<input type="file" name="upload" value="C:\fakepath\x.pdf">
           |<input name="noValue">
           |<textarea name="notes">  Some   notes </textarea>
           |<input value="nameless">
@@ -83,10 +99,26 @@ class PageModelSpec extends AnyWordSpec with Matchers with TwirlSpec {
         "tick" -> "b",
         "agree" -> "on",
         "colour" -> "blue",
+        "size" -> "m",
         "csrfToken" -> "t0k3n",
+        "upload" -> "",
         "noValue" -> "",
-        "notes" -> "Some notes"
+        "notes" -> "  Some   notes "
       )
+    }
+
+    "compare a textarea's text as page text is compared" in {
+      formValues("notes" -> "Some notes").check(form) mustBe empty
+    }
+
+    "keep one checked radio per group in each form" in {
+      val twoForms = render(
+        Html(
+          """<form><input type="radio" name="size" value="s" checked></form>
+            |<form><input type="radio" name="size" value="l" checked></form>""".stripMargin
+        )
+      )
+      twoForms.formSubmission mustBe Seq("size" -> "s", "size" -> "l")
     }
 
     "keep the last value per name in formValues" in {
@@ -133,6 +165,16 @@ class PageModelSpec extends AnyWordSpec with Matchers with TwirlSpec {
           "<!DOCTYPE html><html><body></body></html>"
       ) mustBe true
       isPage("<HTML lang=\"en\"><body></body></HTML>") mustBe true
+      isPage(
+        "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\"><html></html>"
+      ) mustBe true
+      isPage("<html/>") mustBe true
+      isPage("<html") mustBe true
+    }
+
+    "want the whole name, not one that starts the same" in {
+      isPage("<htmlish>x</htmlish>") mustBe false
+      isPage("<!doctype htmlish><html></html>") mustBe false
     }
 
     "not take a fragment that mentions <html further in for a page" in {

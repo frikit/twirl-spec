@@ -140,17 +140,32 @@ final class Page(
         .mkString(" ")
     )
 
-  /** What a browser would submit for the controls on this page, as name and
-    * value pairs in document order.
+  /** What the page's forms would submit as their markup stands — before any
+    * script runs or anyone types — as name and value pairs in document order.
     *
-    * A checkbox or radio counts only when it is checked, and says `on` when it
-    * has no value. A select sends its selected options, and a single select
-    * with none marked sends the first option that is not disabled, which is
-    * what a browser shows as chosen. A disabled control sends nothing, and
-    * neither do buttons, reset controls or image inputs. A name can appear more
-    * than once, as a group of checkboxes does.
+    * It is a static reading of the markup, not a submission: every form on the
+    * page is read together, and no button is the submitter, so no button's name
+    * is included. Within that, it follows the browser. A checkbox counts only
+    * when it is checked, and says `on` when it has no value; of several radios
+    * marked checked in one group, only the last is, as checking one unchecks
+    * the rest. A select sends its selected options, and a single select with
+    * none marked sends the first option that is not disabled, which is what a
+    * browser shows as chosen. A textarea sends its text as written, and a file
+    * input an empty file name, since markup cannot choose a file. A disabled
+    * control sends nothing, and neither do buttons, reset controls or image
+    * inputs. A name can appear more than once, as a group of checkboxes does.
     */
-  def formSubmission: Seq[(String, String)] =
+  def formSubmission: Seq[(String, String)] = {
+    // Disabled radios still take part in their group, so the survivor is
+    // found before disabled controls are left out.
+    val keptRadios = document
+      .select("input[type=radio][checked]")
+      .asScala
+      .toList
+      .groupBy(r => (Option(r.closest("form")), r.attr("name")))
+      .values
+      .map(_.last)
+      .toSet
     document
       .select("input, select, textarea")
       .asScala
@@ -159,19 +174,26 @@ final class Page(
       .flatMap { e =>
         val name = e.attr("name")
         e.tagName() match {
-          case "textarea" => List(name -> Text.normalise(e.text()))
+          case "textarea" => List(name -> e.wholeText())
           case "select"   => selectedOptions(e).map(o => name -> optionValue(o))
           case _          =>
             e.attr("type").toLowerCase match {
-              case "checkbox" | "radio" =>
-                if (!e.hasAttr("checked")) Nil
-                else if (e.hasAttr("value")) List(name -> e.attr("value"))
-                else List(name -> "on")
+              case "checkbox" =>
+                if (e.hasAttr("checked")) List(name -> checkedValue(e)) else Nil
+              case "radio" =>
+                if (keptRadios.contains(e)) List(name -> checkedValue(e))
+                else Nil
+              case "file"                                  => List(name -> "")
               case "submit" | "button" | "reset" | "image" => Nil
               case _ => List(name -> e.attr("value"))
             }
         }
       }
+  }
+
+  /** What a checked box or radio submits: its value, or `on` without one. */
+  private def checkedValue(e: org.jsoup.nodes.Element): String =
+    if (e.hasAttr("value")) e.attr("value") else "on"
 
   /** The value each name submits: [[formSubmission]] as a map, keeping the last
     * value for a name that is submitted more than once.
