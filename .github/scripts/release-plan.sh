@@ -23,7 +23,9 @@
 # whether the API may change (only a major may break binary compatibility).
 set -euo pipefail
 
-last="$(git tag --list 'v*' --sort=-v:refname | head -n 1)"
+# for-each-ref stops after one, where piping a long tag list into head would
+# let git die of SIGPIPE and pipefail abort the release.
+last="$(git for-each-ref --count=1 --sort=-version:refname --format='%(refname:short)' 'refs/tags/v*')"
 range="HEAD"
 [ -n "$last" ] && range="$last..HEAD"
 

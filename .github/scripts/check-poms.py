@@ -27,6 +27,8 @@ EVERY_MODULE = {
     ("org.playframework", "play-test_3"): ("provided", PLAY),
     ("org.playframework", "play-guice_3"): ("provided", PLAY),
     ("org.scalatest", "scalatest_3"): ("compile", None),
+    # the version is held to the 3.3 line below
+    ("org.scala-lang", "scala3-library_3"): ("compile", None),
 }
 CORE_ONLY = {
     ("org.playframework", "play-filters-helpers_3"): ("provided", PLAY),
