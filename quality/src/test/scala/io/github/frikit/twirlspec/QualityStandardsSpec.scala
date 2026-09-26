@@ -205,6 +205,18 @@ class QualityStandardsSpec extends AnyWordSpec with Matchers with TwirlSpec {
         "12".take(0) + "rules"
       )
     }
+
+    "name the rules about search results, all of them metadata rules" in {
+      MetadataStandards.searchRules.map(
+        _.id
+      ) must contain theSameElementsAs Seq(
+        "not-noindex",
+        "has-meta-description",
+        "title-is-concise"
+      )
+      MetadataStandards.all must contain allElementsOf MetadataStandards.searchRules
+      MetadataStandards.searchRules.map(_.id) must not contain "has-charset"
+    }
   }
 
 }

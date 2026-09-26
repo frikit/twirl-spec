@@ -17,6 +17,18 @@ bilingual service's Welsh specs now render in Welsh, and a form now renders
 its CSRF token field. A spec that passed on the English page, or on a form
 without its token, can fail after it.
 
+### Added
+
+- `GovukServiceChecks`, in `twirl-spec-all`: `AllChecks` for a GOV.UK
+  transactional service, which leaves out the three rules about search
+  results. `has-meta-description` fires on every page the GOV.UK template
+  renders, since the template writes no description; `title-is-concise` on
+  most titles in the Design System's "Page - Service - GOV.UK" pattern; and
+  `not-noindex` on a service that keeps itself out of search on purpose.
+  `AllChecks` is unchanged.
+- `MetadataStandards.searchRules`, those three rules, for a spec base that
+  picks its modules by hand and wants to leave them out too.
+
 ### Fixed
 
 - `TwirlSpec` no longer overrides the service's languages.

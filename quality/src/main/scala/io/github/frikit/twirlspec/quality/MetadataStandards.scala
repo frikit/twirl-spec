@@ -34,6 +34,20 @@ object MetadataStandards extends RuleSet {
     */
   private val TitleBudget = 65
 
+  /** The rules about how a page fares in a search result: `not-noindex`,
+    * `has-meta-description` and `title-is-concise`.
+    *
+    * A GOV.UK transactional service is reached from GOV.UK rather than from a
+    * search engine, often keeps its pages out of search on purpose, and titles
+    * them in the Design System's "Page - Service - GOV.UK" pattern, so on such
+    * a service these warn on every page. `GovukServiceChecks` leaves them out;
+    * a spec base picking modules by hand can do the same with this set.
+    */
+  lazy val searchRules: Seq[Rule] = {
+    val ids = Set("not-noindex", "has-meta-description", "title-is-concise")
+    all.filter(r => ids.contains(r.id))
+  }
+
   lazy val all: Seq[Rule] = Seq(
     Rule(
       "has-charset",
