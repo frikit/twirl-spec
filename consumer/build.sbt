@@ -4,7 +4,7 @@
 //
 //   sbt 'set ThisBuild / version := "0.0.0-CONSUMER"' publishLocal
 //   cd consumer && sbt test
-val twirlSpecVersion = sys.props.getOrElse("twirlspec.version", "0.0.0-CONSUMER")
+val twirlSpecVersion = sys.props.getOrElse("twirlspec.version", "2.2.0")
 
 ThisBuild / scalaVersion := sys.props.getOrElse("consumer.scala", "3.3.7")
 // Many service builds compile with -release 11 unless they say otherwise.
