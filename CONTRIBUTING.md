@@ -20,7 +20,9 @@ the next release is made.
 
 `consumer/` is a separate build: two Play applications whose view specs run
 against the library as a service gets it. CI runs it on the combinations in
-`.github/workflows/ci.yml`; locally:
+`.github/workflows/ci.yml`: a row pinned to the Scala, `-release` and Play of
+a service today, and a row on the newest Scala whose Play is the default in
+`consumer/project/plugins.sbt`, which Scala Steward keeps current. Locally:
 
 ```sh
 sbt 'set ThisBuild / version := "0.0.0-CONSUMER"' publishLocal makePom
@@ -96,8 +98,10 @@ token with contents and pull-requests write access, stored as the
 by hand: `gh workflow run ci.yml --ref <branch>`.
 
 `.scala-steward.conf` holds Steward to the deliberate pins: Scala to 3.3, sbt to
-1.x, and Play and twirl-api left alone. It also reads the `consumer/` build,
-and marks every commit `[skip release]`, so an update ships with the next
+1.x, and Play and twirl-api left alone. It also reads the `consumer/` build.
+It edits only the builds, never the workflows: a version in `ci.yml` is a pin,
+and a token without the workflows permission could not push the change anyway.
+It marks every commit `[skip release]`, so an update ships with the next
 change that needs a release rather than spending a version of its own.
 Dependabot moves the actions, which are pinned by commit SHA, weekly and
 grouped, with the same marker. Merge a bot's pull request with a merge commit

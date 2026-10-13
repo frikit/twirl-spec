@@ -126,7 +126,8 @@ authority for that release; this table is kept for the current line.
 
 CI also runs a Play service's view specs against the published artifacts, as a
 service gets them: on Scala 3.3.7 compiled with `-release 11` and Play 3.0.10,
-and on Scala 3.9.0 with `-release 21` and Play 3.0.11.
+and on Scala 3.9.0 with `-release 21` and the newest Play 3.0.x, as the
+consumer build declares it.
 
 What that means for a project on something close but not identical:
 
