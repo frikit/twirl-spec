@@ -22,3 +22,7 @@ jobs:
       - uses: scala-steward-org/scala-steward-action@6162b21b93d4be314a61ce0462fd026630132fee # v2.96.0
         with:
           github-token: ${{ secrets.SCALA_STEWARD_TOKEN || secrets.GITHUB_TOKEN }}
+          # The account behind the token keeps its email private, and the
+          # action needs one to author its commits.
+          author-name: frikit
+          author-email: 11138469+frikit@users.noreply.github.com
