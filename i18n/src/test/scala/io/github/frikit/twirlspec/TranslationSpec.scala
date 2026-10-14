@@ -62,6 +62,9 @@ class TranslationSpec
       .map(_.rule)
       .distinct
 
+  private def rulesBetween(from: Page, to: Page) =
+    TranslationStandards.all().flatMap(_.check(from, to)).map(_.rule).distinct
+
   "i18n-lang-attribute" should {
     "notice a page that declares the wrong language" in {
       val other = pageIn(
@@ -111,6 +114,63 @@ class TranslationSpec
         """<p id="intro">Bonjour</p><a id="go" href="/suivant">Continuer</a>"""
       )
       rulesFor(other) must contain("i18n-same-links")
+    }
+
+    "accept the language switch, which points at the other language on each page" in {
+      val en = pageIn(
+        english,
+        """<p id="intro">Hello there</p><a id="switch" href="/hmrc-frontend/language/fr">Français</a>"""
+      )
+      val other = pageIn(
+        fr,
+        """<p id="intro">Bonjour</p><a id="switch" href="/hmrc-frontend/language/en">English</a>"""
+      )
+      rulesBetween(en, other) must not contain "i18n-same-links"
+    }
+
+    "accept a link that carries the page's own language, wherever it carries it" in {
+      val en = pageIn(
+        english,
+        """<p id="intro">Hello there</p><a id="help" href="/en/help?lang=en&print#top">Help</a>"""
+      )
+      val other = pageIn(
+        fr,
+        """<p id="intro">Bonjour</p><a id="help" href="/fr/help?lang=fr&print#top">Aide</a>"""
+      )
+      rulesBetween(en, other) must not contain "i18n-same-links"
+    }
+
+    "read the bare language where the page is configured with a region" in {
+      val en = pageIn(
+        Lang("en-GB"),
+        """<p id="intro">Hello there</p><a id="switch" href="/language/cy">Cymraeg</a>"""
+      )
+      val other = pageIn(
+        Lang("cy-GB"),
+        """<p id="intro">Helo</p><a id="switch" href="/language/en">English</a>"""
+      )
+      rulesBetween(en, other) must not contain "i18n-same-links"
+    }
+
+    "leave a language name inside a longer segment alone" in {
+      val other = pageIn(
+        fr,
+        """<p id="intro">Bonjour</p><a id="go" href="/next-fr">Continuer</a>"""
+      )
+      rulesFor(other) must contain("i18n-same-links")
+    }
+
+    "report a different place as each page wrote it" in {
+      val other = pageIn(
+        fr,
+        """<p id="intro">Bonjour</p><a id="go" href="/suivant?lang=fr">Continuer</a>"""
+      )
+      val found = TranslationStandards
+        .all()
+        .flatMap(_.check(base, other))
+        .filter(_.rule == "i18n-same-links")
+      found.flatMap(_.expected) must contain("/next")
+      found.flatMap(_.actual) must contain("/suivant?lang=fr")
     }
   }
 
@@ -236,6 +296,21 @@ class TranslationSpec
 
     "pass when every language matches the base" in {
       Seq(base, good) must translateConsistently
+    }
+
+    "touch nothing on the pages it compares, so coverage is not affected" in {
+      val en = pageIn(
+        english,
+        """<p id="intro">Hello there</p><a id="go" href="/next">Continue</a>"""
+      )
+      val other = pageIn(
+        fr,
+        """<p id="intro">Bonjour tout le monde</p><a id="go" href="/next">Continuer</a>"""
+      )
+      Seq(en, other) must translateConsistently
+      translationDifferences(Seq(en, other)) mustBe empty
+      en.touchedAnchors mustBe empty
+      other.touchedAnchors mustBe empty
     }
 
     "fail when one does not, naming what differs" in {

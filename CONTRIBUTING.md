@@ -98,10 +98,12 @@ token with contents and pull-requests write access, stored as the
 by hand: `gh workflow run ci.yml --ref <branch>`.
 
 `.scala-steward.conf` holds Steward to the deliberate pins: Scala to 3.3, sbt to
-1.x, and Play and twirl-api left alone. It also reads the `consumer/` build.
-It edits only the builds, never the workflows: a version in `ci.yml` is a pin,
-and a token without the workflows permission could not push the change anyway.
-It marks every commit `[skip release]`, so an update ships with the next
+1.x, and Play and twirl-api left alone. It also reads the `consumer/` build,
+where it leaves twirl-spec itself alone, because that build has to test what
+CI has just published locally rather than a release from Central. It edits
+only the builds, never the workflows: a version in `ci.yml` is a pin, and a
+token without the workflows permission could not push the change anyway. It marks
+every commit `[skip release]`, so an update ships with the next
 change that needs a release rather than spending a version of its own.
 Dependabot moves the actions, which are pinned by commit SHA, weekly and
 grouped, with the same marker. Merge a bot's pull request with a merge commit

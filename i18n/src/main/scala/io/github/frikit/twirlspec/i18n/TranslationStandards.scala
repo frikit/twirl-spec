@@ -33,9 +33,15 @@ final case class TranslationRule(
 
   /** The violations this rule finds comparing a translated page with the base
     * one, each a warning when the rule is.
+    *
+    * A comparison reads whole pages, so it runs with coverage recording paused
+    * on both: what it looked at says nothing about what the spec asserted, and
+    * `assertEverything` must not pass on its account.
     */
   def check(base: Page, other: Page): Seq[Violation] =
-    run(base, other).map(v => if (severity == Severity.Warning) v.warn else v)
+    base
+      .withRecordingPaused(other.withRecordingPaused(run(base, other)))
+      .map(v => if (severity == Severity.Warning) v.warn else v)
 
 }
 
@@ -116,11 +122,19 @@ object TranslationStandards {
       "i18n-same-links",
       "every language links to the same places"
     ) { (base, other) =>
+      // A link that differs only by the language it names is the same place:
+      // the language switch points at the other language on each page, and a
+      // link that carries the page's own language carries a different one on
+      // each. The targets are compared with those names neutralised, and a
+      // difference is reported as each page wrote it.
+      val langs = languageNamesOf(base, other)
+      val baseLinks = hrefsOf(base, langs)
+      val otherLinks = hrefsOf(other, langs)
       missingAndExtra(
         "i18n-same-links",
         "link target",
-        hrefsOf(base),
-        hrefsOf(other),
+        (baseLinks -- otherLinks.keySet).values.toSet,
+        (otherLinks -- baseLinks.keySet).values.toSet,
         other.lang
       )
     },
@@ -214,8 +228,47 @@ object TranslationStandards {
   private def idsOf(page: Page): Set[String] =
     page.document.getAllElements.asScala.map(_.id()).filter(_.nonEmpty).toSet
 
-  private def hrefsOf(page: Page): Set[String] =
-    page.links.elements.map(_.attr("href")).filter(_.nonEmpty).toSet
+  /** The names a link may carry for either page's language: the code as
+    * configured (`cy-GB`) and the language alone (`cy`), since a language
+    * switch names the bare language whatever the configuration declares.
+    */
+  private def languageNamesOf(base: Page, other: Page): Set[String] =
+    Set(base.lang, other.lang)
+      .flatMap(l => Set(l.code, l.language))
+      .map(_.toLowerCase)
+
+  /** Every link target on the page, keyed by its language-neutral form, so that
+    * two targets differing only in the language they name are one.
+    */
+  private def hrefsOf(page: Page, langs: Set[String]): Map[String, String] =
+    page.links.elements
+      .map(_.attr("href"))
+      .filter(_.nonEmpty)
+      .sorted
+      .map(href => languageNeutral(href, langs) -> href)
+      .toMap
+
+  /** The href with every whole path segment and query value that names one of
+    * the languages replaced by a placeholder: `/language/cy` on an English page
+    * and `/language/en` on a Welsh one read as one place, and so do
+    * `/help?lang=en` and `/help?lang=cy`. A name inside a longer segment is
+    * left alone.
+    */
+  private def languageNeutral(href: String, langs: Set[String]): String = {
+    def neutral(part: String): String =
+      if (langs.contains(part.toLowerCase)) "{lang}" else part
+    val (beforeFragment, fragment) = href.span(_ != '#')
+    val (path, query) = beforeFragment.span(_ != '?')
+    val neutralPath = path.split("/", -1).map(neutral).mkString("/")
+    val neutralQuery = query
+      .split("&", -1)
+      .map { param =>
+        val (key, value) = param.span(_ != '=')
+        if (value.isEmpty) key else s"$key=${neutral(value.drop(1))}"
+      }
+      .mkString("&")
+    neutralPath + neutralQuery + fragment
+  }
 
   private def controlsOf(page: Page): Set[String] =
     page.formControls.map(_.attr("name")).filter(_.nonEmpty).toSet

@@ -10,6 +10,41 @@ release, and each one has a GitHub Release whose notes are its section here. Eve
 recorded in full; earlier lines are kept to one entry each, so the file stays
 readable.
 
+## [2.3.0] - 2026-10-14
+
+Two verdicts change in this release, so it is a minor version.
+`translateConsistently` now passes a page whose only difference between
+languages is the language switch, and `assertEverything` can fail where it
+passed before, because the translation rules no longer count what they read
+as asserted.
+
+### Fixed
+
+- `i18n-same-links` accepts a link that differs only by the language it
+  names. The language switch points at the other language on each page, and a
+  link that carries the page's own language carries a different one on each,
+  so every bilingual page rendered with play-frontend-hmrc's language select
+  failed the rule, and the only remedy was to drop it. A whole path segment or
+  query value naming either language of the pair now reads as the same, a name
+  inside a longer segment does not, and a real difference is still reported as
+  the page wrote it.
+- The translation rules no longer count what they read as asserted.
+  `translateConsistently` and `translationDifferences` read every link on both
+  pages through the recording accessor, so a spec that ran them before
+  `assertEverything` passed coverage for links it never asserted. They now run
+  with recording paused, as the standards rules do.
+
+### Changed
+
+- The troubleshooting guide says how to boot a service whose Mongo component
+  pings a database as the application starts, without a database: swap the
+  component for a stub through `applicationConfig`, or through the builder of
+  a spec base with an application of its own.
+- CI's consumer build tests the newest Play through the consumer build's own
+  default, which Scala Steward keeps current, so the newest row no longer
+  names a version that goes stale; the row for a service today stays pinned
+  at Scala 3.3.7 and Play 3.0.10. Play 3.0.12 is the newest tested.
+
 ## [2.2.0] - 2026-09-26
 
 What a spec renders, and what coverage and exclusions accept, change in this
@@ -295,7 +330,10 @@ the Twirl entry points in `twirl-spec-quality`; language parity in
 them in `twirl-spec-all`. The renames a service built against a 0.x snapshot
 would meet are listed in [the adoption guide](docs/adopting.md).
 
-[Unreleased]: https://github.com/frikit/twirl-spec/compare/v2.0.1...HEAD
+[Unreleased]: https://github.com/frikit/twirl-spec/compare/v2.3.0...HEAD
+[2.3.0]: https://github.com/frikit/twirl-spec/compare/v2.2.0...v2.3.0
+[2.2.0]: https://github.com/frikit/twirl-spec/compare/v2.1.0...v2.2.0
+[2.1.0]: https://github.com/frikit/twirl-spec/compare/v2.0.1...v2.1.0
 [2.0.1]: https://github.com/frikit/twirl-spec/compare/v2.0.0...v2.0.1
 [2.0.0]: https://github.com/frikit/twirl-spec/compare/v1.0.0...v2.0.0
 [1.x]: https://github.com/frikit/twirl-spec/releases/tag/v1.0.0

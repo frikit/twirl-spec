@@ -87,6 +87,12 @@ The first page given is the base; nominate another with
 | `i18n-nothing-lost` | no text present in the base language goes missing |
 | `i18n-actually-translated` | the page is translated, not copied *(warning)* |
 
+A link that differs only by the language it names is the same place: the
+language switch points at the other language on each page, and a link that
+carries the page's own language carries a different one on each.
+`i18n-same-links` reads a whole path segment or query value naming either
+language as the same, and reports a real difference as the page wrote it.
+
 Text that is meant to read the same everywhere, a product name or a unit,
 would otherwise be reported by the last rule. Say so once:
 

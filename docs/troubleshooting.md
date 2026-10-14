@@ -56,6 +56,61 @@ one of `play`, `play-test` or `play-guice` is missing from the test
 classpath: the library declares them `Provided` so that it never moves your
 Play version, and your project supplies them.
 
+## The application needs a database it cannot reach
+
+A service built on HMRC's bootstrap instantiates every controller when the
+application starts, and the `PlayMongoComponent` from hmrc-mongo pings the
+database as it is built, with a five-second timeout that fails the start.
+The service's own `GuiceOneAppPerSuite` specs need a running Mongo for the
+same reason, so running one is the usual answer.
+
+Without one, swap the component for a stub. `TwirlSpec` builds its
+application from configuration alone, and a module can be named there:
+
+```scala
+import com.google.inject.AbstractModule
+import org.mongodb.scala.{MongoClient, MongoDatabase}
+import play.api.{Configuration, Environment}
+import uk.gov.hmrc.mongo.MongoComponent
+
+import scala.concurrent.duration.{DurationInt, FiniteDuration}
+
+object NoMongo extends MongoComponent {
+  lazy val client: MongoClient     = MongoClient("mongodb://localhost:27017/specs")
+  lazy val database: MongoDatabase = client.getDatabase("specs")
+  val initTimeout: FiniteDuration  = 1.second
+}
+
+class NoMongoModule extends AbstractModule {
+  override def configure(): Unit = bind(classOf[MongoComponent]).toInstance(NoMongo)
+}
+
+object NoMongoApplication {
+  // the service's own module list, with hmrc-mongo's module swapped for the stub;
+  // one stable value, so every suite shares one application
+  val config: Map[String, Any] = {
+    val base = Configuration.load(Environment.simple())
+    Map(
+      "play.modules.enabled"  -> (base.get[Seq[String]]("play.modules.enabled") :+ "specs.NoMongoModule"),
+      "play.modules.disabled" -> (base.get[Seq[String]]("play.modules.disabled") :+ "uk.gov.hmrc.mongo.play.PlayMongoModule")
+    )
+  }
+}
+```
+
+```scala
+override def applicationConfig: Map[String, Any] = NoMongoApplication.config
+```
+
+Two things make this work. The driver connects only on first use, so the stub
+builds without a database. And each repository awaits its index creation for
+`initTimeout`, logging a plain timeout as a warning and throwing on any other
+failure, so the timeout has to arrive first: keep the driver's server
+selection timeout at its default rather than shortening it in the URI. A spec
+base with an application of its own gives the builder
+`.disable[PlayMongoModule].overrides(bind[MongoComponent].toInstance(NoMongo))`
+instead.
+
 ## Specs are slow to start
 
 The first spec in a JVM boots a Play application. Every later spec with the
