@@ -68,6 +68,8 @@ Without one, swap the component for a stub. `TwirlSpec` builds its
 application from configuration alone, and a module can be named there:
 
 ```scala
+package specs
+
 import com.google.inject.AbstractModule
 import org.mongodb.scala.{MongoClient, MongoDatabase}
 import play.api.{Configuration, Environment}
@@ -113,12 +115,12 @@ instead.
 
 ## Specs are slow to start
 
-The first spec in a JVM boots a Play application. Every later spec with the
-same `applicationConfig` shares it, so a spec base that overrides
-`applicationConfig` should do so with a stable value; a fresh map per suite is
-a fresh application per suite. `SharedApplication.instanceCount` says how
-many have been built, and a service that suspects it is still booting per
-spec can assert on it.
+The first spec in a JVM boots a Play application. Every later spec with an
+equal `applicationConfig` shares it, whether or not it is the same map, so a
+spec base that overrides `applicationConfig` should keep the values stable: a
+random port or a timestamp in it means a new application per suite.
+`SharedApplication.instanceCount` says how many have been built, and a service
+that suspects it is still booting per spec can assert on it.
 
 ## Specs run in parallel
 
@@ -178,7 +180,8 @@ them on passing tests.
 
 Set `coverageScope` to the part of the page the view spec answers for,
 `"main, #main-content"` by default, and list what every page inherits in
-`coverageIgnored`. Ignoring a wrapper ignores what it holds.
+`coverageIgnored`, by id, or `coverageIgnoredSelectors`. Ignoring a wrapper
+ignores what it holds.
 
 ## The template scan reports an element that is fine
 

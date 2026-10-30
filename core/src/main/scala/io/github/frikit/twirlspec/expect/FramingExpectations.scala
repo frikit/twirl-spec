@@ -69,17 +69,22 @@ trait FramingExpectations {
   def heading(expected: Expected): Expectation = Expectation("heading") {
     page =>
       val h1 = page.h1
-      if (h1.isEmpty) Seq(Violation.missing("heading", "h1"))
-      else {
-        // The caption is inside the h1 for GOV.UK "page heading with caption",
-        // so compare against the h1 text with any caption text removed.
-        val captionText =
-          page.withRecordingPaused(page.caption).texts.headOption.getOrElse("")
-        val headingText =
-          if (captionText.nonEmpty && h1.text.startsWith(captionText))
-            h1.text.drop(captionText.length).trim
-          else h1.text
-        compare("heading", expected, headingText, page, Exact)
+      Matching.exactlyOne("heading", h1) match {
+        case Left(problem) => Seq(problem)
+        case Right(_)      =>
+          // The caption is inside the h1 for GOV.UK "page heading with caption",
+          // so compare against the h1 text with any caption text removed.
+          val captionText =
+            page
+              .withRecordingPaused(page.caption)
+              .texts
+              .headOption
+              .getOrElse("")
+          val headingText =
+            if (captionText.nonEmpty && h1.text.startsWith(captionText))
+              h1.text.drop(captionText.length).trim
+            else h1.text
+          compare("heading", expected, headingText, page, Exact)
       }
   }
 
@@ -130,12 +135,12 @@ trait FramingExpectations {
     present("timeoutDialog", page.timeoutDialog)
   }
 
-  /** A sign out link is present, and points where it should. */
+  /** A sign out link is present. */
   val signOutLink: Expectation = Expectation("signOutLink") { page =>
     present("signOutLink", page.signOutLink)
   }
 
-  /** The alpha or beta phase banner is present, with the phase it names. */
+  /** The alpha or beta phase banner is present. */
   val phaseBanner: Expectation = Expectation("phaseBanner") { page =>
     present("phaseBanner", page.phaseBanner)
   }

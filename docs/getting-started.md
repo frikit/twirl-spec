@@ -78,8 +78,10 @@ class MyViewSpec extends AnyWordSpec with Matchers with TwirlSpec with WcagCheck
 transactional service, `GovukServiceChecks` is the better start: every trait,
 less the three rules about search results (`not-noindex`,
 `has-meta-description`, `title-is-concise`), which a service reached from
-GOV.UK would see warn on every page. Without a rule trait, `display` checks
-exactly what you asked and nothing else.
+GOV.UK would see warn on every page. `HmrcServiceChecks` is the same again for a
+service on play-frontend-hmrc, with the report-a-problem link every page inherits
+left out of coverage. Without a rule trait, `display` checks exactly what you
+asked and nothing else.
 
 ## 4. Write the first spec
 
@@ -129,9 +131,10 @@ Three things to notice:
   compared against itself. When you really mean exact words, wrap them:
   `titleText("What is your name?")`, or `literal("...")` where an expectation
   takes an `Expected`.
-- **Expectations that name one element fail when they find more than one.**
+- **Most expectations that name one element fail when they find more than one.**
   `textInput("value")` with two matching inputs is a failure, not a silent
-  pick of the first. Use `cssSelector` and `elementCount` for groups.
+  pick of the first, and so is `heading` on a page with two `<h1>`s. Use
+  `cssSelector` and `elementCount` for groups.
 - **Every check runs.** One red test shows every problem on the page, followed
   by the page's outline, so you fix them in one round.
 

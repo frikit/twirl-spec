@@ -114,7 +114,7 @@ motion, or anything that depends on CSS or JavaScript.
 
 ## What each set is for
 
-**`WcagStandards`** is accessibility, 21 rules each tied to a success
+**`WcagStandards`** is accessibility, 23 rules each tied to a success
 criterion plus `one-h1`, a structural convention almost everyone wants.
 
 **`TwirlStandards`** is Play rendering mistakes: an unresolved message key
@@ -126,10 +126,12 @@ reader: a password in a form that submits by GET — including one that names no
 method, which submits by GET too — a `javascript:` link, and a new-tab link
 carrying neither `rel="noopener"` nor `rel="noreferrer"`.
 
-**`GovukStandards`** is the Design System's error conventions: the title
-prefix, the visually hidden "Error:" on inline messages, the summary links
-landing on their fields. They key off Design System markup, so they stay
-silent on a page that does not use it.
+**`GovukStandards`** is the Design System's conventions: the title prefix, the
+visually hidden "Error:" on inline messages, the summary links landing on their
+fields, each error reading the same in the summary and beside its field, and the
+skip link landing on something. They key off Design System markup, so they stay
+silent on a page that does not use it. `link-names-distinct`, which goes by what
+any link is called and where it goes, holds on every page.
 
 **`AriaStandards`** is the static half of what an automated accessibility
 tool reports: whether an `aria-` attribute or a role is real, whether its
@@ -160,6 +162,14 @@ import java.nio.file.{Files, Path}
 
 val problems = TagBalance.checkTemplate(Files.readString(Path.of("app/views/page.scala.html")))
 problems.foreach(p => println(s"line ${p.line}: ${p.message}"))
+```
+
+A spec that mixes in `HtmlChecks` can ask it of every template under a directory.
+It names each problem by its file and line, and fails on a directory with no
+templates, so a wrong path cannot pass for ever:
+
+```scala
+Path.of("app/views") must haveBalancedTemplates
 ```
 
 The Scala is taken out first, so `@if(page < total)` is a comparison and not

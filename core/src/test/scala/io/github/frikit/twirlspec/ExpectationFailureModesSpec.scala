@@ -86,6 +86,20 @@ class ExpectationFailureModesSpec
   private def failsOn(page: Page, name: String, e: Expectation): Unit =
     withClue(s"$name should have failed — ")(e.check(page) must not be empty)
 
+  "heading" should {
+    "not read two headings as one" in {
+      val two = Page.fromString(
+        "<!DOCTYPE html><html><head><title>t</title></head><body><h1>A</h1><h1>B</h1></body></html>",
+        english,
+        messages
+      )
+      val found = headingText("A B").check(two)
+      found.map(_.message) mustBe Seq(
+        "2 elements matched, so this assertion is ambiguous"
+      )
+    }
+  }
+
   "expectations looking for something that is not there" should {
     "each report a missing element" in {
       failsOn(bare, "heading", heading("kitchenSink.heading"))

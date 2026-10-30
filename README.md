@@ -275,11 +275,14 @@ This is a working subset of the accessible name computation, not the whole
 specification: it resolves one hop of `aria-labelledby` and knows nothing that
 depends on CSS or JavaScript.
 
-Text expectations also take a regular expression anywhere a string is accepted:
+An expectation that takes an `Expected`, as `title`, `heading`, `caption` and
+`headingAtLevel` do, also takes a regular expression:
 
 ```scala
 heading(matching("Sign\\s+up".r))
 ```
+
+The ones that take a message key, such as `paragraph` and `labelled`, do not.
 
 ### Control state, form values and reading order
 
@@ -403,8 +406,8 @@ listed again here.
 | `noBackLink` | There is no back link, for a page a citizen must not reverse out of. |
 | `languageToggle` | A language switcher, however it is rendered. |
 | `timeoutDialog` | The session-timeout dialog is wired up. |
-| `signOutLink` | A sign out link is present, and points where it should. |
-| `phaseBanner` | The alpha or beta phase banner is present, with the phase it names. |
+| `signOutLink` | A sign out link is present. |
+| `phaseBanner` | The alpha or beta phase banner is present. |
 | `subheading` | An `h2` with the given message key. |
 | `headingAtLevel` | A heading at a given level says this. |
 
@@ -786,17 +789,19 @@ so one view's assertions never pass another view that shares its ids. States of
 one view that should be measured as a whole share a name:
 `render(view(form)).coveredAs("name-page")`.
 
-Three things are adjustable, usually once on a project's spec base:
+Four things are adjustable, usually once on a project's spec base:
 
 ```scala
-override def coverageScope: String        = "main, #main-content"   // the layout is not the view spec's problem
-override def coverageIgnored: Set[String] = Set("#content")         // what every page inherits
-override def trackedAttributes: Set[String] = Set("data-journey-click")
+override def coverageScope: String                 = "main, #main-content"   // the layout is not the view spec's problem
+override def coverageIgnored: Set[String]          = Set("#print-link")      // what every page inherits, by id
+override def coverageIgnoredSelectors: Set[String] = Set(".page-tools")      // or by selector, where it has no id
+override def trackedAttributes: Set[String]        = Set("data-journey-click")
 ```
 
-Ignoring a block ignores what it holds: disclaiming the layout's
-`#report-technical-issue` wrapper does not then hold the spec to the link
-inside it.
+Ignoring a block ignores what it holds, so disclaim only what is inherited:
+`#content` on `<main id="content">` would take the whole page out, and
+`assertEverything` would pass with nothing asserted. `HmrcServiceChecks` already
+leaves out play-frontend-hmrc's report-a-problem link.
 
 `assertEverythingExcept("#id")` covers the one-off case, and
 `unassertedContent(page)` reports without failing.
@@ -826,6 +831,8 @@ language. `PageCatalogue`, in `twirl-spec-all`, makes that a table, with two
 tests per page:
 
 ```scala
+import io.github.frikit.twirlspec.PageCatalogue
+
 class EveryPageSpec extends ViewSpecBase with PageCatalogue {
   catalogue(
     staticPage("Info")(inject[InfoView](draftId, index)),

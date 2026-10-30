@@ -67,17 +67,20 @@ component accessors, count the same as DSL expectations. Rule sets do not
 count: they sweep the whole page, and what they touch says nothing about what
 the spec asserted.
 
-Three things are adjustable, usually once on a spec base:
+Four things are adjustable, usually once on a spec base:
 
 ```scala
-override def coverageScope: String          = "main, #main-content"   // the layout is not the view spec's problem
-override def coverageIgnored: Set[String]   = Set("#content")         // what every page inherits
-override def trackedAttributes: Set[String] = Set("data-journey-click")
+override def coverageScope: String                 = "main, #main-content"   // the layout is not the view spec's problem
+override def coverageIgnored: Set[String]          = Set("#print-link")      // what every page inherits, by id
+override def coverageIgnoredSelectors: Set[String] = Set(".page-tools")      // or by selector, where it has no id
+override def trackedAttributes: Set[String]        = Set("data-journey-click")
 ```
 
-Ignoring a block ignores what it holds: disclaiming the layout's
-`#report-technical-issue` wrapper does not then hold the spec to the link
-inside it. `assertEverythingExcept("#id")` covers the one-off case, and
+Ignoring a block ignores what it holds, so disclaim only what is inherited:
+`#content` on `<main id="content">` would take the whole page out, and
+`assertEverything` would pass with nothing asserted. `HmrcServiceChecks` already
+leaves out play-frontend-hmrc's report-a-problem link.
+`assertEverythingExcept("#id")` covers the one-off case, and
 `unassertedContent(page)` returns the list without failing.
 
 ## The Twirl entry points nothing calls

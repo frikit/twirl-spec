@@ -40,7 +40,7 @@ class StandardsSelectionSpec extends AnyWordSpec with Matchers with TwirlSpec {
           english,
           messages
         )
-      broken must displayOnly(headingText("One Two"))
+      broken must displayOnly(titleText("t"))
       standardsExpectation.check(broken).map(_.rule) must contain("one-h1")
     }
 

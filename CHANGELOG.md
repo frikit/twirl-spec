@@ -75,6 +75,13 @@ that has no id.
 
 ### Fixed
 
+- `heading` fails on a page with more than one `<h1>`, as its documentation said. Two
+  headings read as one, so `<h1>A</h1><h1>B</h1>` passed `headingText("A B")`.
+- The adopting guide's spec base ignored `#report-technical-issue` and
+  `#hmrc-timeout`, which play-frontend-hmrc does not render, so a base copied from
+  it left out nothing. It now mixes in `HmrcServiceChecks`. Other guides had drifted
+  from the code too: which expectations take a regular expression, what `signOutLink`
+  and `phaseBanner` check, and when two specs share an application.
 - `assertEverything` credits what an assertion found, not what it looked
   through. One `link(...)` counted every link on the page as asserted, and one
   `role(...).named(...)` every element with the role; `paragraph`, `tableRow`,
