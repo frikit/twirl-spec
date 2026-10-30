@@ -378,8 +378,8 @@ listed again here.
 | | |
 |---|---|
 | `standardsRules` | Which rules run alongside every `display(...)`: none in the core, and each rule module adds its own. |
-| `failOnWarnings` | Whether warnings fail the test. |
-| `reportWarnings` | Whether passing tests still surface their warnings in the test output. |
+| `failOnWarnings` | Whether warnings fail the test, for `display`, the language comparison and the message files alike. |
+| `reportWarnings` | Whether passing tests still surface their warnings: through ScalaTest's alert under `TwirlSpec`, on standard output with `TwirlSpecDsl` alone. |
 | `display` | The page shows all of this, and holds to every rule `standardsRules` resolves to. |
 | `displayOnly` | As `display`, but without the standards — for the rare page that has to break a rule, or while a legacy view is being brought up to standard. |
 | `meetStandards` | Whatever `standardsRules` resolves to, for a spec that has its own assertions already. |

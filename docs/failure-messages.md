@@ -57,8 +57,16 @@ than compared as text:
 
 Findings from warning rules, and from expectations softened with
 `.asWarning`, appear under `warnings:` and do not fail the page unless
-`failOnWarnings` is on. A passing test with warnings still surfaces them,
-through ScalaTest's alert output, unless `reportWarnings` is off.
+`failOnWarnings` is on, and that holds for `translateConsistently` and the
+message-file matchers as well as `display`. A passing test with warnings still
+surfaces them, unless `reportWarnings` is off: through ScalaTest's alert output
+under `TwirlSpec`, and on standard output with `TwirlSpecDsl` alone, which may
+have no reporter to hand. A spec base with `Alerting`, as every ScalaTest style
+has, can route them to alert in one line:
+
+```scala
+override protected def alertHook(message: String): Unit = alert(message)
+```
 
 ## The outline
 

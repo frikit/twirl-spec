@@ -75,6 +75,15 @@ that has no id.
   `i18n-actually-translated` also reads the title.
 - `i18n-same-links` notices two links with ids swapping their destinations. It
   compared only the set of places, which is unchanged by a swap.
+- Warnings follow one policy everywhere. `translateConsistently` and the
+  message-file matchers ignored `failOnWarnings` and dropped their warnings on a
+  passing run, so `i18n-actually-translated` could not be seen at all unless
+  another rule failed. A spec with `failOnWarnings` on can now fail where it
+  passed.
+- With `TwirlSpecDsl` alone, the route for a spec base with its own application,
+  a passing check's warnings go to standard output. They went nowhere, against
+  what the docs said. `alertHook` routes them to ScalaTest's alert in one line.
+- A failure caused only by warnings says so, rather than "page failed 0 checks".
 
 ## [2.3.0] - 2026-10-14
 

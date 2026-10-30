@@ -23,6 +23,13 @@ import io.github.frikit.twirlspec.messages.{MessagesIntegrity, MessagesMatchers}
 import java.io.{File, PrintWriter}
 import java.nio.file.Files
 
+/** A spec on the DSL, which decides what happens to warnings. */
+private class MessagesPolicy extends TwirlSpecDsl with MessagesMatchers {
+  var surfaced: List[String] = Nil
+  override protected def alertHook(message: String): Unit =
+    surfaced = message :: surfaced
+}
+
 /** The message-file matchers as a consuming spec would use them. */
 class MessagesMatchersSpec
     extends AnyWordSpec
@@ -53,6 +60,59 @@ class MessagesMatchersSpec
         io.github.frikit.twirlspec.expect.Severity.Warning
       )
       api must beConsistentAcrossLanguages() // warnings alone do not fail
+    }
+
+    "hold warnings to the spec's own policy" in {
+      val copied = (1 to 10).map(i => s"k$i" -> s"value $i").toMap
+      val api = new play.api.i18n.DefaultMessagesApi(
+        messages = Map("default" -> copied, "cy" -> copied),
+        langs = new play.api.i18n.DefaultLangs(Seq(english, welsh))
+      )
+      val spec = new MessagesPolicy
+      spec.beConsistentAcrossLanguages()(api).matches mustBe true
+      spec.surfaced.mkString must include("[cy]")
+
+      val quiet = new MessagesPolicy { override def reportWarnings = false }
+      quiet.beConsistentAcrossLanguages()(api).matches mustBe true
+      quiet.surfaced mustBe empty
+
+      val strict = new MessagesPolicy { override def failOnWarnings = true }
+      val failed = strict.beConsistentAcrossLanguages()(api)
+      failed.matches mustBe false
+      failed.failureMessage must include(
+        "message files failed on 1 warning(s), as failOnWarnings asks:"
+      )
+    }
+
+    "say warnings on standard output without a spec to decide" in {
+      val copied = (1 to 10).map(i => s"k$i" -> s"value $i").toMap
+      val api = new play.api.i18n.DefaultMessagesApi(
+        messages = Map("default" -> copied, "cy" -> copied),
+        langs = new play.api.i18n.DefaultLangs(Seq(english, welsh))
+      )
+      val alone = new MessagesMatchers {}
+      val out = new java.io.ByteArrayOutputStream
+      Console.withOut(out) {
+        alone.beConsistentAcrossLanguages()(api).matches mustBe true
+      }
+      out.toString must include("messages.translation-coverage")
+
+      val clean = new play.api.i18n.DefaultMessagesApi(
+        messages = Map("default" -> Map("a" -> "A"), "cy" -> Map("a" -> "B")),
+        langs = new play.api.i18n.DefaultLangs(Seq(english, welsh))
+      )
+      val nothing = new java.io.ByteArrayOutputStream
+      Console.withOut(nothing) {
+        alone.beConsistentAcrossLanguages()(clean).matches mustBe true
+      }
+      nothing.toString mustBe empty
+
+      val broken = new java.io.PrintStream(new java.io.OutputStream {
+        def write(b: Int): Unit = throw new IllegalStateException("closed")
+      })
+      Console.withOut(broken) {
+        alone.beConsistentAcrossLanguages()(api).matches mustBe true
+      }
     }
 
     "ignore keys a service has excluded" in {

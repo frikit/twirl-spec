@@ -89,9 +89,7 @@ final case class CheckReport(
 
   /** The message a developer reads when their view test goes red. */
   def message: String = {
-    val header =
-      if (errors.size == 1) s"$subject failed 1 check:"
-      else s"$subject failed ${errors.size} checks:"
+    val header = Outcome.headline(subject, errors.size, warnings.size)
 
     val body = errors.map(_.render()).mkString("\n\n")
 
@@ -107,6 +105,28 @@ final case class CheckReport(
         |  --- page outline (${page.lang.code}) ---
         |${page.outline}
         |""".stripMargin
+  }
+
+}
+
+/** How a check's outcome is worded, wherever it is reported. */
+private[twirlspec] object Outcome {
+
+  /** A failure's first line. With no errors, only `failOnWarnings` can have
+    * failed it.
+    */
+  def headline(subject: String, errors: Int, warnings: Int): String =
+    errors match {
+      case 0 =>
+        s"$subject failed on $warnings warning(s), as failOnWarnings asks:"
+      case 1 => s"$subject failed 1 check:"
+      case n => s"$subject failed $n checks:"
+    }
+
+  /** What a passing check says about its warnings. */
+  def surfaced(warnings: Seq[Violation]): String = {
+    val lines = warnings.map(w => s"  ${w.rule}: ${w.message}").mkString("\n")
+    s"twirl-spec: ${warnings.size} warning(s)\n$lines"
   }
 
 }

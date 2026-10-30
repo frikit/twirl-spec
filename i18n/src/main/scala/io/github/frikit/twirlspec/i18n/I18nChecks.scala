@@ -96,11 +96,8 @@ trait I18nChecks extends TwirlSpecDsl {
             "no pages were given to compare"
           )
         case Some(first) =>
-          val report =
-            CheckReport(first, compare(pages, base, excluded), "translation")
-          MatchResult(
-            report.passed,
-            if (report.passed) "" else report.message,
+          verdict(
+            CheckReport(first, compare(pages, base, excluded), "translation"),
             "every language matched the base, but was expected not to"
           )
       }

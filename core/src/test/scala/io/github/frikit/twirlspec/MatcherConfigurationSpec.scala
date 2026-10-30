@@ -63,6 +63,15 @@ class MatcherConfigurationSpec extends AnyWordSpec with Matchers {
       pageOf(messages) must meetStandards
     }
 
+    "say a warning failed the check, rather than that no check failed" in new Fixture {
+      override def failOnWarnings = true
+      val message = meetStandards(pageOf(messages)).failureMessage
+      message must include(
+        "page failed on 1 warning(s), as failOnWarnings asks:"
+      )
+      message must not include "failed 0"
+    }
+
     "stay silent when warning reporting is switched off" in new Fixture {
       override def reportWarnings = false
       var called = false
@@ -74,7 +83,7 @@ class MatcherConfigurationSpec extends AnyWordSpec with Matchers {
 
   /** A spec base built on TwirlSpecDsl alone, which is the entry point a
     * project with its own application uses — and which leaves `alertHook` at
-    * its default no-op.
+    * its default, standard output.
     */
   private trait Fixture extends TwirlSpecDsl with Matchers {
     override def standardsRules: Seq[Rule] = Seq(warnOnly)
@@ -98,9 +107,12 @@ class MatcherConfigurationSpec extends AnyWordSpec with Matchers {
   }
 
   "TwirlSpecDsl on its own" should {
-    "have a no-op alert hook, so it needs no ScalaTest reporter" in new Fixture {
+    "say a passing check's warnings on standard output, needing no ScalaTest reporter" in new Fixture {
       // Exercises the default implementation rather than TwirlSpec's override.
-      noException must be thrownBy alertHook("anything")
+      val out = new java.io.ByteArrayOutputStream
+      Console.withOut(out)(pageOf(messages) must meetStandards)
+      out.toString must include("twirl-spec: 1 warning(s)")
+      out.toString must include("advisory: worth a look")
       expectations(Expectation.satisfied).check(pageOf(messages)) mustBe empty
     }
   }
