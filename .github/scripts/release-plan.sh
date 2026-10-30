@@ -23,9 +23,16 @@
 # whether the API may change (only a major may break binary compatibility).
 set -euo pipefail
 
-# for-each-ref stops after one, where piping a long tag list into head would
-# let git die of SIGPIPE and pipefail abort the release.
-last="$(git for-each-ref --count=1 --sort=-version:refname --format='%(refname:short)' 'refs/tags/v*')"
+# Only a release counts: vX.Y.Z. A v2.4.0-rc1 could not be incremented, and does
+# not mean its commit has been released; nor is a v9.0.0 on another branch in
+# this one's history. The lists are read whole, where piping a long one into
+# something that stops early would let git die of SIGPIPE and pipefail abort the
+# release.
+in_history="$(git for-each-ref --merged HEAD --sort=-version:refname --format='%(refname:short)' 'refs/tags/v*')"
+on_head="$(git for-each-ref --points-at HEAD --sort=-version:refname --format='%(refname:short)' 'refs/tags/v*')"
+newest_release() { grep -m1 -E '^v[0-9]+\.[0-9]+\.[0-9]+$' <<< "$1" || true; }
+last="$(newest_release "$in_history")"
+tagged="$(newest_release "$on_head")"
 range="HEAD"
 [ -n "$last" ] && range="$last..HEAD"
 
@@ -63,3 +70,4 @@ echo "bump=$bump"
 echo "next=$next"
 echo "skip=$skip"
 echo "commits=$commits"
+echo "tagged=$tagged"

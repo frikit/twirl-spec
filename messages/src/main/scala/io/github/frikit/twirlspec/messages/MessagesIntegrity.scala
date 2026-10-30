@@ -20,8 +20,9 @@ import play.api.i18n.MessagesApi
 import io.github.frikit.twirlspec.expect.Violation
 
 import java.io.File
+import java.text.{ChoiceFormat, MessageFormat}
 import scala.io.Source
-import scala.util.Using
+import scala.util.{Failure, Success, Try, Using}
 
 /** Checks over a service's message files. */
 object MessagesIntegrity {
@@ -245,6 +246,16 @@ object MessagesIntegrity {
       }
     }
 
+    val malformed = allEntries.flatMap { case (lang, (key, value)) =>
+      whyMalformed(value).map(reason =>
+        Violation(
+          "messages.malformed",
+          s"[$lang] `$key` is not a valid message, so showing it throws",
+          actual = Some(value)
+        ).warn.withHint(s"MessageFormat says: $reason")
+      )
+    }
+
     val placeholderParity =
       if (!config.requireTranslations) Nil
       else
@@ -293,8 +304,24 @@ object MessagesIntegrity {
             )
         }
 
-    noTranslations ++ parity ++ empty ++ quotes ++ placeholderParity ++ coverage
+    noTranslations ++ parity ++ empty ++ quotes ++ malformed ++
+      placeholderParity ++ coverage
   }
+
+  /** Why showing this message would throw, if it would. A choice's branches are
+    * messages of their own, which are parsed only when one is chosen.
+    */
+  private def whyMalformed(message: String): Option[String] =
+    Try(new MessageFormat(message)) match {
+      case Failure(e)      => Some(e.getMessage)
+      case Success(format) =>
+        format.getFormats.toList
+          .collect { case choice: ChoiceFormat => choice.getFormats.toList }
+          .flatten
+          .collect { case branch: String if branch.contains("{") => branch }
+          .flatMap(whyMalformed)
+          .headOption
+    }
 
   /** Keys defined more than once in a single messages file. A file that is not
     * there, or no files at all, is a finding: nothing was checked, and a wrong

@@ -80,7 +80,16 @@ object Outline {
           .map(_.toUpperCase)
           .getOrElse("GET")
         val action =
-          Option(form.attr("action")).filter(_.nonEmpty).getOrElse("(none)")
+          Option(form.attr("action"))
+            .filter(_.nonEmpty)
+            // Play can carry the token in the URL, and it differs per render.
+            .map { action =>
+              val (url, fragment) = action.span(_ != '#')
+              url
+                .replaceAll("(?<=[?&])csrfToken=[^&]*&?", "")
+                .replaceAll("[?&]$", "") + fragment
+            }
+            .getOrElse("(none)")
         val header = s"form $method $action"
 
         val controls = form

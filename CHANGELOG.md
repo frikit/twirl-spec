@@ -25,6 +25,9 @@ that has no id.
   choices, by what they submit rather than their labels or their order, and each
   form submits to the same place. A service that loads a separate Welsh list of
   countries can drop one from it without any other check noticing.
+- `messages.malformed`, new, as a warning: a message MessageFormat cannot parse, such
+  as `Hello {0` or `Hello {name}`, throws when it is shown, however the rest of the
+  checks read it.
 - `button-has-name`, new, as a warning: a button that does not submit has an
   accessible name, as `submit-has-name` asks of one that does. An icon-only button
   with no label is called nothing at all.
@@ -75,6 +78,13 @@ that has no id.
 
 ### Fixed
 
+- `basedOn` fails when no page is in the language it names. It measured against the
+  first page in silence, and took that for a pass.
+- The page outline leaves a CSRF token out of a form's action, as it differs on every
+  render and the outline is meant to be stable enough to commit.
+- The release plan reads only `vX.Y.Z` tags in the branch's own history. A `v9.0.0` on
+  another branch was taken for the last release, which could skip a release or jump a
+  version, and a `v2.4.0-rc1` aborted the plan.
 - `heading` fails on a page with more than one `<h1>`, as its documentation said. Two
   headings read as one, so `<h1>A</h1><h1>B</h1>` passed `headingText("A B")`.
 - Words in a `hidden` element no longer name what they sit in, as words under

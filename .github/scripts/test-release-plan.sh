@@ -103,6 +103,54 @@ git tag v1.10.0
 commit "Three"
 expect "the latest tag by version, not by name" "last=v1.10.0 bump=patch next=v1.10.1"
 
+repo
+commit "Release"
+git tag v1.4.2
+git switch -q -c other
+commit "Something else"
+git tag v9.0.0
+git switch -q main
+commit "Fix a rule"
+expect "a tag on another branch is not the last release" "last=v1.4.2 bump=patch next=v1.4.3 skip=false commits=1"
+
+repo
+commit "Release"
+git tag v1.4.2
+commit "Try something"
+git tag v1.5.0-rc1
+commit "Fix a rule"
+expect "a pre-release tag is not the last release" "last=v1.4.2 bump=patch next=v1.4.3 skip=false commits=2"
+
+repo
+commit "Release"
+git tag v1.4.2
+git tag v2
+git tag version-one
+expect "a tag that is not a version is not the last release" "last=v1.4.2 bump=patch next=v1.4.3 skip=true commits=0"
+
+repo
+commit "Start"
+git tag v1.5.0-rc1
+expect "only pre-releases: the first release is still v1.0.0" "last= bump=patch next=v1.0.0 skip=false commits=1"
+
+repo
+commit "Release"
+git tag v1.4.2
+expect "a released commit says so" "commits=0 tagged=v1.4.2"
+
+repo
+commit "Release"
+git tag v1.4.2
+commit "Try something"
+git tag v1.5.0-rc1
+expect "a pre-release tag does not make a commit released" "next=v1.4.3 skip=false commits=1 tagged= "
+
+repo
+commit "Release"
+git tag v1.4.2
+commit "Fix a rule"
+expect "a commit since the last release is not released" "commits=1 tagged= "
+
 if [ "$failures" -gt 0 ]; then
   echo "$failures failure(s)"
   exit 1

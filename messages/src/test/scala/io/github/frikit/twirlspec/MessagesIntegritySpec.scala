@@ -19,10 +19,12 @@ package io.github.frikit.twirlspec
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import play.api.i18n.{DefaultLangs, DefaultMessagesApi, Lang, MessagesApi}
+import io.github.frikit.twirlspec.expect.Severity
 import io.github.frikit.twirlspec.messages.{MessagesIntegrity, MessagesMatchers}
 
 import java.io.{File, PrintWriter}
 import java.nio.file.Files
+import java.text.MessageFormat
 
 class MessagesIntegritySpec
     extends AnyWordSpec
@@ -44,6 +46,13 @@ class MessagesIntegritySpec
       welsh: Map[String, String]
   ): Set[String] =
     MessagesIntegrity.check(api(english, welsh)).map(_.rule).toSet
+
+  /** A message as Play shows it, with arguments that reach every choice's last
+    * branch.
+    */
+  private def shown(message: String): String =
+    new MessageFormat(message)
+      .format(Array[Object](Int.box(1), Int.box(1), "x"))
 
   "the message files of this library's own fixtures" should {
     "already be consistent" in {
@@ -150,6 +159,49 @@ class MessagesIntegritySpec
         Map("a" -> "A", "b" -> "  "),
         Map("a" -> "A cy", "b" -> "B cy")
       ) must contain("messages.empty-value")
+    }
+
+    "warn of a message that would throw when shown, in either language" in {
+      Seq(
+        "Hello {0",
+        "Hello {name}",
+        "Hello {0,nonsense}",
+        "{0,choice,0#No names|1#Hello {name}}",
+        "{0,choice,0#None|1#{1,choice,1'#'Hello {name}}}",
+        // A choice inside a choice has to quote its marks, or they are the outer's.
+        "{0,choice,0#None|1#{1,choice,1#Hello {2}}}"
+      ).foreach { bad =>
+        withClue(bad) {
+          // What it warns of is what really happens.
+          an[IllegalArgumentException] must be thrownBy shown(bad)
+          rules(Map("a" -> bad), Map("a" -> "Helo {0}")) must contain(
+            "messages.malformed"
+          )
+          val found = MessagesIntegrity
+            .check(api(Map("a" -> "Hello {0}"), Map("a" -> bad)))
+            .filter(_.rule == "messages.malformed")
+          found.map(_.severity) mustBe Seq(Severity.Warning)
+          found.flatMap(_.actual) mustBe Seq(bad)
+        }
+      }
+    }
+
+    "leave alone a message that is only odd" in {
+      Seq(
+        "Hello {0}",
+        "Hello '{0'",
+        "Don''t",
+        "",
+        "{0,number}",
+        "{0,choice,0#No names|1#One name|1<{0} names}",
+        "{0,choice,0#None|1#{1,choice,1'#'Hello {2}}}"
+      ).foreach(fine =>
+        withClue(fine) {
+          noException must be thrownBy shown(fine)
+          rules(Map("a" -> fine), Map("a" -> fine)) must not contain
+            "messages.malformed"
+        }
+      )
     }
 
     "flag an unpaired apostrophe" in {

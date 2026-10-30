@@ -685,8 +685,17 @@ class TranslationSpec
       Seq(good, base) must basedOn(english)
     }
 
-    "fall back to the first page when the nominated language is absent" in {
-      Seq(base, good) must basedOn(Lang("de"))
+    "fail when the nominated language is absent, rather than measure against another" in {
+      val result = basedOn(Lang("de")).apply(Seq(base, good))
+      result.matches mustBe false
+      result.failureMessage must include("no page was rendered in de")
+      translationDifferences(Seq(base), Some(Lang("de"))).map(_.rule) mustBe
+        Seq("basedOn")
+      translationDifferences(Nil, Some(Lang("de"))) mustBe empty
+    }
+
+    "take a regional form of the nominated language" in {
+      Seq(good, base) must basedOn(Lang("en-GB"))
     }
 
     "pass when there is only one language to compare" in {

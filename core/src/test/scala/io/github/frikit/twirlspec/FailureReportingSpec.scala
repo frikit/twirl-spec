@@ -16,6 +16,7 @@
 
 package io.github.frikit.twirlspec
 
+import io.github.frikit.twirlspec.page.Page
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import play.api.data.Form
@@ -124,6 +125,32 @@ class FailureReportingSpec extends AnyWordSpec with Matchers with Bilingual {
       lines must contain("form POST /register/name")
       lines.exists(_.startsWith("button submit")) mustBe true
       lines.exists(_.startsWith("title What is your name?")) mustBe true
+    }
+
+    "stay the same whatever token a form's action carries" in {
+      def header(action: String) =
+        Page
+          .fromString(
+            s"""<main><form method="post" action="$action"></form></main>""",
+            english,
+            messages
+          )
+          .outline
+          .linesIterator
+          .map(_.trim)
+          .filter(_.startsWith("form"))
+          .toList
+      header("/save?csrfToken=A") mustBe List("form POST /save")
+      header("/save?csrfToken=A") mustBe header("/save?csrfToken=B")
+      header("/save?csrfToken=A&amp;b=2") mustBe List("form POST /save?b=2")
+      header("/save?b=2&amp;csrfToken=A") mustBe List("form POST /save?b=2")
+      header("/save?b=2") mustBe List("form POST /save?b=2")
+      header("/save?csrfToken=A#one") mustBe List("form POST /save#one")
+      header("/save?b=2&amp;csrfToken=A#two") mustBe
+        List("form POST /save?b=2#two")
+      header("/save#part?csrfToken=A") mustBe
+        List("form POST /save#part?csrfToken=A")
+      header("/save#part?") mustBe List("form POST /save#part?")
     }
 
     "list the errors when the page is in an error state" in {

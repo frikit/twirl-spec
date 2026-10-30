@@ -66,7 +66,17 @@ trait I18nChecks extends TwirlSpecDsl {
       .all(translationConfig)
       .filterNot(r => excluded.contains(r.id))
     basePage(pages, base) match {
-      case None       => Nil
+      case None =>
+        base
+          .filter(_ => pages.nonEmpty)
+          .toSeq
+          .map(lang =>
+            Violation(
+              "basedOn",
+              s"no page was rendered in ${lang.code} to measure the others against",
+              actual = Some(pages.map(_.lang.code).mkString(", "))
+            )
+          )
       case Some(from) =>
         val differences = pages
           .filterNot(_ eq from)
@@ -78,10 +88,16 @@ trait I18nChecks extends TwirlSpecDsl {
     }
   }
 
+  /** The page to measure against: the first, or the one in the language asked
+    * for, where `en-GB` will do for `en`. Asking for a language no page is in
+    * finds none, rather than measuring against some other page in silence.
+    */
   private def basePage(pages: Seq[Page], base: Option[Lang]): Option[Page] =
-    base
-      .flatMap(l => pages.find(_.lang.code == l.code))
-      .orElse(pages.headOption)
+    base.fold(pages.headOption)(l =>
+      pages
+        .find(_.lang.code == l.code)
+        .orElse(pages.find(_.lang.language == l.language))
+    )
 
   private def matcher(
       base: Option[Lang],
