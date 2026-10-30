@@ -108,6 +108,32 @@ class ExpectationFailureModesSpec
     }
   }
 
+  "textArea" should {
+    def holding(text: String) =
+      Page.fromString(
+        s"""<label for="notes">Notes</label><textarea id="notes" name="notes">$text</textarea>""",
+        english,
+        messages
+      )
+
+    "compare what it holds as a browser reads it" in {
+      val lines = holding("a\nb")
+      textArea("notes").withValue("a\nb").check(lines) mustBe empty
+      textArea("notes").withValue("a b").check(lines) must not be empty
+      lines.formValues mustBe Map("notes" -> "a\nb")
+    }
+
+    "keep the spaces it holds, and drop the line break after its tag" in {
+      textArea("notes").withValue("  a").check(holding("  a")) mustBe empty
+      textArea("notes").withValue("a").check(holding("  a")) must not be empty
+      textArea("notes").withValue("a").check(holding("\na")) mustBe empty
+      holding("\na").formValues mustBe Map("notes" -> "a")
+      textArea("notes").withValue("a\nb").check(holding("a\r\nb")) mustBe empty
+      textArea("notes").withValue("a\nb").check(holding("a\rb")) mustBe empty
+      textArea("notes").withValue("a").check(holding("\r\na")) mustBe empty
+    }
+  }
+
   "the page's text" should {
     "not include the title, which is not on the page" in {
       val page = Page.fromString(

@@ -254,7 +254,9 @@ role("radio").occurring(2)
 
 Roles are resolved the way HTML-AAM defines them, implicit or explicit, and an
 element carrying an explicit `role` is matched only by that role — so
-`<a role="button">` is a button and not a link. The accessible name comes from
+`<a role="button">` is a button and not a link. One limit: an input's `list` is
+not followed, so one with suggestions stays a `textbox` rather than a `combobox`.
+The accessible name comes from
 `aria-labelledby`, `aria-label`, an associated `<label>`, a `<legend>`, `alt`,
 the `value` of a `button`, `submit` or `reset` input, the element's own text
 (or the `alt` of an image standing in for it), and finally `title` — in that

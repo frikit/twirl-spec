@@ -170,6 +170,76 @@ class AriaStandardsSpec
       ).foreach(html => withClue(html)(ids(html) must not contain rule))
     }
 
+    "ask a banner's header only of the page's own, whatever marks the section" in {
+      val rule = "landmarks-are-distinguishable"
+      def inBody(body: String) =
+        AriaStandards.all
+          .flatMap(
+            _.check(
+              Page.fromString(
+                s"""<!DOCTYPE html><html lang="en"><head><title>t</title></head><body>$body</body></html>""",
+                english,
+                messages
+              )
+            )
+          )
+          .map(_.rule)
+      inBody(
+        """<header>One</header><div role="main"><h1>A</h1><header>Two</header></div>"""
+      ) must not contain rule
+      inBody(
+        """<header>One</header><div role="main"><h1>A</h1></div><header>Two</header>"""
+      ) must contain(rule)
+      inBody(
+        """<main><h1>A</h1><article><aside>One</aside><aside>Two</aside></article></main>"""
+      ) must not contain rule
+      inBody(
+        """<main><h1>A</h1><aside>One</aside><aside>Two</aside></main>"""
+      ) must contain(rule)
+      inBody(
+        """<main><h1>A</h1><article><aside aria-label="Same">One</aside><aside aria-label="Same">Two</aside></article></main>"""
+      ) must contain(rule)
+    }
+
+    "ask a meter for its value, and a separator only if it can take focus" in {
+      val rule = "aria-required-attr"
+      ids("""<div role="meter" aria-label="Used">5</div>""") must contain(rule)
+      ids(
+        """<div role="meter" aria-label="Used" aria-valuenow="5">5</div>"""
+      ) must not contain rule
+      ids("""<meter role="meter" value="5">5</meter>""") must not contain rule
+      ids("""<div role="separator"></div>""") must not contain rule
+      ids(
+        """<div role="separator" tabindex="0" aria-label="Resize"></div>"""
+      ) must contain(rule)
+      ids(
+        """<div role="separator" tabindex="0" aria-label="Resize" aria-valuenow="50"></div>"""
+      ) must not contain rule
+      ids(
+        """<div role="separator" tabindex="-1" aria-label="Resize"></div>"""
+      ) must contain(rule)
+      ids(
+        """<button role="separator" disabled aria-label="Divider"></button>"""
+      ) must not contain rule
+      ids(
+        """<fieldset disabled><button role="separator" aria-label="Divider"></button></fieldset>"""
+      ) must not contain rule
+    }
+
+    "not take mixed for a state on a role that has none" in {
+      val rule = "aria-attr-value-is-allowed"
+      Seq("switch", "radio", "menuitemradio").foreach(role =>
+        withClue(role) {
+          ids(s"""<button role="$role" aria-checked="MIXED">x</button>""") must
+            contain(rule)
+        }
+      )
+      ids("""<div role="checkbox" aria-checked="mixed">x</div>""") must
+        not contain rule
+      ids("""<button role="switch" aria-checked="true">x</button>""") must
+        not contain rule
+    }
+
     "still ask it of an element whose HTML gives it none" in {
       val rule = "aria-required-attr"
       ids("""<div role="heading">Your details</div>""") must contain(rule)

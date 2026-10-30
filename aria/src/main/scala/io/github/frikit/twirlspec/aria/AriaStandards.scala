@@ -66,7 +66,7 @@ object AriaStandards extends RuleSet {
       "aria-attr-value-is-allowed",
       "an aria- attribute taking a fixed set of values carries one of them"
     ) { page =>
-      elementsWith(page, _ => true).flatMap { e =>
+      val anywhere = elementsWith(page, _ => true).flatMap { e =>
         AriaVocabulary.tokenValues.toSeq.sortBy(_._1).flatMap {
           case (attr, allowed) =>
             val value = e.attr(attr)
@@ -82,6 +82,17 @@ object AriaStandards extends RuleSet {
             else Nil
         }
       }
+      val onItsRole = rolesOn(page).collect {
+        case (e, role)
+            if AriaVocabulary.noMixedState.contains(role) &&
+              e.attr("aria-checked").trim.equalsIgnoreCase("mixed") =>
+          Violation(
+            "aria-attr-value-is-allowed",
+            s"""aria-checked="mixed" means nothing on role="$role", which reads it as false""",
+            actual = Some(e.attr("aria-checked"))
+          ).at(describe(e))
+      }
+      anywhere ++ onItsRole
     },
     Rule(
       "aria-role-is-real",
@@ -108,10 +119,12 @@ object AriaStandards extends RuleSet {
     Rule("aria-required-attr", "a role that depends on state declares it") {
       page =>
         rolesOn(page).flatMap { case (e, role) =>
-          AriaVocabulary.requiredAttributes
-            .getOrElse(role, Set.empty)
-            .toList
-            .sorted
+          val whenFocusable =
+            if (e.is(Focusable) && !(e.is(Control) && page.isDisabled(e)))
+              AriaVocabulary.requiredWhenFocusable.getOrElse(role, Set.empty)
+            else Set.empty[String]
+          (AriaVocabulary.requiredAttributes.getOrElse(role, Set.empty)
+            ++ whenFocusable).toList.sorted
             .collect {
               case attr
                   if !e.hasAttr(attr) &&
@@ -439,8 +452,16 @@ object AriaStandards extends RuleSet {
     "radio" -> "input[type=radio]",
     "option" -> "option",
     "slider" -> "input[type=range]",
+    "meter" -> "meter",
     "combobox" -> "select"
   )
+
+  /** What can take focus, by a script if not by the tab key, unless disabled.
+    */
+  private val Focusable = "a[href], button, input, select, textarea, [tabindex]"
+
+  /** What disabling takes the focus from. */
+  private val Control = "button, input, select, textarea"
 
   /** What `aria-owns` makes this element's own, wherever it sits in the
     * document. Only the one step is followed, so a cycle cannot trap this.
@@ -500,12 +521,22 @@ object AriaStandards extends RuleSet {
   /** A header or footer is the page's own only when nothing sectioning encloses
     * it.
     */
-  private val sectioning = "article, aside, main, nav, section"
+  private val sectioning =
+    "article, aside, main, nav, section, [role=article], [role=complementary], [role=main], [role=navigation], [role=region]"
+
+  /** An aside is the page's own in `<main>` too, and only a name makes one
+    * anywhere else a landmark.
+    */
+  private val asideBelongsTo =
+    "article, aside, nav, section, [role=article], [role=complementary], [role=navigation], [role=region]"
 
   private def implicitRole(e: Element): Option[String] = e.tagName match {
     case "nav"   => Some("navigation")
-    case "aside" => Some("complementary")
-    case "main"  => Some("main")
+    case "aside" =>
+      Option.when(
+        landmarkName(e).nonEmpty || e.parent().closest(asideBelongsTo) == null
+      )("complementary")
+    case "main" => Some("main")
     // A form is a landmark only once it has a name to be told apart by.
     case "form"   => Option.when(landmarkName(e).nonEmpty)("form")
     case "header" => Option.when(e.closest(sectioning) == null)("banner")

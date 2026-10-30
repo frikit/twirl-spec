@@ -78,6 +78,23 @@ that has no id.
 
 ### Fixed
 
+- `role(...)` and `page.byRole` find what HTML-AAM says, as the README claimed:
+  `complementary`, `rowheader`, `searchbox`, `spinbutton`, `slider`, `listbox`,
+  `option`, `rowgroup`, `region`, `dialog`, `progressbar`, `meter`, `status`, `term`,
+  `definition` and `figure`, which matched nothing. `role("textbox")` no longer finds
+  a search input, `role("columnheader")` a row's `<th>`, or `role("combobox")` a
+  `<select>` showing several rows. `banner`, `contentinfo` and `complementary` go by
+  where the element sits, so a `<header>` in an article is no banner.
+- `landmarks-are-distinguishable` no longer counts an unnamed `<aside>` in an article or
+  a section as a landmark, so two of them there pass, and treats an element with a
+  sectioning role as it does the tag, so a `<header>` in `<div role="main">` is not a
+  second banner.
+- `aria-required-attr` asks a `meter` for `aria-valuenow`, and a `separator` for it
+  when it can take focus. `aria-attr-value-is-allowed` fails `aria-checked="mixed"` on
+  `switch`, `radio` and `menuitemradio`, which read it as false.
+- `textArea(...).withValue` compares what the textarea holds, as `formValues` does. It
+  squashed the page's side only, so `withValue("a\nb")` failed on a textarea holding
+  those two lines, and `withValue("a b")` passed.
 - `basedOn` fails when no page is in the language it names. It measured against the
   first page in silence, and took that for a pass.
 - The page outline leaves a CSRF token out of a form's action, as it differs on every

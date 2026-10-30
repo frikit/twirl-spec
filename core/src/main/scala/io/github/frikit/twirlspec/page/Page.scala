@@ -252,7 +252,7 @@ final class Page(
       .filter(e => e.attr("name").nonEmpty && !isDisabled(e))
       .flatMap { e =>
         val values = e.tagName() match {
-          case "textarea" => List(e.wholeText())
+          case "textarea" => List(textareaValue(e))
           case "select"   => selectedOptions(e).map(optionValue)
           case _          =>
             e.attr("type").toLowerCase match {
@@ -268,6 +268,13 @@ final class Page(
         values.map(value => (e, e.attr("name"), value))
       }
   }
+
+  /** What a textarea holds, as a browser reads it: its text as written, with
+    * its line breaks and spaces, less the one line break HTML drops right after
+    * the opening tag.
+    */
+  private[twirlspec] def textareaValue(e: Element): String =
+    e.wholeText().replaceAll("\r\n?", "\n").stripPrefix("\n")
 
   /** The form a control belongs to. A `form` attribute names it by id, and then
     * it is that form or, where the id names no form, none at all; without one

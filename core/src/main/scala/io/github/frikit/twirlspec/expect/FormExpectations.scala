@@ -413,7 +413,7 @@ final case class TextInputExpectation(
 
         val valueIssues = value.toSeq.flatMap { expectedValue =>
           val actual =
-            if (tag == "textarea") Text.normalise(element.text())
+            if (tag == "textarea") page.textareaValue(element)
             else element.attr("value")
           if (actual == expectedValue) Nil
           else
