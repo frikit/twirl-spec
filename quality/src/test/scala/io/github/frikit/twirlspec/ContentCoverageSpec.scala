@@ -199,7 +199,7 @@ class ContentCoverageSpec
       val page = pageIn("k")
       page.byRole("link")
       CoverageRegistry.touched(page.coverageGroup) must contain(
-        """link "Go somewhere""""
+        """link "Go somewhere" -> /somewhere"""
       )
     }
   }

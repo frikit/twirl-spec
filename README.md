@@ -754,12 +754,16 @@ already run.
 ```
 7 things on this page were never asserted:
   id (3): #sub-header, #sub-header-link, #upload-file
-  link (1): "upload a new file or download one that is waiting."
+  link (1): link "upload a new file or download one that is waiting." -> /upload
   tracking (1): data-journey-click=link - click:File not available:Choose something else to do
 ```
 
 Assertions are recorded by what they touch, not by the selector they used, so
-asserting `#action-list > *` does not count as asserting `#action-list`. They
+asserting `#action-list > *` does not count as asserting `#action-list`. An
+expectation that looks through several elements to find one counts only what it
+found: `link("x.help")` asserts that link, not every link on the page. A link is
+its words and where it goes, so two links reading "Change" and going to
+different places are two things to assert. They
 count for the page they were made on — every render of exactly that markup —
 so one view's assertions never pass another view that shares its ids. States of
 one view that should be measured as a whole share a name:

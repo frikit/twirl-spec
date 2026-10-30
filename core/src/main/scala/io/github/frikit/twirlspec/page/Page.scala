@@ -135,7 +135,7 @@ final class Page(
 
   private[twirlspec] def record(elements: List[Element]): Unit =
     if (recording && elements.nonEmpty) {
-      val names = elements.flatMap(e => Anchors.namesOf(e))
+      val names = elements.flatMap(Anchors.touchedBy)
       if (owner.isEmpty) ownRecord.synchronized(ownRecord ++= names)
       else CoverageRegistry.record(coverageGroup, names)
     }
@@ -188,14 +188,15 @@ final class Page(
 
   /** The description an assistive technology reads after the name. */
   def accessibleDescription(e: org.jsoup.nodes.Element): String =
-    Text.normalise(
-      e.attr("aria-describedby")
-        .split("\\s+")
-        .filter(_.nonEmpty)
-        .flatMap(id => Option(document.getElementById(id)))
-        .map(_.text())
-        .mkString(" ")
-    )
+    Text.normalise(describedBy(e).map(_.text()).mkString(" "))
+
+  /** The elements that say what `aria-describedby` points at. */
+  private[twirlspec] def describedBy(e: Element): List[Element] =
+    e.attr("aria-describedby")
+      .split("\\s+")
+      .filter(_.nonEmpty)
+      .toList
+      .flatMap(id => Option(document.getElementById(id)))
 
   /** What the page's forms would submit as their markup stands — before any
     * script runs or anyone types — as name and value pairs in document order.
@@ -212,7 +213,11 @@ final class Page(
     * control sends nothing, and neither do buttons, reset controls or image
     * inputs. A name can appear more than once, as a group of checkboxes does.
     */
-  def formSubmission: Seq[(String, String)] = {
+  def formSubmission: Seq[(String, String)] =
+    submittedControls.map { case (_, name, value) => (name, value) }
+
+  /** [[formSubmission]], with the control each name and value comes from. */
+  private[twirlspec] def submittedControls: List[(Element, String, String)] = {
     // Disabled radios still take part in their group, so the survivor is
     // found before disabled controls are left out.
     val keptRadios = document
@@ -229,22 +234,21 @@ final class Page(
       .toList
       .filter(e => e.attr("name").nonEmpty && !isDisabled(e))
       .flatMap { e =>
-        val name = e.attr("name")
-        e.tagName() match {
-          case "textarea" => List(name -> e.wholeText())
-          case "select"   => selectedOptions(e).map(o => name -> optionValue(o))
+        val values = e.tagName() match {
+          case "textarea" => List(e.wholeText())
+          case "select"   => selectedOptions(e).map(optionValue)
           case _          =>
             e.attr("type").toLowerCase match {
               case "checkbox" =>
-                if (e.hasAttr("checked")) List(name -> checkedValue(e)) else Nil
+                if (e.hasAttr("checked")) List(checkedValue(e)) else Nil
               case "radio" =>
-                if (keptRadios.contains(e)) List(name -> checkedValue(e))
-                else Nil
-              case "file"                                  => List(name -> "")
+                if (keptRadios.contains(e)) List(checkedValue(e)) else Nil
+              case "file"                                  => List("")
               case "submit" | "button" | "reset" | "image" => Nil
-              case _ => List(name -> e.attr("value"))
+              case _ => List(e.attr("value"))
             }
         }
+        values.map(value => (e, e.attr("name"), value))
       }
   }
 
@@ -387,13 +391,17 @@ final class Page(
     * entry.
     */
   def errorSummaryLinks: List[(String, String)] =
+    errorSummaryLinkElements.map(e =>
+      (e.attr("href").stripPrefix("#"), Text.normalise(e.text()))
+    )
+
+  private[twirlspec] def errorSummaryLinkElements: List[Element] =
     document
       .select(
         ".govuk-error-summary a[href], .govuk-error-summary__list a[href]"
       )
       .asScala
       .toList
-      .map(e => (e.attr("href").stripPrefix("#"), Text.normalise(e.text())))
 
   /** The error summary entries whose link lands on nothing: a link to
     * `#firstName` when the input is `id="value"` leaves a keyboard user

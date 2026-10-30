@@ -62,17 +62,49 @@ private[twirlspec] object Matching {
               case StartsWith => a.startsWith(value)
             }
         }
-        if (ok) Nil
+        if (ok) Nil else Seq(mismatch(rule, value, a, mode))
+    }
+
+  /** One of these elements says what is expected. The verdict comes from each
+    * on its own rather than from their words run together, and only the ones
+    * saying it count as asserted.
+    */
+  def oneSays(
+      rule: String,
+      selection: Selection,
+      expected: Expected,
+      page: Page,
+      mode: Mode
+  ): Seq[Violation] =
+    expected.resolve(page) match {
+      case Left(v)      => Seq(v.copy(rule = rule))
+      case Right(value) =>
+        val saying = selection.elements.filter(e =>
+          compare(rule, expected, e.text(), page, mode).isEmpty
+        )
+        page.record(saying)
+        if (saying.nonEmpty) Nil
         else
           Seq(
-            Violation(
-              rule = rule,
-              message = s"text did not ${mode.verb} the expected value",
-              expected = Some(value),
-              actual = Some(if (a.isEmpty) "(empty)" else a)
+            mismatch(rule, value, selection.texts.mkString(" | "), mode).copy(
+              message =
+                s"text did not ${mode.verb} the expected value in any one element"
             )
           )
     }
+
+  private def mismatch(
+      rule: String,
+      value: String,
+      actual: String,
+      mode: Mode
+  ): Violation =
+    Violation(
+      rule = rule,
+      message = s"text did not ${mode.verb} the expected value",
+      expected = Some(value),
+      actual = Some(if (actual.isEmpty) "(empty)" else actual)
+    )
 
   /** Resolve a selection that is meant to identify one element.
     *

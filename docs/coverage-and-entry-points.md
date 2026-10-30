@@ -25,12 +25,20 @@ When something was missed:
 ```
 7 things on this page were never asserted:
   id (3): #sub-header, #sub-header-link, #upload-file
-  link (1): "upload a new file or download one that is waiting."
+  link (1): link "upload a new file or download one that is waiting." -> /upload
   tracking (1): data-journey-click=link - click:File not available:Choose something else to do
 ```
 
 Assertions are recorded by what they touch, not by the selector they used, so
-asserting `#action-list > *` does not count as asserting `#action-list`.
+asserting `#action-list > *` does not count as asserting `#action-list`. An
+expectation that looks through several elements to find one counts only what it
+found: `link("x.help")` asserts that link, not every link on the page, and
+`role("button").named("x.save")` that button.
+
+A link is its words and where it goes, so two links reading "Change" and going
+to different places are two things to assert. `coverageIgnored` still takes
+`link "Change"` for every link with those words, or
+`link "Change" -> /where` for one of them.
 
 They count for the page they were made on: every render, in any test of the
 spec, that produces exactly that markup. A different view, or the same view in

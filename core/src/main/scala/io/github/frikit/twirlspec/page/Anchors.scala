@@ -18,6 +18,8 @@ package io.github.frikit.twirlspec.page
 
 import org.jsoup.nodes.Element
 
+import scala.jdk.CollectionConverters._
+
 /** What makes something on a page worth asserting, and what to call it.
   *
   * Identity is the id, the link, or the tracking attribute rather than a
@@ -37,14 +39,27 @@ object Anchors {
   def namesOf(
       e: Element,
       tracked: Set[String] = defaultTrackedAttributes
+  ): List[String] = names(e, tracked, linkName)
+
+  /** What an assertion touching this element counts for: its id, its link with
+    * where it goes, and every attribute it carries, because which of them a
+    * spec tracks is only known when coverage is measured.
+    */
+  def touchedBy(e: Element): List[String] =
+    names(e, e.attributes.asScala.map(_.getKey).toSet, linkTo)
+
+  private def names(
+      e: Element,
+      tracked: Set[String],
+      link: Element => String
   ): List[String] = {
     val id = e.id()
     val idName = if (id.nonEmpty) List(s"#$id") else Nil
-    val link = if (isLink(e)) List(linkName(e)) else Nil
+    val linked = if (isLink(e)) List(link(e)) else Nil
     val tracking = tracked.toList.sorted.collect {
       case a if e.hasAttr(a) => s"$a=${e.attr(a)}"
     }
-    idName ::: link ::: tracking
+    idName ::: linked ::: tracking
   }
 
   /** Whether the element is a link with a destination. */
@@ -56,6 +71,14 @@ object Anchors {
   def linkName(e: Element): String = {
     val text = e.text().trim
     if (text.nonEmpty) s"""link "$text"""" else s"link ${e.attr("href")}"
+  }
+
+  /** A link's name with where it goes: two links reading the same and going to
+    * different places are two things to assert.
+    */
+  def linkTo(e: Element): String = {
+    val name = linkName(e)
+    if (e.text().trim.nonEmpty) s"$name -> ${e.attr("href")}" else name
   }
 
 }

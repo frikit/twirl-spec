@@ -12,6 +12,10 @@ readable.
 
 ## [2.4.0] - 2026-10-30
 
+Verdicts change in this release, so it is a minor version. `assertEverything`
+can fail where it passed before, because it no longer counts what an expectation
+merely looked through as asserted.
+
 ### Added
 
 - The library traces what it does at `DEBUG` through Play's logger, under
@@ -19,6 +23,36 @@ readable.
   builds it with, each page rendered, each check and the rules it failed, and
   each coverage and language comparison. A service turns it on with one
   logger line in `logback-test.xml`; nothing is written at any other level.
+
+### Fixed
+
+- `assertEverything` credits what an assertion found, not what it looked
+  through. One `link(...)` counted every link on the page as asserted, and one
+  `role(...).named(...)` every element with the role; `paragraph`, `tableRow`,
+  `formPostsTo`, `hiddenInput`, `appearsBefore`, `caption`, the component text
+  expectations and the caption read by `heading` did the same on a smaller scale.
+  Each now counts only the elements it matched, and `link`, `formPostsTo` and
+  `appearsBefore` count nothing when they fail.
+- A link's identity for coverage is its words and where it goes, so of two links
+  reading "Change" and going to different places, asserting one no longer covers
+  the other. The report names the destination, and `coverageIgnored` still takes
+  `link "Change"` for every link with those words.
+- `trackedAttributes` works beyond the default: an attribute it adds could never
+  be covered, because what an assertion touched was recorded with the default
+  list.
+- `summaryRow`, `summaryList`, `dateInput`, `subheading`, `headingAtLevel`,
+  `fieldError`, `errorSummary`, `formValues`, `tableRow`, `legendIs` and
+  `describedAs` now count as asserting what they check: the row, its key and any
+  value or action named; the date input's container; the heading; the inline
+  error; the summary links they name and where those go; the controls behind a
+  submitted value; a row's cells; the legend; the elements describing a control.
+  `assertEverything` reported all of these as unasserted.
+- `paragraph`, `caption`, `warning`, `insetText`, `notificationBanner`,
+  `panelTitle`, `panelBody` and `detailsSummary` find the words within one
+  element. They searched every match's text run together, so words spanning two
+  of them passed.
+- `headingAtLevel` honours `matching(...)` and `anyText`, which it compared as
+  literal words.
 
 ## [2.3.0] - 2026-10-14
 
