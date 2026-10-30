@@ -319,7 +319,7 @@ trait FormExpectations {
       Expected.Key(key, args.toSeq).resolve(page) match {
         case Left(v)      => Seq(v.copy(rule = s"fieldError($field)"))
         case Right(value) =>
-          page.fieldErrors.get(field) match {
+          page.errorOf(field) match {
             case None =>
               Seq(
                 Violation(
@@ -334,12 +334,13 @@ trait FormExpectations {
                       s"errors on: ${page.fieldErrors.keys.toList.sorted.mkString(", ")}"
                   )
                 ).withHint(
-                  s"""the govuk error message element should have id="$field-error""""
+                  s"""the govuk error message element should have id="$field-error", or the control or its fieldset should name it in aria-describedby"""
                 )
               )
-            case Some(found) =>
+            case Some(error) =>
+              val found = page.errorWords(error)
               if (Text.same(found, value)) {
-                page.byId(s"$field-error")
+                page.record(List(error))
                 Nil
               } else
                 Seq(Violation.mismatch(s"fieldError($field)", value, found))
@@ -760,61 +761,78 @@ final case class ErrorSummaryExpectation(
       )
     else {
       val actual = page.errorSummaryLinks
+      val fields = entries.map(_._1)
+      val answering = ErrorSummaryExpectation.answering(
+        page,
+        fields,
+        actual.map(_._1)
+      )
 
-      val entryIssues = entries.flatMap { case (field, expected) =>
-        expected.resolve(page) match {
-          case Left(v)      => Seq(v.copy(rule = s"errorSummary($field)"))
-          case Right(value) =>
-            actual.find(_._1 == field) match {
-              case None =>
-                Seq(
-                  Violation(
-                    rule = s"errorSummary($field)",
-                    message =
-                      "the error summary has no entry linking to this field",
-                    expected = Some(s"""<a href="#$field">$value</a>"""),
-                    actual = Some(
-                      if (actual.isEmpty) "(summary has no links)"
-                      else
-                        actual
-                          .map { case (t, x) => s"#$t -> $x" }
-                          .mkString(" | ")
+      val entryIssues =
+        entries.zip(answering).flatMap { case ((field, expected), link) =>
+          expected.resolve(page) match {
+            case Left(v)      => Seq(v.copy(rule = s"errorSummary($field)"))
+            case Right(value) =>
+              link.map(actual) match {
+                case None =>
+                  Seq(
+                    Violation(
+                      rule = s"errorSummary($field)",
+                      message =
+                        "the error summary has no entry linking to this field",
+                      expected = Some(s"""<a href="#$field">$value</a>"""),
+                      actual = Some(
+                        if (actual.isEmpty) "(summary has no links)"
+                        else
+                          actual
+                            .map { case (t, x) => s"#$t -> $x" }
+                            .mkString(" | ")
+                      )
                     )
                   )
-                )
-              case Some((_, text)) if !Text.same(text, value) =>
-                Seq(Violation.mismatch(s"errorSummary($field)", value, text))
-              case _ =>
-                // What this asserted: the entry, and where it goes.
-                page.record(
-                  page.errorSummaryLinkElements.filter(link =>
-                    link.attr("href").stripPrefix("#") == field &&
-                      Text.same(link.text(), value)
-                  )
-                )
-                page.byId(field)
-                Nil
-            }
-        }
-      }
-
-      val unexpected =
-        if (!exhaustive) Nil
-        else {
-          val expectedFields = entries.map(_._1).toSet
-          actual.map(_._1).filterNot(expectedFields.contains) match {
-            case Nil     => Nil
-            case surplus =>
-              Seq(
-                Violation(
-                  rule = "errorSummary",
-                  message =
-                    s"the error summary has entries that were not expected: ${surplus.mkString(", ")}",
-                  expected = Some(entries.map(_._1).mkString(", ")),
-                  actual = Some(actual.map(_._1).mkString(", "))
-                )
-              )
+                case Some((_, text)) if !Text.same(text, value) =>
+                  Seq(Violation.mismatch(s"errorSummary($field)", value, text))
+                case Some((target, _)) =>
+                  // What this asserted: the entry, and where it goes.
+                  page.record(link.toList.map(page.errorSummaryLinkElements))
+                  page.byId(target)
+                  Nil
+              }
           }
+        }
+
+      val used = answering.flatten
+      val surplus =
+        actual.indices.filterNot(used.contains).map(actual(_)._1).toList
+      val unexpected =
+        if (!exhaustive || surplus.isEmpty) Nil
+        else
+          Seq(
+            Violation(
+              rule = "errorSummary",
+              message =
+                s"the error summary has entries that were not expected: ${surplus.mkString(", ")}",
+              expected = Some(fields.mkString(", ")),
+              actual = Some(actual.map(_._1).mkString(", "))
+            )
+          )
+
+      val outOfOrder =
+        if (!exhaustive || used == used.sorted) Nil
+        else {
+          val reached = fields
+            .zip(answering)
+            .collect { case (field, Some(i)) => (i, field) }
+            .sortBy(_._1)
+            .map(_._2)
+          Seq(
+            Violation(
+              rule = "errorSummary",
+              message = "the error summary lists these in a different order",
+              expected = Some(fields.filter(reached.contains).mkString(", ")),
+              actual = Some(reached.mkString(", "))
+            )
+          )
         }
 
       // Every summary link must land somewhere.
@@ -832,8 +850,39 @@ final case class ErrorSummaryExpectation(
             )
         }
 
-      entryIssues ++ unexpected ++ danglingLinks
+      entryIssues ++ unexpected ++ outOfOrder ++ danglingLinks
     }
+
+}
+
+/** How an error summary's links are matched to what a spec expects of them. */
+object ErrorSummaryExpectation {
+
+  /** Which link answers for each field, by its position, each link for one
+    * field at most: first a link to the field itself, so a control of `a` does
+    * not take the place of `#a`, and then a link to one of its controls.
+    */
+  private[twirlspec] def answering(
+      page: Page,
+      fields: List[String],
+      targets: List[String]
+  ): List[Option[Int]] = {
+    def assign(
+        sofar: List[Option[Int]],
+        lands: (String, String) => Boolean
+    ): List[Option[Int]] =
+      fields
+        .zip(sofar)
+        .foldLeft((List.empty[Option[Int]], sofar.flatten.toSet)) {
+          case ((out, used), (_, taken @ Some(_))) => (out :+ taken, used)
+          case ((out, used), (field, _))           =>
+            val hit =
+              targets.indices.find(i => !used(i) && lands(targets(i), field))
+            (out :+ hit, used ++ hit)
+        }
+        ._1
+    assign(assign(fields.map(_ => None), _ == _), page.landsOn)
+  }
 
 }
 

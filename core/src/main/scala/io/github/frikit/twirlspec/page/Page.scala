@@ -400,7 +400,10 @@ final class Page(
 
   /** The HMRC session timeout dialog. */
   def timeoutDialog: Selection =
-    named("timeout dialog", "[data-module=hmrc-timeout-dialog]")
+    named(
+      "timeout dialog",
+      "meta[name=hmrc-timeout-dialog], [data-module=hmrc-timeout-dialog]"
+    )
 
   /** The sign out link of an HMRC header. */
   def signOutLink: Selection =
@@ -451,17 +454,63 @@ final class Page(
       .select(".govuk-error-message")
       .asScala
       .toList
-      .map { e =>
-        val field = e.id().stripSuffix("-error")
-        val hidden = e
-          .select(".govuk-visually-hidden")
-          .asScala
-          .toList
-          .map(_.text())
-          .mkString
-        field -> Text.normalise(e.text().replace(hidden, ""))
-      }
+      .map(e => e.id().stripSuffix("-error") -> errorWords(e))
       .toMap
+
+  /** What an inline error says, with the visually hidden prefix taken off. */
+  private[twirlspec] def errorWords(e: Element): String = {
+    val hidden = e
+      .select(".govuk-visually-hidden")
+      .asScala
+      .toList
+      .map(_.text())
+      .mkString
+    Text.normalise(e.text().replace(hidden, ""))
+  }
+
+  /** A field's inline error: by the GOV.UK id convention, or else the one its
+    * control or that control's fieldset announces, since a component may build
+    * the error's id from something other than the field's name.
+    */
+  private[twirlspec] def errorOf(field: String): Option[Element] = {
+    def announcedBy(controls: List[Element]) =
+      controls
+        .flatMap(c => c :: Option(c.closest("fieldset")).toList)
+        .flatMap(describedBy)
+        .find(_.hasClass("govuk-error-message"))
+    val controls = document.select("input, select, textarea").asScala.toList
+    document
+      .select(".govuk-error-message")
+      .asScala
+      .find(_.id() == s"$field-error")
+      .orElse(announcedBy(controls.filter(isCalled(_, field))))
+      .orElse(
+        announcedBy(
+          controls.filter(c =>
+            isPartOf(c.attr("name"), field) || isPartOf(c.id(), field)
+          )
+        )
+      )
+  }
+
+  /** Whether a name or id is one of a date's parts, as `dob.day` is of `dob`.
+    * It goes by the parts rather than the prefix, because `a-b` is usually a
+    * field of its own.
+    */
+  private def isPartOf(value: String, field: String): Boolean =
+    Seq("day", "month", "year").exists(part =>
+      value == s"$field.$part" || value == s"$field-$part"
+    )
+
+  /** Whether an error summary link to this target lands on this field: on the
+    * element with its id, or on one of its controls, which is where a GOV.UK
+    * radio group's and date input's links go, to the first radio and the day.
+    */
+  private[twirlspec] def landsOn(target: String, field: String): Boolean =
+    target == field ||
+      withRecordingPaused(byId(target)).elements.exists { e =>
+        e.attr("name") == field || isPartOf(e.attr("name"), field)
+      }
 
   // -------------------------------------------------------------------- forms
 

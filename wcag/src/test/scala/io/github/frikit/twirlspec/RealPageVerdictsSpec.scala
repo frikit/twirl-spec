@@ -226,6 +226,33 @@ class RealPageVerdictsSpec extends AnyWordSpec with Matchers with TwirlSpec {
     }
   }
 
+  "new-tab-is-announced" should {
+    val rule = "new-tab-is-announced"
+
+    def link(words: String, aria: String = "") =
+      s"""<a href="/x" target="_blank" rel="noopener" aria-label="$aria">$words</a>"""
+
+    "know how a Welsh link says it" in {
+      Seq(
+        "Cymorth (yn agor tab newydd)",
+        "Cymorth (yn agor tab neu ffenestr newydd)",
+        "Cymorth (yn agor ffenestr neu dab newydd)"
+      ).foreach(words => withClue(words)(on(link(words)) must not contain rule))
+    }
+
+    "read what the link is announced as, in either language" in {
+      on(link("Cymorth", aria = "Cymorth, yn agor tab newydd")) must
+        not contain rule
+      on(link("Help", aria = "Help, opens in a new window")) must
+        not contain rule
+    }
+
+    "still notice a link that does not say so" in {
+      on(link("Help")) must contain(rule)
+      on(link("Cymorth")) must contain(rule)
+    }
+  }
+
   "html-lang" should {
     val rule = "html-lang"
 

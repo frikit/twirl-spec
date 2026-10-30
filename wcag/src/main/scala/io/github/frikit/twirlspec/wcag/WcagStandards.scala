@@ -348,11 +348,8 @@ object WcagStandards extends RuleSet {
       page.links.elements
         .filter(_.attr("target") == "_blank")
         .filterNot { e =>
-          val t = Text.normalise(e.text()).toLowerCase
-          t.contains("new tab") || t.contains("new window") || t.contains(
-            "tab newydd"
-          ) ||
-          e.attr("aria-label").toLowerCase.contains("new tab")
+          val said = s"${Text.normalise(e.text())} ${e.attr("aria-label")}"
+          NewTabWords.exists(said.toLowerCase.contains)
         }
         .map(e =>
           Violation(
@@ -564,6 +561,18 @@ object WcagStandards extends RuleSet {
             .withHint("""WCAG 1.1.1 — use alt="" for decorative images""")
         )
     }
+  )
+
+  /** How a link says it opens a new tab, in the languages a GOV.UK service is
+    * offered in: "yn agor tab newydd", "yn agor tab neu ffenestr newydd", and
+    * "yn agor ffenestr neu dab newydd", as the mutation of tab has it.
+    */
+  private val NewTabWords = Seq(
+    "new tab",
+    "new window",
+    "tab newydd",
+    "dab newydd",
+    "ffenestr newydd"
   )
 
   /** The input types HTML does not let `autocomplete` apply to. */

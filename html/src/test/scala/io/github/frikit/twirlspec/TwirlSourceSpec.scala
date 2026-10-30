@@ -185,4 +185,37 @@ class TwirlSourceSpec extends AnyWordSpec with Matchers {
     }
   }
 
+  "A named fragment" should {
+
+    "not let an apostrophe in its words hide the rest of the template" in {
+      TagBalance
+        .checkTemplate(
+          "@()\n@intro = {<p>What's next?</p>}\n@intro\n<div>Unclosed"
+        )
+        .map(_.message) mustBe List("<div> opened on line 4 was never closed")
+    }
+
+    "still blank what it holds, Scala and markup alike" in {
+      TagBalance.checkTemplate(
+        """@()
+          |@intro = {<div>@messages("a}b") @if(x) {<p>one</p>} else {<p>two</p>}}
+          |<p>@intro</p>""".stripMargin
+      ) mustBe empty
+    }
+
+    "read a bare else-if's condition as Scala, whatever brace it holds" in {
+      TagBalance
+        .checkTemplate(
+          """@()
+            |@intro = {@if(x){<p>A</p>} else if(s == "{"){<p>B</p>}}
+            |<div>Unclosed""".stripMargin
+        )
+        .map(_.message) mustBe List("<div> opened on line 3 was never closed")
+    }
+
+    "read to the end of a template that never closes it" in {
+      TagBalance.checkTemplate("@()\n@intro = {<p>Open") mustBe empty
+    }
+  }
+
 }

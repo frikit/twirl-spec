@@ -114,6 +114,70 @@ class AriaStandardsSpec
     }
   }
 
+  "What ARIA allows beyond nesting and attributes" should {
+
+    "accept a child owned from elsewhere in the document, as both rules read it" in {
+      val found = ids(
+        """<div role="listbox" aria-label="Country" tabindex="0" aria-owns="gb"></div>
+          |<div id="gb" role="option" aria-selected="false">United Kingdom</div>""".stripMargin
+      )
+      found must not contain "aria-required-parent"
+      found must not contain "aria-required-children"
+    }
+
+    "read a child inside what is owned, and a parent around the owner" in {
+      val found = ids(
+        """<div role="listbox" aria-label="Country" tabindex="0">
+          |<div role="group" aria-owns="gb"></div></div>
+          |<div id="gb" role="option" aria-selected="false">United Kingdom</div>""".stripMargin
+      )
+      found must not contain "aria-required-parent"
+    }
+
+    "read a child inside an owned wrapper as owned too" in {
+      val found = ids(
+        """<div role="listbox" aria-label="Country" tabindex="0" aria-owns="wrapper"></div>
+          |<div id="wrapper"><div id="gb" role="option" aria-selected="false">GB</div></div>""".stripMargin
+      )
+      found must not contain "aria-required-parent"
+      found must not contain "aria-required-children"
+    }
+
+    "not read an empty aria-owns as owning whatever has no id" in {
+      ids(
+        """<div role="listbox" aria-label="L" tabindex="0" aria-owns=""><div role="option" aria-selected="false">In</div></div>
+          |<div role="option" aria-selected="false">Out</div>""".stripMargin
+      ) must contain("aria-required-parent")
+    }
+
+    "still notice an option nothing owns, and a list owning nothing it needs" in {
+      ids("""<div role="option" aria-selected="false">Alone</div>""") must
+        contain("aria-required-parent")
+      ids(
+        """<div role="listbox" aria-label="L" tabindex="0" aria-owns="x nowhere"></div><p id="x">Not an option</p>"""
+      ) must contain("aria-required-children")
+    }
+
+    "not ask an element for state its HTML already gives it" in {
+      val rule = "aria-required-attr"
+      Seq(
+        """<h2 role="heading">Your details</h2>""",
+        """<input type="checkbox" role="checkbox" aria-label="Subscribe">""",
+        """<input type="checkbox" role="switch" aria-label="Subscribe">""",
+        """<input type="radio" role="radio" aria-label="One" name="r">""",
+        """<input type="range" role="slider" aria-label="Volume">""",
+        """<label for="s">S</label><select id="s" name="s" role="combobox"></select>"""
+      ).foreach(html => withClue(html)(ids(html) must not contain rule))
+    }
+
+    "still ask it of an element whose HTML gives it none" in {
+      val rule = "aria-required-attr"
+      ids("""<div role="heading">Your details</div>""") must contain(rule)
+      ids("""<div role="checkbox" aria-label="Subscribe"></div>""") must
+        contain(rule)
+    }
+  }
+
   "aria-required-children" should {
     "notice a tablist with no tabs" in {
       ids("""<div role="tablist"><p>nothing</p></div>""") must contain(

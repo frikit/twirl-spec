@@ -145,7 +145,38 @@ object TwirlSource {
     val eq = skipWhitespace(src, from)
     val brace = skipWhitespace(src, eq + 1)
     blank(out, eq, brace)
-    blankBalanced(src, out, brace, '{', '}')
+    blankMarkupBlock(src, out, brace)
+  }
+
+  /** From a fragment's opening brace to the one that closes it. What it holds
+    * is markup, where an apostrophe is only an apostrophe, so quotes count only
+    * in the Scala expressions among it, and those are blanked as they are met.
+    */
+  private def blankMarkupBlock(
+      src: String,
+      out: Array[Char],
+      start: Int
+  ): Int = {
+    var depth = 0
+    var i = start
+    var result = -1
+    while (i < src.length && result < 0) {
+      val c = src.charAt(i)
+      if (c == '@') i = blankExpression(src, out, i)
+      else if (c == '{') {
+        depth += 1
+        i += 1
+      } else if (c == '}') {
+        depth -= 1
+        if (depth == 0) {
+          result = i + 1
+          i += 1
+        } else i = blankElseContinuation(src, out, i)
+      } else i += 1
+    }
+    val to = if (result < 0) src.length else result
+    blank(out, start, to)
+    to
   }
 
   private def blankToEndOfLine(

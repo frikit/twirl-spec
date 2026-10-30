@@ -111,6 +111,31 @@ that has no id.
   passed.
 - `html-lang` and `i18n-lang-attribute` accept any region of the page's language,
   in any case, and do not take `english` for `en`.
+- `errorSummary(field -> key)` accepts a link to any control of the field, which is
+  where a GOV.UK radio group's and date input's links go, to the first radio and
+  the day. It needed a link to `#field`, so it could not pass on those. It also
+  holds the entries to the order the summary lists them in, as it always said it
+  did, so a spec naming them in another order can fail where it passed.
+- `fieldError(field, key)` follows the control or its fieldset to the error they
+  announce, where the error's id is not `field-error`.
+- `timeoutDialog` finds the `meta[name=hmrc-timeout-dialog]` play-frontend-hmrc
+  renders. It looked only for a `data-module` no current page has, so it failed on
+  every HMRC page.
+- `new-tab-is-announced` knows the Welsh "yn agor tab neu ffenestr newydd" and "yn
+  agor ffenestr neu dab newydd", and reads `aria-label` for all of its phrases.
+- `tags-are-balanced` and `TagBalance.check` do not read a `>` inside a quoted
+  attribute value as the end of the tag, so an attribute holding markup, such as
+  `srcdoc`, no longer reports stray tags.
+- `TagBalance.checkTemplate` is not thrown by an apostrophe in a named fragment,
+  which hid every problem from there to the end of the template.
+- `known-elements` and `known-attributes` know more of SVG, including `desc`, with
+  which a graphic describes itself, and `pathLength`.
+- `aria-required-parent` and `aria-required-children` read `aria-owns`, so a child
+  owned from elsewhere in the document no longer fails both.
+- `aria-required-attr` does not ask an element for state its HTML already gives it,
+  such as `aria-level` of `<h2 role="heading">`.
+- `entryPointsAgree` handles a template with more than 22 parameters in one list,
+  whose `f` is a `FunctionXXL`. It reported that `f` produced different HTML.
 - `haveNoDuplicateKeys` reports a file that is not there, or being given none,
   rather than passing on a wrong path. It no longer reads a line of a value carrying
   on past a backslash as a key of its own.

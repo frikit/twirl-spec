@@ -58,7 +58,13 @@ object TagBalance {
 
   final private case class Open(name: String, line: Int)
 
-  private val tag = """<\s*(/?)\s*([a-zA-Z][a-zA-Z0-9:-]*)([^>]*?)(/?)\s*>""".r
+  /** A `>` inside a quoted attribute value does not end the tag, so an
+    * attribute holding markup, as `srcdoc` does, is not read as tags of its
+    * own. Where a quote never closes, the tag ends at the first `>`, so the
+    * element is still seen.
+    */
+  private val tag =
+    """<\s*(/?)\s*([a-zA-Z][a-zA-Z0-9:-]*)((?:[^>"']|"[^"]*"|'[^']*')*?|[^>]*?)(/?)\s*>""".r
 
   /** The same check against a Twirl template rather than a rendered page.
     *

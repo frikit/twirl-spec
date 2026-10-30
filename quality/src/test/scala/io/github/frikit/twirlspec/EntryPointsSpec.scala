@@ -50,6 +50,50 @@ class EntryPointsSpec
     def ref: this.type = this
   }
 
+  /** Shaped like a Twirl template with more parameters in its first list than a
+    * `Function22` takes: its `f` wants this many, and then one more in a list
+    * of its own.
+    */
+  class BigTemplate(firstList: Int, body: () => Unit = () => ()) {
+    def render(
+        a1: Int,
+        a2: Int,
+        a3: Int,
+        a4: Int,
+        a5: Int,
+        a6: Int,
+        a7: Int,
+        a8: Int,
+        a9: Int,
+        a10: Int,
+        a11: Int,
+        a12: Int,
+        a13: Int,
+        a14: Int,
+        a15: Int,
+        a16: Int,
+        a17: Int,
+        a18: Int,
+        a19: Int,
+        a20: Int,
+        a21: Int,
+        a22: Int,
+        a23: Int,
+        a24: Int,
+        last: String
+    ): Html = Html(s"$a23-$a24-$last")
+    def f: AnyRef = new scala.runtime.FunctionXXL {
+      def apply(xs: IArray[Object]): Object = {
+        val (penultimate, final_) = (xs(firstList - 2), xs(firstList - 1))
+        (last: String) => {
+          body()
+          Html(s"$penultimate-$final_-$last")
+        }
+      }
+    }
+    def ref: this.type = this
+  }
+
   object NoRender {
     def f: String => Html = a => Html(a)
     def ref: this.type = this
@@ -179,6 +223,54 @@ class EntryPointsSpec
       val thrown = the[AssertionError] thrownBy
         EntryPoints.problems(GreedyF, GreedyF("x"), Seq("x"))
       thrown.getMessage must include("f threw")
+    }
+  }
+
+  "A template with more than 22 parameters in a list" should {
+    val args: Seq[Any] = Seq.fill(24)(1) :+ "x"
+    val expected = Html("1-1-x")
+
+    "agree through f, whichever number of arguments its first list takes" in {
+      EntryPoints.problems(new BigTemplate(24), expected, args) mustBe empty
+    }
+
+    "let the template's own failure surface, rather than try another number" in {
+      val thrown = the[AssertionError] thrownBy EntryPoints.problems(
+        new BigTemplate(
+          24,
+          body = () => throw new IllegalArgumentException("bad model")
+        ),
+        expected,
+        args
+      )
+      thrown.getMessage must include("bad model")
+    }
+
+    "say so when f takes none of the numbers it could be given" in {
+      val thrown = the[AssertionError] thrownBy EntryPoints.problems(
+        new BigTemplate(30),
+        expected,
+        args
+      )
+      thrown.getMessage must include("f threw")
+      thrown.getCause.getMessage must include(
+        "none of the numbers of arguments"
+      )
+    }
+
+    "keep the failure when it might be the template's own" in {
+      val singleList = new BigTemplate(24) {
+        override def f: AnyRef = new scala.runtime.FunctionXXL {
+          def apply(xs: IArray[Object]): Object = new Array[Object](0)(3)
+        }
+      }
+      val thrown = the[AssertionError] thrownBy EntryPoints.problems(
+        singleList,
+        expected,
+        args
+      )
+      thrown.getMessage must include("ArrayIndexOutOfBoundsException")
+      thrown.getMessage must include("Index 3")
     }
   }
 

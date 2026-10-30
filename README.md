@@ -467,9 +467,9 @@ listed again here.
 | `noErrors` | No error summary and no inline error messages anywhere on the page. |
 | `errorTitlePrefix` | GOV.UK requires the browser title of a page in an error state to be prefixed, so screen reader users hear that something went wrong before the page name. |
 | `errorSummaryTitle` | The heading above the error summary. |
-| `errorSummary` | The error summary lists exactly these `field -> message key` entries, in order, and every entry links to an element that exists on the page. |
+| `errorSummary` | The error summary lists exactly these `field -> message key` entries, in order, and every entry links to an element that exists on the page: the field, or one of its controls, as a radio group's first radio or a date input's day. |
 | `errorSummaryContaining` | The error summary mentions this field, whatever else it lists. |
-| `fieldError` | The inline error message rendered against a specific field. |
+| `fieldError` | The inline error message rendered against a specific field: by the id `field-error`, or the one its control or fieldset announces. |
 | `labelledByLegend` | For the rare text input that is legitimately labelled by a legend rather than a label. |
 
 **Coverage and entry points**

@@ -224,4 +224,36 @@ class HtmlStandardsSpec
     }
   }
 
+  "Valid markup that reads like more than it is" should {
+
+    "not read tags inside a quoted attribute value" in {
+      TagBalance.check(
+        """<iframe title="Preview" srcdoc="<p>Hello</p>"></iframe>"""
+      ) mustBe empty
+      TagBalance.check("""<input value='<b>'>""") mustBe empty
+      TagBalance.check("""<a title="1 > 0" href="/x">Go</a>""") mustBe empty
+    }
+
+    "still see an element whose quote never closes" in {
+      TagBalance
+        .check("""<div title="unfinished>""")
+        .map(_.message) mustBe List("<div> opened on line 1 was never closed")
+    }
+
+    "still notice what is wrong around such a value" in {
+      TagBalance
+        .check("""<div title="<p>"><span></div>""")
+        .map(_.message) mustBe List(
+        "</div> on line 1 closes <span> from line 1 as well, so the two overlap"
+      )
+    }
+
+    "know the SVG a page uses to describe itself" in {
+      rulesOf(
+        """<svg role="img" aria-label="Progress" viewBox="0 0 10 10"><desc>Half complete</desc>
+          |<path d="M1 1H9" pathLength="100" stroke-linecap="round"/></svg>""".stripMargin
+      ) must contain noneOf ("known-elements", "known-attributes")
+    }
+  }
+
 }

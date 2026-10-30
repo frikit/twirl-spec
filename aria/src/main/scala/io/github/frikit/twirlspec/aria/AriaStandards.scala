@@ -113,7 +113,9 @@ object AriaStandards extends RuleSet {
             .toList
             .sorted
             .collect {
-              case attr if !e.hasAttr(attr) =>
+              case attr
+                  if !e.hasAttr(attr) &&
+                    !NativeState.get(role).exists(e.is) =>
                 Violation(
                   "aria-required-attr",
                   s"""role="$role" needs $attr""",
@@ -130,7 +132,9 @@ object AriaStandards extends RuleSet {
     ) { page =>
       rolesOn(page).flatMap { case (e, role) =>
         AriaVocabulary.requiredParents.get(role).toSeq.flatMap { allowed =>
-          if (ancestorRoles(e).exists(allowed.contains)) Nil
+          val owners = ownersOf(page, e)
+          val context = owners.flatMap(roleOf) ++ owners.flatMap(ancestorRoles)
+          if ((ancestorRoles(e) ++ context).exists(allowed.contains)) Nil
           else
             Seq(
               Violation(
@@ -150,7 +154,11 @@ object AriaStandards extends RuleSet {
     ) { page =>
       rolesOn(page).flatMap { case (e, role) =>
         AriaVocabulary.requiredChildren.get(role).toSeq.flatMap { allowed =>
-          val found = e.getAllElements.asScala.filterNot(_ eq e).flatMap(roleOf)
+          val contained =
+            e.getAllElements.asScala.filterNot(_ eq e).flatMap(roleOf)
+          val owned =
+            ownedBy(e).flatMap(_.getAllElements.asScala).flatMap(roleOf)
+          val found = contained ++ owned
           if (found.exists(allowed.contains)) Nil
           else
             Seq(
@@ -418,6 +426,42 @@ object AriaStandards extends RuleSet {
       case field :: rest => isField(field) && ends(rest)
       case Nil           => false
     }
+  }
+
+  /** HTML that supplies a role's required state itself: a heading's level is in
+    * its tag, and a native checkbox has a checked state whatever its
+    * attributes.
+    */
+  private val NativeState = Map(
+    "heading" -> "h1, h2, h3, h4, h5, h6",
+    "checkbox" -> "input[type=checkbox]",
+    "switch" -> "input[type=checkbox]",
+    "radio" -> "input[type=radio]",
+    "option" -> "option",
+    "slider" -> "input[type=range]",
+    "combobox" -> "select"
+  )
+
+  /** What `aria-owns` makes this element's own, wherever it sits in the
+    * document. Only the one step is followed, so a cycle cannot trap this.
+    */
+  private def ownedBy(e: Element): Seq[Element] =
+    e.attr("aria-owns")
+      .split("\\s+")
+      .filter(_.nonEmpty)
+      .toSeq
+      .flatMap(id => Option(e.ownerDocument().getElementById(id)))
+
+  /** The elements whose `aria-owns` names this one or anything it sits in,
+    * since what an owned element holds is owned too.
+    */
+  private def ownersOf(page: Page, e: Element): Seq[Element] = {
+    val ids = (e +: e.parents.asScala.toSeq).map(_.id()).filter(_.nonEmpty)
+    page.document
+      .select("[aria-owns]")
+      .asScala
+      .toSeq
+      .filter(_.attr("aria-owns").split("\\s+").exists(ids.contains))
   }
 
   /** What a landmark is called, from the first of these that says anything. */
