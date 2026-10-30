@@ -18,6 +18,7 @@ package io.github.frikit.twirlspec.i18n
 
 import io.github.frikit.twirlspec.expect.{Severity, Violation}
 import io.github.frikit.twirlspec.page.{Page, Text}
+import org.jsoup.nodes.Element
 import play.api.i18n.Lang
 
 import scala.jdk.CollectionConverters._
@@ -130,13 +131,26 @@ object TranslationStandards {
       val langs = languageNamesOf(base, other)
       val baseLinks = hrefsOf(base, langs)
       val otherLinks = hrefsOf(other, langs)
+      // The set of places can match while two links have swapped them, so a
+      // link with an id is also held to going where it went in the base.
+      val otherTargets = targetsById(other, langs)
+      val moved = targetsById(base, langs).toSeq.sortBy(_._1).collect {
+        case (id, (neutral, written))
+            if otherTargets.get(id).exists(_._1 != neutral) =>
+          Violation(
+            "i18n-same-links",
+            s"#$id goes somewhere else in ${other.lang.code}",
+            expected = Some(written),
+            actual = otherTargets.get(id).map(_._2)
+          )
+      }
       missingAndExtra(
         "i18n-same-links",
         "link target",
         (baseLinks -- otherLinks.keySet).values.toSet,
         (otherLinks -- baseLinks.keySet).values.toSet,
         other.lang
-      )
+      ) ++ moved
     },
     TranslationRule(
       "i18n-same-controls",
@@ -147,6 +161,26 @@ object TranslationStandards {
         "form control",
         controlsOf(base),
         controlsOf(other),
+        other.lang
+      )
+    },
+    TranslationRule(
+      "i18n-same-submissions",
+      "every language offers the same choices and submits to the same place",
+      Severity.Warning
+    ) { (base, other) =>
+      val langs = languageNamesOf(base, other)
+      missingAndExtra(
+        "i18n-same-submissions",
+        "choice",
+        choicesOf(base),
+        choicesOf(other),
+        other.lang
+      ) ++ missingAndExtra(
+        "i18n-same-submissions",
+        "form destination",
+        destinationsOf(base, langs),
+        destinationsOf(other, langs),
         other.lang
       )
     },
@@ -174,29 +208,53 @@ object TranslationStandards {
       "no text present in the base language goes missing"
     ) { (base, other) =>
       val otherText = textByIdOf(other)
-      textByIdOf(base).toSeq.sortBy(_._1).flatMap { case (id, baseText) =>
-        otherText.get(id) match {
-          case Some(text) if text.trim.nonEmpty => Nil
-          case _ if baseText.trim.isEmpty       => Nil
-          case _                                =>
-            Seq(
-              Violation(
-                "i18n-nothing-lost",
-                s"#$id says something in the base language but is empty in ${other.lang.code}",
-                expected = Some(baseText),
-                actual = Some("")
+      val byId = textByIdOf(base).toSeq.sortBy(_._1).flatMap {
+        case (id, baseText) =>
+          otherText.get(id) match {
+            case Some(text) if text.trim.nonEmpty => Nil
+            case _ if baseText.trim.isEmpty       => Nil
+            case _                                =>
+              Seq(
+                Violation(
+                  "i18n-nothing-lost",
+                  s"#$id says something in the base language but is empty in ${other.lang.code}",
+                  expected = Some(baseText),
+                  actual = Some("")
+                )
               )
-            )
-        }
+          }
       }
+      val otherBlocks = wordsByTag(blockElements(other, Everything))
+      val blocks =
+        wordsByTag(blockElements(base, Everything)).toSeq.sortBy(_._1).flatMap {
+          case (tag, texts) =>
+            // Compared only when both pages have as many, because a page may say
+            // something in one language alone, as a start page offering Welsh
+            // does; and by how many are empty rather than which, because a table
+            // can sort differently once translated.
+            otherBlocks.get(tag).filter(_.size == texts.size).toSeq.flatMap {
+              otherTexts =>
+                val said = texts.filter(_.nonEmpty)
+                val kept = otherTexts.filter(_.nonEmpty)
+                Option.when(kept.size < said.size)(
+                  Violation(
+                    "i18n-nothing-lost",
+                    s"${said.size - kept.size} <$tag> say something in the base language but are empty in ${other.lang.code}",
+                    expected = Some(said.mkString(" | ")),
+                    actual = Some(kept.mkString(" | "))
+                  )
+                )
+            }
+        }
+      byId ++ blocks
     },
     TranslationRule(
       "i18n-actually-translated",
       "the page is translated, not copied",
       Severity.Warning
     ) { (base, other) =>
-      val baseText = textByIdOf(base)
-      val otherText = textByIdOf(other)
+      val baseText = textByIdOf(base, isProse)
+      val otherText = textByIdOf(other, isProse)
       val copied = baseText.toSeq.sortBy(_._1).collect {
         case (id, text)
             if otherText
@@ -204,15 +262,144 @@ object TranslationStandards {
               .contains(text) && worthTranslating(text, config) =>
           id -> text
       }
-      copied.map { case (id, text) =>
+      val hint = "either it is untranslated, or add it to sameTextIsFine"
+      val byId = copied.map { case (id, text) =>
         Violation(
           "i18n-actually-translated",
           s"#$id reads the same in ${other.lang.code} as in the base language",
           actual = Some(text)
-        ).withHint("either it is untranslated, or add it to sameTextIsFine")
+        ).withHint(hint)
       }
+      // What most pages say has no id, so it is compared as blocks of words, in
+      // any order. Answers and table data read the same in any language.
+      def prose(page: Page) =
+        wordsByTag(blockElements(page, Prose).filter(isProse))
+      val otherWords = prose(other).values.flatten.toSet
+      val blocks =
+        prose(base).toSeq.sortBy(_._1).flatMap { case (tag, texts) =>
+          texts.distinct
+            .filter(t => otherWords.contains(t) && worthTranslating(t, config))
+            .map { text =>
+              Violation(
+                "i18n-actually-translated",
+                s"a <$tag> reads the same in ${other.lang.code} as in the base language",
+                actual = Some(text)
+              ).withHint(hint)
+            }
+        }
+      val title =
+        if (base.title == other.title && worthTranslating(base.title, config))
+          Seq(
+            Violation(
+              "i18n-actually-translated",
+              s"the title reads the same in ${other.lang.code} as in the base language",
+              actual = Some(base.title)
+            ).withHint(hint)
+          )
+        else Nil
+      byId ++ blocks ++ title
     }
   )
+
+  /** The elements a page's words sit in: the blocks of text, the GOV.UK
+    * components that write their words directly, and a summary list's keys and
+    * actions, which unlike its values are the page's words rather than data.
+    */
+  private val Prose =
+    "h1, h2, h3, h4, h5, h6, p, li, label, legend, button, summary, th, caption, " +
+      ".govuk-hint, .govuk-inset-text, .govuk-warning-text__text, .govuk-details__text, " +
+      ".govuk-panel__title, .govuk-panel__body, " +
+      ".govuk-caption-xl, .govuk-caption-l, .govuk-caption-m, .govuk-caption-s, " +
+      "dt.govuk-summary-list__key, dd.govuk-summary-list__actions"
+
+  /** Those, and what holds answers and data. */
+  private val Everything = s"$Prose, td, dt, dd"
+
+  /** Not answers or data, which read the same in any language: cells, values,
+    * and the terms an add-to-a-list page names people with.
+    */
+  private def isProse(e: Element): Boolean =
+    e.closest(
+      "td, dd:not(.govuk-summary-list__actions), dt:not(.govuk-summary-list__key)"
+    ) == null
+
+  /** The page's own content matching this, leaving out what has an id, which is
+    * compared by its id.
+    */
+  private def blockElements(page: Page, blocks: String): List[Element] =
+    page.main.headOption
+      .getOrElse(page.document.body())
+      .select(blocks)
+      .asScala
+      .toList
+      .filter(_.id().isEmpty)
+
+  private def wordsByTag(elements: List[Element]): Map[String, List[String]] =
+    elements
+      .map(e => e.tagName() -> Text.normalise(e.text()))
+      .groupMap(_._1)(_._2)
+
+  /** Each of these once, and again for each time it repeats, so one offered
+    * twice differs from one offered once.
+    */
+  private def counted(items: List[String]): Set[String] =
+    items
+      .groupBy(identity)
+      .toList
+      .flatMap { case (item, all) =>
+        item :: (2 to all.size).toList.map(n => s"$item (x$n)")
+      }
+      .toSet
+
+  /** What each named choice submits. A label is left out, since it is
+    * translated, and the order, since a translated list sorts differently.
+    */
+  private def choicesOf(page: Page): Set[String] = {
+    val options = page.document
+      .select("select[name] option")
+      .asScala
+      .toList
+      .map { o =>
+        val value = if (o.hasAttr("value")) o.attr("value") else o.text()
+        s"${o.closest("select").attr("name")}=$value"
+      }
+    val boxes = page.document
+      .select("input[type=radio][name], input[type=checkbox][name]")
+      .asScala
+      .toList
+      .map(i => s"${i.attr("name")}=${page.checkedValue(i)}")
+    counted(options ++ boxes)
+  }
+
+  /** Where each form submits, language-neutral and leaving out the query, which
+    * can carry a token that differs per render. A form with an id is named, so
+    * two that swap destinations differ.
+    */
+  private def destinationsOf(page: Page, langs: Set[String]): Set[String] =
+    counted(page.document.select("form").asScala.toList.map { form =>
+      val method =
+        if (form.attr("method").isEmpty) "GET"
+        else form.attr("method").toUpperCase
+      val path =
+        languageNeutral(form.attr("action").takeWhile(_ != '?'), langs)
+      val named = if (form.id().isEmpty) "" else s"#${form.id()} "
+      s"$named$method $path"
+    })
+
+  /** Where each link with an id goes: language-neutral, and as the page wrote
+    * it.
+    */
+  private def targetsById(
+      page: Page,
+      langs: Set[String]
+  ): Map[String, (String, String)] =
+    page.links.elements
+      .filter(_.id().nonEmpty)
+      .map { e =>
+        val href = e.attr("href")
+        e.id() -> (languageNeutral(href, langs), href)
+      }
+      .toMap
 
   private def worthTranslating(
       text: String,
@@ -273,9 +460,19 @@ object TranslationStandards {
   private def controlsOf(page: Page): Set[String] =
     page.formControls.map(_.attr("name")).filter(_.nonEmpty).toSet
 
-  private def textByIdOf(page: Page): Map[String, String] =
+  /** What each element with an id says: the whole of a block of text, inline
+    * elements and all, and of anything else, a section say, only what sits
+    * directly in it, since its blocks are compared on their own.
+    */
+  private def textByIdOf(
+      page: Page,
+      keep: Element => Boolean = _ => true
+  ): Map[String, String] =
     page.document.getAllElements.asScala.collect {
-      case e if e.id().nonEmpty => e.id() -> Text.normalise(e.ownText())
+      case e if e.id().nonEmpty && keep(e) =>
+        e.id() -> Text.normalise(
+          if (e.is(Everything)) e.text() else e.ownText()
+        )
     }.toMap
 
   private def missingAndExtra(

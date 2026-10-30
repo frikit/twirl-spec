@@ -47,7 +47,8 @@ naming the languages that are configured.
 `inLanguage` swaps the implicit `messages` and `request` for the block, so
 the view renders in that language and every message key in the expectations
 resolves in it too. A key that is not defined in that language is reported as
-missing, rather than silently compared against itself, which is what a plain
+missing, even when `conf/messages` defines it and Play would render that English
+on the page, rather than silently compared against itself, which is what a plain
 `doc.title mustBe messages("x.y")` does, passing while the page shows a raw key.
 
 With `TwirlSpecDsl`, where the spec owns its `Messages`, the same thing is
@@ -83,9 +84,16 @@ The first page given is the base; nominate another with
 | `i18n-same-ids` | every language renders the same elements |
 | `i18n-same-links` | every language links to the same places |
 | `i18n-same-controls` | every language collects the same fields |
+| `i18n-same-submissions` | every language offers the same choices and submits to the same place *(warning)* |
 | `i18n-same-headings` | every language has the same heading structure |
 | `i18n-nothing-lost` | no text present in the base language goes missing |
 | `i18n-actually-translated` | the page is translated, not copied *(warning)* |
+
+The last two read the blocks of text a page's own content is made of, with or
+without ids. `i18n-nothing-lost` pairs them only where both languages have as
+many of a kind, because a page may say something in one language alone.
+`i18n-actually-translated` leaves answers, names and table data out, since those
+read the same in any language.
 
 A link that differs only by the language it names is the same place: the
 language switch points at the other language on each page, and a link that

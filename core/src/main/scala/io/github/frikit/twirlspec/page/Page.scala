@@ -19,7 +19,7 @@ package io.github.frikit.twirlspec.page
 import org.jsoup.Jsoup
 import org.jsoup.parser.Parser
 import org.jsoup.nodes.{Document, Element}
-import play.api.i18n.{Lang, Messages}
+import play.api.i18n.{Lang, Messages, MessagesImpl}
 import play.twirl.api.Html
 
 import scala.collection.mutable
@@ -265,7 +265,7 @@ final class Page(
     else Option(e.closest("form"))
 
   /** What a checked box or radio submits: its value, or `on` without one. */
-  private def checkedValue(e: org.jsoup.nodes.Element): String =
+  private[twirlspec] def checkedValue(e: org.jsoup.nodes.Element): String =
     if (e.hasAttr("value")) e.attr("value") else "on"
 
   /** The value each name submits: [[formSubmission]] as a map, keeping the last
@@ -622,10 +622,30 @@ final class Page(
 
   // ----------------------------------------------------------------- messages
 
-  /** Resolve a message key in this page's language. */
+  /** Resolve a message key in this page's language. A key the language does not
+    * define resolves to nothing, rather than to the English Play would render
+    * in its place, so a Welsh assertion cannot pass on English words.
+    */
   def message(key: String, args: Seq[Any] = Nil): Option[String] =
-    if (messages.isDefinedAt(key)) Some(Text.normalise(messages(key, args: _*)))
+    if (definedInLanguage(key)) Some(Text.normalise(messages(key, args: _*)))
     else None
+
+  /** Play's `isDefinedAt` also answers from the default files, which are
+    * written in English or in the first language `play.i18n.langs` names. For
+    * any other language only its own file counts, by its code and then, as Play
+    * reads it, by the bare language. A `Messages` other than the one Play hands
+    * out can only be asked `isDefinedAt`, fallback and all.
+    */
+  private def definedInLanguage(key: String): Boolean =
+    messages match {
+      case MessagesImpl(language, api)
+          if language.language != "en" &&
+            language.language != api.preferred(Nil).lang.language =>
+        Seq(language.code, language.language).exists(code =>
+          api.messages.get(code).exists(_.contains(key))
+        )
+      case _ => messages.isDefinedAt(key)
+    }
 
   /** Resolve a key, falling back to the key itself (Play's default behaviour).
     */

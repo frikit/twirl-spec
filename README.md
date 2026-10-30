@@ -812,8 +812,9 @@ implicit ones, flattened, in order.
 ```
 
 `inLanguage(lang) { … }` swaps the implicit `messages` and request for a block.
-A key that is not defined in that language is reported as missing, rather than
-silently compared against itself — which is what a plain
+A key that is not defined in that language is reported as missing, even when
+`conf/messages` defines it and Play would render that English on the page,
+rather than silently compared against itself — which is what a plain
 `doc.title mustBe messages("x.y")` does, passing happily while the page shows a
 raw key.
 
@@ -845,6 +846,7 @@ whichever languages the application is configured for are the ones compared.
 | `i18n-same-ids` | every language renders the same elements |
 | `i18n-same-links` | every language links to the same places |
 | `i18n-same-controls` | every language collects the same fields |
+| `i18n-same-submissions` | every language offers the same choices and submits to the same place *(warning)* |
 | `i18n-same-headings` | every language has the same heading structure |
 | `i18n-nothing-lost` | no text present in the base language goes missing |
 | `i18n-actually-translated` | the page is translated, not copied *(warning)* |

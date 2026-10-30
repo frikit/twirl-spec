@@ -14,7 +14,17 @@ readable.
 
 Verdicts change in this release, so it is a minor version. `assertEverything`
 can fail where it passed before, because it no longer counts what an expectation
-merely looked through as asserted.
+merely looked through as asserted. A Welsh assertion can fail where it passed
+before, because a message defined only in English no longer satisfies it, and
+`translateConsistently` can fail on a page it passed, because it now reads text
+that has no id.
+
+### Rules
+
+- `i18n-same-submissions`, new, as a warning: every language offers the same
+  choices, by what they submit rather than their labels or their order, and each
+  form submits to the same place. A service that loads a separate Welsh list of
+  countries can drop one from it without any other check noticing.
 
 ### Added
 
@@ -53,6 +63,18 @@ merely looked through as asserted.
   of them passed.
 - `headingAtLevel` honours `matching(...)` and `anyText`, which it compared as
   literal words.
+- A message key resolves in a language only when that language defines it. Play's
+  `isDefinedAt` also answers from the default files, so a key only in
+  `conf/messages` satisfied a Welsh assertion on a page showing English, against
+  what the README promised. The default files still count for English, in any
+  region, and for the first language `play.i18n.langs` names.
+- `i18n-nothing-lost` and `i18n-actually-translated` read text with no id, and
+  the whole of an element with one. They compared only what sat directly in an
+  element with an id, which on most pages is hardly any of the content: a Welsh
+  page left entirely in English, or with a paragraph emptied, reported nothing.
+  `i18n-actually-translated` also reads the title.
+- `i18n-same-links` notices two links with ids swapping their destinations. It
+  compared only the set of places, which is unchanged by a swap.
 
 ## [2.3.0] - 2026-10-14
 
