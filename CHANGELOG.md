@@ -33,6 +33,23 @@ that has no id.
   builds it with, each page rendered, each check and the rules it failed, and
   each coverage and language comparison. A service turns it on with one
   logger line in `logback-test.xml`; nothing is written at any other level.
+- `HmrcServiceChecks`: `GovukServiceChecks` with what an HMRC service would
+  otherwise write on its spec base. The report-a-problem link every page inherits
+  is left out of coverage in whichever language it reads, and "HMRC" may read the
+  same in every language.
+- `coverageIgnoredSelectors` leaves out a block by CSS selector, with what it
+  holds, for one with no id, and `ContentCoverage.unassertedOutside` beside
+  `unasserted`.
+- `Path.of("app/views") must haveBalancedTemplates` checks every template under a
+  directory, names each problem by its file and line, and fails on a directory
+  with no templates. `TagBalance.templatesUnder` lists them.
+
+### Changed
+
+- Arguments straight after `inject[MyView]` apply the view, where they used to bind
+  to `inject`'s own `ClassTag` and fail to compile. `inject[MyView].apply(...)`
+  still works and compiled code is unaffected. The one source change is passing a
+  `ClassTag` explicitly, which now needs `using`.
 
 ### Fixed
 

@@ -18,6 +18,9 @@ package io.github.frikit.twirlspec.html
 
 import io.github.frikit.twirlspec.TwirlSpecDsl
 import io.github.frikit.twirlspec.standards.Rule
+import org.scalatest.matchers.{MatchResult, Matcher}
+
+import java.nio.file.{Files, Path}
 
 /** Adds the HTML validity rules to every `display(...)`. */
 trait HtmlChecks extends TwirlSpecDsl {
@@ -33,5 +36,34 @@ trait HtmlChecks extends TwirlSpecDsl {
 
   override def standardsRules: Seq[Rule] =
     super.standardsRules ++ htmlStandards.all
+
+  /** Every Twirl template under this directory closes what it opens:
+    *
+    * {{{
+    * Path.of("app/views") must haveBalancedTemplates
+    * }}}
+    *
+    * A directory that is not there, or holds no templates, fails: nothing was
+    * checked, and a wrong path should not pass for ever.
+    */
+  def haveBalancedTemplates: Matcher[Path] = new Matcher[Path] {
+    def apply(root: Path): MatchResult = {
+      val templates = TagBalance.templatesUnder(root)
+      val problems = templates.flatMap(template =>
+        TagBalance
+          .checkTemplate(Files.readString(template))
+          .map(problem => s"$template:${problem.line} ${problem.message}")
+      )
+      MatchResult(
+        templates.nonEmpty && problems.isEmpty,
+        if (templates.isEmpty)
+          s"no Twirl templates were found under $root, so nothing was checked"
+        else
+          s"${problems.size} problem(s) in the ${templates.size} templates under $root:\n  " +
+            problems.mkString("\n  "),
+        s"the ${templates.size} templates under $root closed everything they opened, but were expected not to"
+      )
+    }
+  }
 
 }

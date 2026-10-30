@@ -402,6 +402,36 @@ class CoverageCreditSpec
     }
   }
 
+  "A block left out by a selector" should {
+
+    "leave out what it holds, and nothing else" in {
+      val page = pageOf(
+        """<div class="chrome"><a href="/help">Help</a></div><p id="mine">x</p>"""
+      )
+      ContentCoverage
+        .unassertedOutside(page, Set(".chrome"))
+        .map(_.name) mustBe List("#mine")
+    }
+
+    "leave out the element it matches, as well as what is inside it" in {
+      ContentCoverage.unassertedOutside(
+        pageOf("""<a class="chrome" href="/help">Help</a>"""),
+        Set(".chrome")
+      ) mustBe empty
+    }
+
+    "be read from the spec's own setting" in {
+      val spec = new TwirlSpecDsl with CoverageChecks {
+        override def coverageIgnoredSelectors = Set(".chrome")
+      }
+      val page = pageOf(
+        """<div class="chrome"><a href="/help">Help</a></div><p id="mine">x</p>"""
+      )
+      spec.unassertedContent(page).map(_.name) mustBe List("#mine")
+      spec.assertEverythingExcept("#mine")(page).matches mustBe true
+    }
+  }
+
   "A tracked attribute beyond the default" should {
 
     "be covered by asserting the element carrying it" in {

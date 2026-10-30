@@ -364,7 +364,7 @@ listed again here.
 |---|---|
 | `applicationConfig` | Extra configuration for this suite's application, over the view-test defaults. |
 | `app` | The shared application for that configuration. |
-| `inject` | An instance from the application's injector, usually a view. |
+| `inject` | An instance from the application's injector, usually a view; arguments straight after it apply the view. |
 | `languages` | Every language the application is configured for, English first. |
 | `currentLang` | The language the current block is running in. |
 | `inLanguage` | Run a block with `messages` and a request for the given language in scope. |
@@ -479,6 +479,7 @@ listed again here.
 | `trackedAttributes` | Attributes that mark an element as worth asserting, beyond ids and links. |
 | `coverageScope` | Which part of the page a spec answers for. |
 | `coverageIgnored` | Ids, links or tracking values every page in this project inherits from its layout. |
+| `coverageIgnoredSelectors` | CSS selectors for blocks every page inherits, for a block with no id whose words change with the language. |
 | `assertEverything` | Every id, link and tracked element on the page was asserted by some test in this spec. |
 | `assertEverythingExcept` | As `assertEverything`, but these ids, links or tracking values are deliberately not asserted. |
 | `unassertedContent` | What this spec has asserted so far, for a spec that wants to report rather than fail. |
@@ -522,6 +523,11 @@ is reached from GOV.UK, not from search, and titles its pages in the Design
 System's pattern. Its `scripts-are-deferred` also leaves alone HMRC's
 tracking-consent script, which the platform puts in the head on purpose, and
 still reports the service's own. Mix it in after any rule trait of your own.
+
+An HMRC service on play-frontend-hmrc wants `HmrcServiceChecks`: the same again,
+with the report-a-problem link every page inherits left out of coverage in
+whichever language it reads, and "HMRC" allowed to read the same in every
+language.
 
 ### `WcagStandards`
 
@@ -627,7 +633,11 @@ application, no injector and no render:
 
 ```scala
 TagBalance.checkTemplate(Files.readString(template))
+Path.of("app/views") must haveBalancedTemplates    // every template under here
 ```
+
+The matcher names each problem by its file and line, and fails on a directory
+with no templates, so a wrong path cannot pass for ever.
 
 A template is two languages at once, and only one of them writes tags, so the
 Scala is taken out first — `@if(page < total)` is a comparison, not the start of

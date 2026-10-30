@@ -46,6 +46,11 @@ trait CoverageChecks extends TwirlSpecDsl {
     */
   def coverageIgnored: Set[String] = Set.empty
 
+  /** CSS selectors for blocks every page inherits, left out with what they
+    * hold: for a block with no id, whose link's words change with the language.
+    */
+  def coverageIgnoredSelectors: Set[String] = Set.empty
+
   /** Every id, link and tracked element on the page was asserted by some test
     * in this spec.
     *
@@ -61,8 +66,9 @@ trait CoverageChecks extends TwirlSpecDsl {
     new Matcher[Page] {
       def apply(page: Page): MatchResult = {
         val missing =
-          ContentCoverage.unasserted(
+          ContentCoverage.unassertedOutside(
             page,
+            coverageIgnoredSelectors,
             ignored.toSet ++ coverageIgnored,
             trackedAttributes,
             coverageScope
@@ -83,8 +89,9 @@ trait CoverageChecks extends TwirlSpecDsl {
     * than fail.
     */
   def unassertedContent(page: Page): List[ContentCoverage.Anchor] =
-    ContentCoverage.unasserted(
+    ContentCoverage.unassertedOutside(
       page,
+      coverageIgnoredSelectors,
       coverageIgnored,
       trackedAttributes,
       coverageScope

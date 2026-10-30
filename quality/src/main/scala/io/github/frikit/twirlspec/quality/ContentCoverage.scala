@@ -89,11 +89,25 @@ object ContentCoverage {
       ignored: Set[String] = Set.empty,
       trackedAttributes: Set[String] = defaultTrackedAttributes,
       scope: String = defaultScope
+  ): List[Anchor] =
+    unassertedOutside(page, Set.empty, ignored, trackedAttributes, scope)
+
+  /** As [[unasserted]], leaving out whatever sits inside something these CSS
+    * selectors match: a block a page inherits, which may have no id to name it
+    * by and whose words change with the language.
+    */
+  def unassertedOutside(
+      page: Page,
+      selectors: Set[String],
+      ignored: Set[String] = Set.empty,
+      trackedAttributes: Set[String] = defaultTrackedAttributes,
+      scope: String = defaultScope
   ): List[Anchor] = {
     val touched = page.touchedAnchors
     val ignoredIds = ignored.map(_.stripPrefix("#"))
     within(page, scope)
       .filterNot(insideIgnored(_, ignoredIds))
+      .filterNot(e => selectors.exists(e.closest(_) != null))
       .flatMap(anchorsOf(_, trackedAttributes))
       .distinctBy(_.path)
       .filterNot(a => touched.contains(a.path))
