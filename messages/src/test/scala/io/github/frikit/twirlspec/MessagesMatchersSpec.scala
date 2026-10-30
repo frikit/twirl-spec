@@ -138,10 +138,43 @@ class MessagesMatchersSpec
       ) mustBe empty
     }
 
-    "read a missing file as no findings" in {
-      MessagesIntegrity.duplicateKeys(
-        Seq(new File("/definitely/not/here"))
+    "report a file that is not there, since nothing in it was checked" in {
+      val found =
+        MessagesIntegrity.duplicateKeys(Seq(new File("/definitely/not/here")))
+      found.map(_.rule) mustBe Seq("messages.missing-file")
+      found.head.message must include("/definitely/not/here")
+      a[org.scalatest.exceptions.TestFailedException] must be thrownBy {
+        Seq(new File("/definitely/not/here")) must haveNoDuplicateKeys
+      }
+    }
+
+    "report being given no files at all" in {
+      MessagesIntegrity.duplicateKeys(Nil).map(_.rule) mustBe
+        Seq("messages.no-files")
+    }
+
+    "read a value carrying on past the end of a line as part of the value" in {
+      def keysFoundIn(text: String) = {
+        val file = Files.createTempFile("messages", "").toFile
+        val out = new PrintWriter(file, "UTF-8")
+        try out.write(text)
+        finally out.close()
+        try MessagesIntegrity.duplicateKeys(Seq(file)).map(_.message)
+        finally file.delete()
+      }
+      // Both values carry on, and what they carry on with looks like a key.
+      keysFoundIn(
+        "first=<a \\\n  href=\"/a\">One</a>\nsecond=<a \\\n  href=\"/b\">Two</a>\n"
       ) mustBe empty
+      // A value can carry on over several lines.
+      keysFoundIn("a=one \\\n  b=two \\\n  b=three\n") mustBe empty
+      // An escaped backslash ends the value, so the next line is a key again.
+      keysFoundIn("a=one\\\\\na=two\n").map(_.takeRight(16)) mustBe
+        Seq("is defined 2 times".takeRight(16))
+      // A comment does not carry on.
+      keysFoundIn("# note \\\na=one\na=two\n") must have size 1
+      // Nor does a line that is not a message.
+      keysFoundIn("not a message \\\na=one\na=two\n") must have size 1
     }
   }
 

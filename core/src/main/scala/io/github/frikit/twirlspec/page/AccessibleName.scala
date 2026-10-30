@@ -51,7 +51,7 @@ object AccessibleName {
       () => fromLabelledBy(document, e),
       () => e.attr("aria-label"),
       () => labelFor(document, e),
-      () => if (e.tagName() == "img") e.attr("alt") else "",
+      () => if (e.tagName() == "img" || isImageInput(e)) e.attr("alt") else "",
       () =>
         if (e.tagName() == "fieldset")
           e.select("legend")
@@ -83,6 +83,9 @@ object AccessibleName {
       .flatMap(id => Option(document.getElementById(id)))
       .map(target => announcedText(target))
       .mkString(" ")
+
+  private def isImageInput(e: Element): Boolean =
+    e.tagName() == "input" && e.attr("type").equalsIgnoreCase("image")
 
   private def valueIsTheName(e: Element): Boolean =
     e.tagName() == "input" &&

@@ -27,7 +27,7 @@ object Roles {
 
   /** The HTML that carries each ARIA role implicitly, per HTML-AAM. */
   private val implicitly: Map[String, String] = Map(
-    "button" -> "button, input[type=submit], input[type=button], input[type=reset]",
+    "button" -> "button, input[type=submit], input[type=button], input[type=reset], input[type=image]",
     "link" -> "a[href], area[href]",
     "heading" -> "h1, h2, h3, h4, h5, h6",
     "textbox" -> "input[type=text], input[type=email], input[type=tel], input[type=url], input[type=search], input:not([type]), textarea",

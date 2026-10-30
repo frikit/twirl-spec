@@ -234,12 +234,7 @@ object AriaStandards extends RuleSet {
     ) { page =>
       page.document.select("[autocomplete]").asScala.toSeq.flatMap { e =>
         val raw = e.attr("autocomplete").toLowerCase.trim
-        val tokens = raw.split("\\s+").filter(_.nonEmpty).toList
-        val body =
-          tokens.filterNot(AriaVocabulary.autocompleteModifiers.contains)
-        val ok = raw.isEmpty || body.nonEmpty && body
-          .forall(AriaVocabulary.autocompleteTokens.contains)
-        if (ok) Nil
+        if (raw.isEmpty || autocompleteIsValid(e, raw)) Nil
         else
           Seq(
             Violation(
@@ -375,7 +370,7 @@ object AriaStandards extends RuleSet {
         .sortBy(_._1)
         .flatMap { case (role, group) =>
           // A landmark is named by aria-label or aria-labelledby, never by what it contains.
-          val names = group.map { case (e, _) => landmarkName(page, e) }
+          val names = group.map { case (e, _) => landmarkName(e) }
           if (group.size > 1 && names.distinct.size < group.size)
             Seq(
               Violation(
@@ -394,17 +389,52 @@ object AriaStandards extends RuleSet {
     }
   )
 
-  private def landmarkName(page: Page, e: Element): String =
-    if (e.hasAttr("aria-label")) e.attr("aria-label").trim
-    else if (e.hasAttr("aria-labelledby"))
-      e.attr("aria-labelledby")
-        .split("\\s+")
-        .filter(_.nonEmpty)
-        .flatMap(id =>
-          Option(page.document.getElementById(id)).map(_.text().trim)
-        )
-        .mkString(" ")
-    else ""
+  /** The autofill grammar: `on` or `off` alone; or an optional section, an
+    * optional `shipping` or `billing`, one field, which a contact kind such as
+    * `home` may come before where the field is a way of contacting someone, and
+    * an optional `webauthn`, on an input or a textarea. A hidden input cannot
+    * say `on` or `off`, having no user to ask.
+    */
+  private def autocompleteIsValid(e: Element, raw: String): Boolean = {
+    val tokens = raw.split("\\s+").toList
+    val afterSection = tokens match {
+      case section :: rest if section.startsWith("section-") => rest
+      case all                                               => all
+    }
+    val afterAddress = afterSection match {
+      case ("shipping" | "billing") :: rest => rest
+      case all                              => all
+    }
+    def ends(rest: List[String]) =
+      rest.isEmpty || rest == List("webauthn") && e.is("input, textarea")
+    def isField(name: String) =
+      AriaVocabulary.autocompleteTokens(name) && name != "on" && name != "off"
+    afterAddress match {
+      case List("on" | "off") =>
+        tokens.size == 1 && !e.is("input[type=hidden]")
+      case kind :: field :: rest
+          if AriaVocabulary.autocompleteContactKinds(kind) =>
+        AriaVocabulary.isContactField(field) && ends(rest)
+      case field :: rest => isField(field) && ends(rest)
+      case Nil           => false
+    }
+  }
+
+  /** What a landmark is called, from the first of these that says anything. */
+  private def landmarkName(e: Element): String = {
+    val labelledBy = e
+      .attr("aria-labelledby")
+      .split("\\s+")
+      .filter(_.nonEmpty)
+      .flatMap(id =>
+        Option(e.ownerDocument().getElementById(id)).map(_.text().trim)
+      )
+      .mkString(" ")
+      .trim
+    Seq(labelledBy, e.attr("aria-label").trim, e.attr("title").trim)
+      .find(_.nonEmpty)
+      .getOrElse("")
+  }
 
   private def elementsWith(page: Page, p: Element => Boolean): Seq[Element] =
     page.document.getAllElements.asScala.toSeq.filter(p)
@@ -429,10 +459,11 @@ object AriaStandards extends RuleSet {
   private val sectioning = "article, aside, main, nav, section"
 
   private def implicitRole(e: Element): Option[String] = e.tagName match {
-    case "nav"    => Some("navigation")
-    case "aside"  => Some("complementary")
-    case "main"   => Some("main")
-    case "form"   => Some("form")
+    case "nav"   => Some("navigation")
+    case "aside" => Some("complementary")
+    case "main"  => Some("main")
+    // A form is a landmark only once it has a name to be told apart by.
+    case "form"   => Option.when(landmarkName(e).nonEmpty)("form")
     case "header" => Option.when(e.closest(sectioning) == null)("banner")
     case "footer" => Option.when(e.closest(sectioning) == null)("contentinfo")
     case "ul" | "ol" => Some("list")

@@ -296,37 +296,64 @@ object MessagesIntegrity {
     noTranslations ++ parity ++ empty ++ quotes ++ placeholderParity ++ coverage
   }
 
-  /** Keys defined more than once in a single messages file. */
+  /** Keys defined more than once in a single messages file. A file that is not
+    * there, or no files at all, is a finding: nothing was checked, and a wrong
+    * path would otherwise pass for ever.
+    */
   def duplicateKeys(files: Seq[File]): Seq[Violation] =
-    files.filter(_.exists()).flatMap { file =>
-      val keys = Using.resource(Source.fromFile(file, "UTF-8")) { source =>
-        source
-          .getLines()
-          .map(_.trim)
-          .filter(line =>
-            line.nonEmpty && !line.startsWith("#") && line.contains("=")
-          )
-          .map(_.takeWhile(_ != '=').trim)
-          .toList
-      }
-      keys
-        .groupBy(identity)
-        .collect {
-          case (key, occurrences) if occurrences.size > 1 =>
-            (key, occurrences.size)
-        }
-        .toList
-        .sortBy(_._1)
-        .map { case (key, n) =>
-          Violation(
-            "messages.duplicate-key",
-            s"${file.getName}: `$key` is defined $n times"
-          )
-            .withHint(
-              "Play keeps the last definition, so the earlier ones are dead content"
+    if (files.isEmpty)
+      Seq(
+        Violation("messages.no-files", "no message files were given to check")
+      )
+    else
+      files.flatMap {
+        case file if !file.exists() =>
+          Seq(
+            Violation(
+              "messages.missing-file",
+              s"${file.getPath} does not exist, so nothing in it was checked"
             )
-        }
+          )
+        case file => duplicatesIn(file)
+      }
+
+  /** The keys a file defines. A line ending in an unescaped backslash carries
+    * on into the next, so whatever the next says is part of a value.
+    */
+  private def keysIn(lines: List[String]): List[String] =
+    lines
+      .foldLeft((List.empty[String], false)) { case ((keys, continuing), raw) =>
+        val line = raw.trim
+        val isKey = !continuing && line.nonEmpty && !line.startsWith("#") &&
+          line.contains("=")
+        val carriesOn = (continuing || isKey) &&
+          raw.reverse.takeWhile(_ == '\\').length % 2 == 1
+        (if (isKey) line.takeWhile(_ != '=').trim :: keys else keys, carriesOn)
+      }
+      ._1
+
+  private def duplicatesIn(file: File): Seq[Violation] = {
+    val keys = Using.resource(Source.fromFile(file, "UTF-8")) { source =>
+      keysIn(source.getLines().toList)
     }
+    keys
+      .groupBy(identity)
+      .collect {
+        case (key, occurrences) if occurrences.size > 1 =>
+          (key, occurrences.size)
+      }
+      .toList
+      .sortBy(_._1)
+      .map { case (key, n) =>
+        Violation(
+          "messages.duplicate-key",
+          s"${file.getName}: `$key` is defined $n times"
+        )
+          .withHint(
+            "Play keeps the last definition, so the earlier ones are dead content"
+          )
+      }
+  }
 
   private def preview(keys: List[String]): String =
     if (keys.size <= 12) keys.mkString(", ")

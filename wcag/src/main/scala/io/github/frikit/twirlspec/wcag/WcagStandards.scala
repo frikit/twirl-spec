@@ -104,7 +104,7 @@ object WcagStandards extends RuleSet {
             Violation("html-lang", "the <html> element has no lang attribute")
               .withHint("WCAG 3.1.1")
           )
-        case Some(l) if !l.startsWith(page.lang.code) =>
+        case Some(l) if !page.declaresItsLanguage(l) =>
           Seq(
             Violation.mismatch(
               "html-lang",
@@ -374,10 +374,8 @@ object WcagStandards extends RuleSet {
       // 1.3.5 applies to fields collecting information *about the user*, which cannot be detected in general.
       page.formControls
         .filter(e => e.attr("autocomplete").isEmpty)
-        .filter { e =>
-          val name = (e.attr("name") + " " + e.id()).toLowerCase
-          PersonalFieldNames.exists(name.contains)
-        }
+        .filterNot(e => AutocompleteDoesNotApply(e.attr("type").toLowerCase))
+        .filter(e => collectsAboutTheUser(e.attr("name") + " " + e.id()))
         .map { e =>
           Violation(
             "input-purpose-autocomplete",
@@ -433,9 +431,13 @@ object WcagStandards extends RuleSet {
       // The hint below tells a reader to add tabindex="-1". That has to be
       // enough to satisfy the rule, so an element taken out of the tab order
       // no longer counts as focusable — otherwise following the advice leaves
-      // the test red.
+      // the test red. A disabled control and anything hidden or inert take no
+      // focus either.
       def stillFocusable(e: Element): Boolean =
-        e.is(focusable) && !removedFromTabOrder(e)
+        e.is(focusable) && !removedFromTabOrder(e) &&
+          !e.is("input[type=hidden]") &&
+          !(e.is("button, input, select, textarea") && page.isDisabled(e)) &&
+          e.closest("[hidden], [inert]") == null
       page.document
         .select("[aria-hidden=true]")
         .asScala
@@ -564,14 +566,29 @@ object WcagStandards extends RuleSet {
     }
   )
 
+  /** The input types HTML does not let `autocomplete` apply to. */
+  private val AutocompleteDoesNotApply =
+    Set("checkbox", "radio", "file", "image", "reset", "range", "color")
+
+  /** Whether a control's name and id read as one of the autofill tokens. The
+    * short tokens have to be whole words, so `hotelName` is not a telephone.
+    */
+  private def collectsAboutTheUser(name: String): Boolean =
+    name
+      .split("[^A-Za-z]+|(?<=[a-z])(?=[A-Z])")
+      .map(_.toLowerCase)
+      .exists(PersonalFieldWords) ||
+      PersonalFieldNames.exists(name.toLowerCase.contains)
+
+  /** Autofill tokens short enough to turn up inside other words. */
+  private val PersonalFieldWords = Set("tel", "phone", "telephone")
+
   /** Substrings of the autofill tokens WCAG 1.3.5 enumerates, which is what
     * makes the heuristic defensible rather than a guess.
     */
   private val PersonalFieldNames =
     Set(
       "email",
-      "tel",
-      "phone",
       "postcode",
       "postal-code",
       "given-name",

@@ -256,7 +256,7 @@ final class Page(
     * it is that form or, where the id names no form, none at all; without one
     * it is the form the control sits in.
     */
-  private def formOwner(
+  private[twirlspec] def formOwner(
       e: org.jsoup.nodes.Element
   ): Option[org.jsoup.nodes.Element] =
     if (e.hasAttr("form"))
@@ -302,7 +302,29 @@ final class Page(
     * an id with a dot in it works.
     */
   def byId(elementId: String): Selection =
-    named(s"#$elementId", Page.idSelector(elementId))
+    exactly(s"#$elementId", Page.idSelector(elementId), "[id]")(e =>
+      says(e.id(), elementId)
+    )
+
+  /** The elements among these whose attributes pass an exact test. Jsoup's
+    * `[a="x"]` ignores case, where an id and a name do not, and throws on a
+    * value with a quote in it, so values are compared rather than written into
+    * the selector, and `shown` is what a failure message calls it.
+    */
+  private def exactly(name: String, shown: String, among: String)(
+      test: Element => Boolean
+  ): Selection = {
+    val elements = document.select(among).asScala.toList.filter(test)
+    record(elements)
+    Selection(name, shown, elements)
+  }
+
+  private def isCalled(e: Element, nameOrId: String): Boolean =
+    says(e.attr("name"), nameOrId) || says(e.id(), nameOrId)
+
+  /** An attribute that is absent reads as empty, so nothing is called "". */
+  private def says(attribute: String, wanted: String): Boolean =
+    wanted.nonEmpty && attribute == wanted
 
   // ------------------------------------------------------------- page framing
 
@@ -312,6 +334,12 @@ final class Page(
   /** The `lang` attribute of the `<html>` element, if it has one. */
   def htmlLang: Option[String] =
     Option(document.selectFirst("html")).map(_.attr("lang")).filter(_.nonEmpty)
+
+  /** Whether a `lang` value names this page's language: in any region and any
+    * case, as a language tag is read.
+    */
+  private[twirlspec] def declaresItsLanguage(declared: String): Boolean =
+    declared.toLowerCase.takeWhile(_ != '-') == lang.language.toLowerCase
 
   /** The `<h1>` elements; a page should have exactly one. */
   def h1: Selection = named("h1", "h1")
@@ -448,52 +476,68 @@ final class Page(
 
   /** The inputs with this name or id. */
   def input(nameOrId: String): Selection =
-    named(s"input($nameOrId)", Page.control("input", nameOrId))
+    exactly(s"input($nameOrId)", Page.control("input", nameOrId), "input")(
+      isCalled(_, nameOrId)
+    )
 
   /** Any control by name or id: input, select or textarea. */
   def formControl(nameOrId: String): Selection =
-    named(
+    exactly(
       s"control($nameOrId)",
       Seq("input", "select", "textarea")
         .map(Page.control(_, nameOrId))
-        .mkString(", ")
-    )
+        .mkString(", "),
+      "input, select, textarea"
+    )(isCalled(_, nameOrId))
 
   /** The textareas with this name or id. */
   def textarea(nameOrId: String): Selection =
-    named(s"textarea($nameOrId)", Page.control("textarea", nameOrId))
+    exactly(
+      s"textarea($nameOrId)",
+      Page.control("textarea", nameOrId),
+      "textarea"
+    )(isCalled(_, nameOrId))
 
   /** The selects with this name or id. */
   def selectBox(nameOrId: String): Selection =
-    named(s"select($nameOrId)", Page.control("select", nameOrId))
+    exactly(s"select($nameOrId)", Page.control("select", nameOrId), "select")(
+      isCalled(_, nameOrId)
+    )
 
   /** The radio buttons sharing this name. */
   def radios(fieldName: String): Selection =
-    named(s"radios($fieldName)", s"""input[type=radio][name="$fieldName"]""")
+    exactly(
+      s"radios($fieldName)",
+      s"""input[type=radio][name="$fieldName"]""",
+      "input[type=radio]"
+    )(e => says(e.attr("name"), fieldName))
 
   /** The checkboxes sharing this name. */
   def checkboxes(fieldName: String): Selection =
-    named(
+    exactly(
       s"checkboxes($fieldName)",
-      s"""input[type=checkbox][name="$fieldName"]"""
-    )
+      s"""input[type=checkbox][name="$fieldName"]""",
+      "input[type=checkbox]"
+    )(e => says(e.attr("name"), fieldName))
 
   /** The fields of a date input, under either id convention. */
-  def dateInput(fieldName: String): Selection =
-    named(
+  def dateInput(fieldName: String): Selection = {
+    val ids = Seq("day", "month", "year")
+      .flatMap(part => Seq(s"$fieldName.$part", s"$fieldName-$part"))
+    exactly(
       s"date input($fieldName)",
-      Seq("day", "month", "year")
-        .flatMap(part => Seq(s"$fieldName.$part", s"$fieldName-$part"))
-        .map(Page.idSelector)
-        .mkString(", ")
-    )
+      ids.map(Page.idSelector).mkString(", "),
+      "[id]"
+    )(e => ids.contains(e.id()))
+  }
 
   /** The file inputs with this name or id. */
   def fileUpload(nameOrId: String): Selection =
-    named(
+    exactly(
       s"file upload($nameOrId)",
-      s"""input[type=file][name="$nameOrId"], input[type=file][id="$nameOrId"]"""
-    )
+      s"""input[type=file][name="$nameOrId"], input[type=file][id="$nameOrId"]""",
+      "input[type=file]"
+    )(isCalled(_, nameOrId))
 
   /** Every control on the page that a user can type into or choose from. */
   def formControls: List[Element] =
@@ -506,7 +550,9 @@ final class Page(
 
   /** The labels pointing at this field. */
   def labelFor(fieldId: String): Selection =
-    named(s"label for $fieldId", s"""label[for="$fieldId"]""")
+    exactly(s"label for $fieldId", s"""label[for="$fieldId"]""", "label[for]")(
+      e => says(e.attr("for"), fieldId)
+    )
 
   /** Every legend. */
   def legends: Selection = named("legend", "legend")
@@ -518,9 +564,14 @@ final class Page(
     * wrapper.
     */
   def hint(fieldId: String): Selection =
-    named(
+    exactly(
       s"hint for $fieldId",
-      s"""[id="$fieldId-hint"], [id="$fieldId"] .govuk-hint"""
+      s"""[id="$fieldId-hint"], [id="$fieldId"] .govuk-hint""",
+      "[id], .govuk-hint"
+    )(e =>
+      e.id() == s"$fieldId-hint" ||
+        e.hasClass("govuk-hint") &&
+        e.parents.asScala.exists(parent => says(parent.id(), fieldId))
     )
 
   /** Every GOV.UK hint. */
@@ -645,6 +696,16 @@ final class Page(
           api.messages.get(code).exists(_.contains(key))
         )
       case _ => messages.isDefinedAt(key)
+    }
+
+  /** The first segment of every key this page's messages define, in any
+    * language.
+    */
+  private[twirlspec] def messageKeyFamilies: Set[String] =
+    messages match {
+      case MessagesImpl(_, api) =>
+        api.messages.values.flatMap(_.keys).map(_.takeWhile(_ != '.')).toSet
+      case _ => Set.empty
     }
 
   /** Resolve a key, falling back to the key itself (Play's default behaviour).

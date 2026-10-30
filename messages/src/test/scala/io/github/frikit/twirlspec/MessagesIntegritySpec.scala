@@ -263,11 +263,6 @@ class MessagesIntegritySpec
       file.delete()
     }
 
-    "ignore a file that is not there" in {
-      MessagesIntegrity.duplicateKeys(
-        Seq(new File("/nope/messages"))
-      ) mustBe empty
-    }
   }
 
   "the apostrophe rule" should {

@@ -197,6 +197,57 @@ class AriaStandardsSpec
         """<input autocomplete="">"""
       ) must not contain "autocomplete-is-valid"
     }
+    "accept what the autofill grammar allows, in its order" in {
+      Seq(
+        "on",
+        "off",
+        "section-person1 given-name",
+        "billing postal-code",
+        "section-a shipping street-address",
+        "section-a billing home tel",
+        "work email",
+        "mobile tel-national",
+        "fax impp",
+        "username webauthn",
+        "SECTION-A GIVEN-NAME",
+        "tel-local-prefix",
+        "home tel-local-suffix"
+      ).foreach(value =>
+        withClue(value)(
+          ids(s"""<input autocomplete="$value">""") must
+            not contain "autocomplete-is-valid"
+        )
+      )
+    }
+    "hold webauthn, on and off to the elements they apply to" in {
+      val rule = "autocomplete-is-valid"
+      ids("""<textarea autocomplete="username webauthn"></textarea>""") must
+        not contain rule
+      ids("""<select autocomplete="country webauthn"></select>""") must
+        contain(rule)
+      ids("""<input type="hidden" autocomplete="on">""") must contain(rule)
+      ids("""<input type="hidden" autocomplete="country">""") must
+        not contain rule
+    }
+    "reject what it does not" in {
+      Seq(
+        "given-name family-name",
+        "home given-name",
+        "home",
+        "home tel-unknown",
+        "on off",
+        "shipping on",
+        "section-a",
+        "given-name section-a",
+        "username webauthn extra",
+        "webauthn"
+      ).foreach(value =>
+        withClue(value)(
+          ids(s"""<input autocomplete="$value">""") must
+            contain("autocomplete-is-valid")
+        )
+      )
+    }
   }
 
   "no-meta-refresh" should {
@@ -327,9 +378,51 @@ class AriaStandardsSpec
       )
     }
 
-    "treat two unnamed forms as indistinguishable" in {
+    "leave unnamed forms alone, since a form with no name is no landmark" in {
       ids(
         """<form action="/a"></form><form action="/b"></form>"""
+      ) must not contain "landmarks-are-distinguishable"
+    }
+
+    "treat forms with a name as landmarks, told apart by it" in {
+      ids(
+        """<form aria-label="Same"></form><form aria-label="Same"></form>"""
+      ) must contain("landmarks-are-distinguishable")
+      ids(
+        """<form aria-label="One"></form><form aria-label="Two"></form>"""
+      ) must not contain "landmarks-are-distinguishable"
+    }
+
+    "not take an empty name for a name" in {
+      ids(
+        """<form title=""></form><form title=" "></form>"""
+      ) must not contain "landmarks-are-distinguishable"
+      ids(
+        """<form aria-label="" title="One"></form><form aria-label="" title="One"></form>"""
+      ) must contain("landmarks-are-distinguishable")
+    }
+
+    "take a name from aria-labelledby first, as a browser does" in {
+      ids(
+        """<span id="a">One</span><span id="b">Two</span>
+          |<form aria-labelledby="a" aria-label="Same"></form>
+          |<form aria-labelledby="b" aria-label="Same"></form>""".stripMargin
+      ) must not contain "landmarks-are-distinguishable"
+    }
+
+    "not make a name out of references to nothing but empty elements" in {
+      ids(
+        """<span id="a"></span><span id="b"></span>
+          |<form aria-labelledby="a b"></form><form aria-labelledby="a b"></form>""".stripMargin
+      ) must not contain "landmarks-are-distinguishable"
+    }
+
+    "read a form's name from wherever it has one" in {
+      ids(
+        """<form title="One"></form><form title="Two"></form>"""
+      ) must not contain "landmarks-are-distinguishable"
+      ids(
+        """<span id="a">One</span><form aria-labelledby="a"></form><form title="One"></form>"""
       ) must contain("landmarks-are-distinguishable")
     }
 

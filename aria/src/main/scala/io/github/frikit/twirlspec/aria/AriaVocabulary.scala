@@ -303,6 +303,8 @@ object AriaVocabulary {
     "tel-national",
     "tel-area-code",
     "tel-local",
+    "tel-local-prefix",
+    "tel-local-suffix",
     "tel-extension",
     "email",
     "impp"
@@ -311,5 +313,14 @@ object AriaVocabulary {
   /** Prefixes a token may carry before the field name. */
   val autocompleteModifiers: Set[String] =
     Set("shipping", "billing", "home", "work", "mobile", "fax", "pager")
+
+  /** The modifiers that say what kind of contact a field is. */
+  private[twirlspec] val autocompleteContactKinds: Set[String] =
+    Set("home", "work", "mobile", "fax", "pager")
+
+  /** The fields a contact kind may come before. */
+  private[twirlspec] def isContactField(field: String): Boolean =
+    field == "email" || field == "impp" || field == "tel" ||
+      field.startsWith("tel-") && autocompleteTokens(field)
 
 }

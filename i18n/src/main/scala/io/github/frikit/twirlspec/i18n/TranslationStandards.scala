@@ -91,10 +91,8 @@ object TranslationStandards {
       "the page declares the language it was rendered in"
     ) { (_, other) =>
       other.htmlLang match {
-        case Some(declared)
-            if declared.toLowerCase.startsWith(other.lang.code.toLowerCase) =>
-          Nil
-        case declared =>
+        case Some(declared) if other.declaresItsLanguage(declared) => Nil
+        case declared                                              =>
           Seq(
             Violation(
               "i18n-lang-attribute",

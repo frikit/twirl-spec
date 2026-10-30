@@ -84,6 +84,36 @@ that has no id.
   a passing check's warnings go to standard output. They went nowhere, against
   what the docs said. `alertHook` routes them to ScalaTest's alert in one line.
 - A failure caused only by warnings says so, rather than "page failed 0 checks".
+- A page with two forms no longer fails. `unambiguous-field-names` read the whole
+  document as one submission, so two forms each with a CSRF token failed it, and
+  `landmarks-are-distinguishable` counted every form as a landmark, which a form
+  is only once it has a name. The first now goes by the form each control belongs
+  to, leaves out what submits nothing, and accepts a name ending in `[]`.
+- An id or a name is compared exactly. Jsoup's attribute selector ignores case, so
+  `element("name")` passed on `id="Name"` and a reference to `Hint` resolved to
+  `hint`, and it throws on a value with a quote in it, so such an id ended a rule
+  with a `SelectorParseException` rather than a verdict.
+- `no-raw-message-keys` reads everything in the main content rather than a list of
+  elements, which left out buttons, hints, inset text, panels, details and options,
+  and also the title, `aria-label`, `alt`, `placeholder` and a button's value. A
+  key may have a hyphen. It also stops failing what is not a key: a version such as
+  `v1.2`, and a plain pair of words such as `john.smith`, which could be someone's
+  answer, unless the service has keys beginning with the first of them.
+- `no-aria-hidden-focusable` leaves alone what takes no focus: a disabled control,
+  a hidden input, and anything inside `hidden` or `inert`.
+- `labelled-controls` reads an image button's `alt` as its name, and `role("button")`
+  finds one.
+- `input-purpose-autocomplete` does not ask it of a control it does not apply to,
+  such as a radio, and reads `tel` and `phone` as whole words, so `hotelName` is not
+  a telephone.
+- `autocomplete-is-valid` follows the autofill grammar. A valid
+  `section-person1 given-name` failed it, and an invalid `given-name family-name`
+  passed.
+- `html-lang` and `i18n-lang-attribute` accept any region of the page's language,
+  in any case, and do not take `english` for `en`.
+- `haveNoDuplicateKeys` reports a file that is not there, or being given none,
+  rather than passing on a wrong path. It no longer reads a line of a value carrying
+  on past a backslash as a key of its own.
 
 ## [2.3.0] - 2026-10-14
 

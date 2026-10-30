@@ -92,6 +92,34 @@ class TranslationSpec
     }
   }
 
+  "i18n-lang-attribute, on how a language is written" should {
+    "accept the bare language on a page rendered in a region of it" in {
+      rulesFor(
+        pageIn(
+          Lang("fr-CA"),
+          """<p id="intro">Bonjour</p><a id="go" href="/next">Continuer</a>""",
+          declared = "fr"
+        )
+      ) must not contain "i18n-lang-attribute"
+    }
+    "accept it in any case, and not take another word for it" in {
+      rulesFor(
+        pageIn(
+          fr,
+          """<p id="intro">Bonjour</p><a id="go" href="/next">Continuer</a>""",
+          declared = "FR"
+        )
+      ) must not contain "i18n-lang-attribute"
+      rulesFor(
+        pageIn(
+          fr,
+          """<p id="intro">Bonjour</p><a id="go" href="/next">Continuer</a>""",
+          declared = "french"
+        )
+      ) must contain("i18n-lang-attribute")
+    }
+  }
+
   "i18n-same-ids" should {
     "notice an element the translation dropped" in {
       rulesFor(

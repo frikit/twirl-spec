@@ -64,9 +64,9 @@ trait FormExpectations {
   /** A hidden input with this name carries this value. */
   def hiddenInput(name: String, value: String): Expectation =
     Expectation(s"hiddenInput($name)") { page =>
-      val sel = page.withRecordingPaused(
-        page.css(s"""input[type=hidden][name="$name"]""")
-      )
+      val sel = page
+        .withRecordingPaused(page.css("input[type=hidden]"))
+        .filter(e => name.nonEmpty && e.attr("name") == name)
       if (sel.isEmpty)
         Seq(Violation.missing(s"hiddenInput($name)", sel.selector))
       else {
@@ -715,9 +715,7 @@ final case class DateInputExpectation(
           labelRequired = true
         )
       }
-      val first = page.css(
-        io.github.frikit.twirlspec.page.Page.idSelector(partIds.head._2)
-      )(0)
+      val first = page.byId(partIds.head._2)(0)
       val legendIssues =
         legend.toSeq.flatMap(FormChecks.legendIssues(page, rule, first, _))
       val hintIssues = hint.toSeq.flatMap(
@@ -739,11 +737,7 @@ object DateInputExpectation {
       part: String
   ): Option[String] =
     List(s"$name.$part", s"$name-$part", part)
-      .find(candidate =>
-        page
-          .css(io.github.frikit.twirlspec.page.Page.idSelector(candidate))
-          .nonEmpty
-      )
+      .find(candidate => page.byId(candidate).nonEmpty)
 
 }
 
@@ -906,10 +900,7 @@ private[twirlspec] object FormChecks {
 
       val candidates =
         if (referrers.nonEmpty) referrers
-        else
-          page
-            .css(io.github.frikit.twirlspec.page.Page.idSelector(fieldId))
-            .elements
+        else page.byId(fieldId).elements
 
       val describedByValues = candidates.flatMap { element =>
         val own = element.attr("aria-describedby")
