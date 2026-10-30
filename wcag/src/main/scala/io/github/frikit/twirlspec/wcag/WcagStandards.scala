@@ -258,7 +258,7 @@ object WcagStandards extends RuleSet {
         Some(Criterion("4.1.2", "Name, Role, Value", Level.A, WcagVersion.V2_0))
     ) { page =>
       page.document
-        .select("button[type=submit], input[type=submit], button:not([type])")
+        .select(SubmitControls)
         .asScala
         .toList
         .filter(e => page.accessibleName(e).isEmpty)
@@ -267,6 +267,53 @@ object WcagStandards extends RuleSet {
             "submit-has-name",
             "a submit control has no accessible name"
           ).withHint("WCAG 4.1.2")
+        )
+    },
+    Rule(
+      "button-has-name",
+      "every other button has an accessible name",
+      severity = Warning,
+      criterion =
+        Some(Criterion("4.1.2", "Name, Role, Value", Level.A, WcagVersion.V2_0))
+    ) { page =>
+      // An <input type="reset"> with no value is called "Reset" by the browser,
+      // and what submit-has-name and link-has-name report is theirs to report.
+      page.document
+        .select(
+          "button[type=button], button[type=reset], input[type=button], input[type=image], [role~=(?i)^\\s*button(\\s|$)]"
+        )
+        .asScala
+        .toList
+        .filterNot(_.is(s"$SubmitControls, a[href]"))
+        .filter(page.isExposed)
+        .filter(e => page.accessibleName(e).isEmpty)
+        .map(e =>
+          Violation(
+            "button-has-name",
+            "a button has no accessible name",
+            actual = Some(Text.preview(e.outerHtml(), 90))
+          ).withHint("WCAG 4.1.2")
+        )
+    },
+    Rule(
+      "iframe-has-name",
+      "every frame has an accessible name",
+      severity = Warning,
+      criterion =
+        Some(Criterion("4.1.2", "Name, Role, Value", Level.A, WcagVersion.V2_0))
+    ) { page =>
+      page.document
+        .select("iframe")
+        .asScala
+        .toList
+        .filter(page.isExposed)
+        .filter(e => page.accessibleName(e).isEmpty)
+        .map(e =>
+          Violation(
+            "iframe-has-name",
+            "a frame has no accessible name",
+            actual = Some(Text.preview(e.outerHtml(), 90))
+          ).withHint("""WCAG 4.1.2 — a title="" saying what the frame holds""")
         )
     },
     Rule(
@@ -629,6 +676,10 @@ object WcagStandards extends RuleSet {
     * is not a landmark.
     */
   private val MainLandmark = "main, [role=main]"
+
+  /** What `submit-has-name` reads. */
+  private val SubmitControls =
+    "button[type=submit], input[type=submit], button:not([type])"
 
   /** WCAG 1.4.4 asks for text at 200%, so a viewport that caps the scale below
     * 2 is the one that takes the zoom away.

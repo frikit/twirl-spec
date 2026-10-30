@@ -39,11 +39,12 @@ object AccessibleName {
     */
   private val ValueNamedInputTypes = Set("button", "submit", "reset")
 
-  /** The controls whose content is their value rather than their name: the text
-    * inside a `<textarea>` and the options inside a `<select>` are not what the
-    * control is announced as.
+  /** The elements whose content is not their name: the text inside a
+    * `<textarea>` and the options inside a `<select>` are not what the control
+    * is announced as, and what is inside an `<iframe>` is for a browser that
+    * cannot show frames.
     */
-  private val ContentIsNotTheName = Set("input", "select", "textarea")
+  private val ContentIsNotTheName = Set("input", "select", "textarea", "iframe")
 
   /** The accessible name of an element in this document. */
   def of(document: Document, e: Element): String =

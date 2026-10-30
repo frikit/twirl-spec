@@ -72,8 +72,8 @@ judges a page against a design system you are not using.
 | Artifact | Depends on | What it adds |
 |---|---|---|
 | `twirl-spec-core` | — | Page model, expectation DSL, ScalaTest matchers, `Rule` infrastructure |
-| `twirl-spec-wcag` | core | 29 rules: 21 tagged with a WCAG success criterion, 1 structural convention, 4 for Twirl rendering, 3 for safety |
-| `twirl-spec-govuk` | core, wcag | 5 GOV.UK Design System conventions |
+| `twirl-spec-wcag` | core | 31 rules: 23 tagged with a WCAG success criterion, 1 structural convention, 4 for Twirl rendering, 3 for safety |
+| `twirl-spec-govuk` | core, wcag | 10 GOV.UK Design System conventions |
 | `twirl-spec-quality` | core | 12 rules: semantics, page weight and metadata, plus the coverage and entry-point checks |
 | `twirl-spec-aria` | core | 16 ARIA correctness rules, the static half of what an automated tool reports |
 | `twirl-spec-html` | core | 3 HTML validity rules: unclosed elements named with their line, unknown elements and attributes |
@@ -497,15 +497,15 @@ listed again here.
 
 ## The rules
 
-65 rules in nine sets across five optional modules, kept apart so a
+72 rules in nine sets across five optional modules, kept apart so a
 project is only judged against what it actually uses.
 
 | Set | Module | Rules | Covers |
 |---|---|---|---|
-| `WcagStandards` | `twirl-spec-wcag` | 22 | Accessibility |
+| `WcagStandards` | `twirl-spec-wcag` | 24 | Accessibility |
 | `TwirlStandards` | `twirl-spec-wcag` | 4 | Play rendering mistakes |
 | `SecurityStandards` | `twirl-spec-wcag` | 3 | Ways a page can leak or be turned against its reader |
-| `GovukStandards` | `twirl-spec-govuk` | 5 | GOV.UK Design System error conventions |
+| `GovukStandards` | `twirl-spec-govuk` | 10 | GOV.UK Design System conventions |
 | `AriaStandards` | `twirl-spec-aria` | 16 | ARIA correctness |
 | `HtmlStandards` | `twirl-spec-html` | 3 | Basic HTML validity, read from the source rather than the repaired tree, so an unclosed element is named along with the line it opened on |
 | `SemanticStandards` | `twirl-spec-quality` | 4 | Markup that parses but does not mean what it looks like |
@@ -531,7 +531,7 @@ language.
 
 ### `WcagStandards`
 
-Accessibility: 21 rules each enforce a WCAG success criterion, and `one-h1` is a structural convention WCAG does not require but almost everyone wants.
+Accessibility: 23 rules each enforce a WCAG success criterion, and `one-h1` is a structural convention WCAG does not require but almost everyone wants.
 
 | Rule | Checks | Criterion |
 |---|---|---|
@@ -545,6 +545,8 @@ Accessibility: 21 rules each enforce a WCAG success criterion, and `one-h1` is a
 | `labelled-controls` | every form control has an accessible name | 3.3.2 Labels or Instructions · A · WCAG 2.0 |
 | `grouped-choices` | radios and checkboxes sit in a fieldset with a legend | 1.3.1 Info and Relationships · A · WCAG 2.0 |
 | `submit-has-name` | the submit control has an accessible name | 4.1.2 Name, Role, Value · A · WCAG 2.0 |
+| `button-has-name` | every other button has an accessible name *(warning)* | 4.1.2 Name, Role, Value · A · WCAG 2.0 |
+| `iframe-has-name` | every frame has an accessible name *(warning)* | 4.1.2 Name, Role, Value · A · WCAG 2.0 |
 | `table-header-scope` | table headers declare a scope *(warning)* | 1.3.1 Info and Relationships · A · WCAG 2.0 |
 | `link-has-name` | every link has an accessible name | 2.4.4 Link Purpose (In Context) · A · WCAG 2.0 |
 | `link-text-is-meaningful` | link text makes sense out of context *(warning)* | 2.4.9 Link Purpose (Link Only) · AAA · WCAG 2.0 |
@@ -590,6 +592,11 @@ Ways a page can leak or be turned against its reader.
 | `error-hidden-prefix` | an inline error carries a visually hidden prefix |
 | `error-summary-targets` | every error summary link lands on an element |
 | `error-summary-focusable` | the error summary can take focus *(warning)* |
+| `error-in-summary` | an inline error has an entry in the error summary *(warning)* |
+| `error-summary-has-inline` | an error summary entry has an inline error beside its field *(warning)* |
+| `error-summary-wording` | an error reads the same in the summary and beside its field *(warning)* |
+| `skip-link-target` | the skip link lands on an element *(warning)* |
+| `link-names-distinct` | links called the same go to the same place *(warning)* |
 
 ### `AriaStandards`
 
@@ -721,7 +728,7 @@ Criteria currently covered:
 | 3.1.1 Language of Page | A | 2.0 | `html-lang` |
 | 3.2.5 Change on Request | AAA | 2.0 | `new-tab-is-announced` |
 | 3.3.2 Labels or Instructions | A | 2.0 | `labelled-controls`, `label-for-resolves` |
-| 4.1.2 Name, Role, Value | A | 2.0 | `unique-ids`, `submit-has-name`, `no-aria-hidden-focusable` |
+| 4.1.2 Name, Role, Value | A | 2.0 | `unique-ids`, `submit-has-name`, `button-has-name`, `iframe-has-name`, `no-aria-hidden-focusable` |
 | 1.3.5 Identify Input Purpose | AA | 2.1 | `input-purpose-autocomplete` |
 
 This is a useful subset, not full WCAG coverage. A static check over rendered

@@ -25,6 +25,21 @@ that has no id.
   choices, by what they submit rather than their labels or their order, and each
   form submits to the same place. A service that loads a separate Welsh list of
   countries can drop one from it without any other check noticing.
+- `button-has-name`, new, as a warning: a button that does not submit has an
+  accessible name, as `submit-has-name` asks of one that does. An icon-only button
+  with no label is called nothing at all.
+- `iframe-has-name`, new, as a warning: a frame has an accessible name, for WCAG
+  4.1.2. A frame the markup hides, such as a tag manager's, is left alone, and what
+  is inside an `<iframe>` no longer counts as its name.
+- `error-in-summary`, `error-summary-has-inline` and `error-summary-wording`, new,
+  as warnings: an inline error has an entry in the error summary, an entry has an
+  inline error beside its field, and the two read the same, as the GOV.UK Design
+  System asks.
+- `skip-link-target`, new, as a warning: the skip link lands on an element. On a
+  page whose main content has another id, it silently does nothing.
+- `link-names-distinct`, new, as a warning: links called the same go to the same
+  place. It goes by the name announced, so a summary list's "Change" links pass with
+  their hidden context, and fail without it.
 
 ### Added
 

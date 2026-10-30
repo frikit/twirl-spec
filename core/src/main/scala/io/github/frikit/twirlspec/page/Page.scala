@@ -190,6 +190,23 @@ final class Page(
   def accessibleDescription(e: org.jsoup.nodes.Element): String =
     Text.normalise(describedBy(e).map(_.text()).mkString(" "))
 
+  /** Whether assistive technology is told about this element, as far as the
+    * markup says: neither it nor anything above it is hidden. It knows nothing
+    * of stylesheets, so it answers for `hidden` and an inline style, not for a
+    * class that hides.
+    */
+  private[twirlspec] def isExposed(e: Element): Boolean = {
+    val lineage = e :: e.parents.asScala.toList
+    e.closest(Page.NotExposed) == null &&
+    !lineage.exists(Page.inlineStyle(_, "display").contains("none")) &&
+    // An element can show itself inside something hidden, so the nearest that
+    // says anything of its own decides.
+    !lineage
+      .flatMap(Page.inlineStyle(_, "visibility"))
+      .find(value => value != "inherit" && value != "unset")
+      .contains("hidden")
+  }
+
   /** The elements that say what `aria-describedby` points at. */
   private[twirlspec] def describedBy(e: Element): List[Element] =
     e.attr("aria-describedby")
@@ -473,11 +490,6 @@ final class Page(
     * the error's id from something other than the field's name.
     */
   private[twirlspec] def errorOf(field: String): Option[Element] = {
-    def announcedBy(controls: List[Element]) =
-      controls
-        .flatMap(c => c :: Option(c.closest("fieldset")).toList)
-        .flatMap(describedBy)
-        .find(_.hasClass("govuk-error-message"))
     val controls = document.select("input, select, textarea").asScala.toList
     document
       .select(".govuk-error-message")
@@ -492,6 +504,20 @@ final class Page(
         )
       )
   }
+
+  /** The inline error these controls, or their fieldsets, announce. */
+  private def announcedBy(controls: List[Element]): Option[Element] =
+    controls
+      .flatMap(c => c :: Option(c.closest("fieldset")).toList)
+      .flatMap(describedBy)
+      .find(_.hasClass("govuk-error-message"))
+
+  /** The inline error an error summary link leads to: the one that the element
+    * it lands on says it is described by, and only then a field's of that name.
+    */
+  private[twirlspec] def errorAt(target: String): Option[Element] =
+    announcedBy(withRecordingPaused(byId(target)).elements)
+      .orElse(errorOf(target))
 
   /** Whether a name or id is one of a date's parts, as `dob.day` is of `dob`.
     * It goes by the parts rather than the prefix, because `a-b` is usually a
@@ -804,6 +830,36 @@ object Page {
 
   private[twirlspec] def control(tag: String, nameOrId: String): String =
     s"""$tag[name="$nameOrId"], $tag[id="$nameOrId"]"""
+
+  /** What keeps an element and all it holds from assistive technology, or from
+    * being rendered at all: a tag manager's frame in `<noscript>`, say, or what
+    * a `<template>` holds until a script uses it.
+    */
+  private val NotExposed =
+    "[hidden], [inert], [aria-hidden=true], noscript, template"
+
+  /** Comments, strings and brackets in a style attribute. A semicolon in one
+    * ends no declaration, and `display` and `visibility` need none of them.
+    */
+  private val StyleNoise = """(?s)/\*.*?\*/|"[^"]*"|'[^']*'|\([^)]*\)"""
+
+  /** A property's value in an element's own style attribute: the last it
+    * declares, unless an earlier one is `!important`.
+    */
+  private def inlineStyle(e: Element, property: String): Option[String] = {
+    val declared = e
+      .attr("style")
+      .replaceAll(StyleNoise, "")
+      .split(";")
+      .toList
+      .map(_.split(":", 2).map(_.replaceAll("\\s+", "").toLowerCase))
+      .collect { case Array(`property`, value) => value }
+    declared
+      .filter(_.endsWith("!important"))
+      .lastOption
+      .orElse(declared.lastOption)
+      .map(_.stripSuffix("!important"))
+  }
 
   /** Parse rendered HTML into a page in the language of the implicit messages.
     */
