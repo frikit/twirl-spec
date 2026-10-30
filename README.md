@@ -811,6 +811,36 @@ memberNameView must entryPointsAgree(
 The arguments are the ones `render` takes: every parameter including the
 implicit ones, flattened, in order.
 
+## A catalogue of pages
+
+Most of what a service's pages need is the same for each: to meet the standards
+in every language, blank and with errors, and to say the same thing in each
+language. `PageCatalogue`, in `twirl-spec-all`, makes that a table, with two
+tests per page:
+
+```scala
+class EveryPageSpec extends ViewSpecBase with PageCatalogue {
+  catalogue(
+    staticPage("Info")(inject[InfoView](draftId, index)),
+    formPage("Name", nameForm)(inject[NameView](_, draftId)),
+    formPage("Date of birth", dobForm, "part of a date" -> Map("value.day" -> "1"))(
+      inject[DateOfBirthView](_, draftId)
+    ),
+    staticPage("Not found")(inject[PageNotFoundView]()).exceptTranslation("i18n-same-links")
+  )
+}
+```
+
+A form page is rendered blank, with the errors of an empty submission, and with
+those of each submission named; a submission that gives no errors fails its test.
+Nothing is rendered until a test runs, so each state renders in the language
+under test. Every state runs in every language, and a failure reports each that
+went wrong, by state and language.
+
+It writes its tests in the `AnyWordSpec` style. In another style, mix in
+`PageCases`, which has the same `staticPage` and `formPage`, and call
+`checkStandards(page)` and `checkTranslation(page)` from tests of your own.
+
 ## Languages
 
 ```scala

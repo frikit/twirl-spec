@@ -33,6 +33,13 @@ that has no id.
   builds it with, each page rendered, each check and the rules it failed, and
   each coverage and language comparison. A service turns it on with one
   logger line in `logback-test.xml`; nothing is written at any other level.
+- `PageCatalogue`, in `twirl-spec-all`: a table of a service's pages, with two tests
+  per page, the standards in every language and the comparison across them, over
+  each of its states. `staticPage` has one state; `formPage` is blank, with the
+  errors of an empty submission, and with those of each submission named, and fails
+  on one that gives no errors. A page can be excused from rules it names. Every state
+  runs in every language, and a failure reports each that went wrong. `PageCases`
+  offers the same pages and checks to any other test style.
 - `HmrcServiceChecks`: `GovukServiceChecks` with what an HMRC service would
   otherwise write on its spec base. The report-a-problem link every page inherits
   is left out of coverage in whichever language it reads, and "HMRC" may read the
