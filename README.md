@@ -255,7 +255,7 @@ role("radio").occurring(2)
 Roles are resolved the way HTML-AAM defines them, implicit or explicit, and an
 element carrying an explicit `role` is matched only by that role — so
 `<a role="button">` is a button and not a link. One limit: an input's `list` is
-not followed, so one with suggestions stays a `textbox` rather than a `combobox`.
+not followed, so one with suggestions keeps its usual role rather than `combobox`.
 The accessible name comes from
 `aria-labelledby`, `aria-label`, an associated `<label>`, a `<legend>`, `alt`,
 the `value` of a `button`, `submit` or `reset` input, the element's own text
@@ -872,7 +872,8 @@ A key that is not defined in that language is reported as missing, even when
 `conf/messages` defines it and Play would render that English on the page,
 rather than silently compared against itself — which is what a plain
 `doc.title mustBe messages("x.y")` does, passing happily while the page shows a
-raw key.
+raw key. `conf/messages` still counts for English, and for the first language
+`play.i18n.langs` names.
 
 The languages are the ones the service's `conf/application.conf` declares in
 `play.i18n.langs`. A language that is not among them fails the spec rather than

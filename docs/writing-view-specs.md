@@ -138,7 +138,7 @@ role("radio").occurring(2)
 Roles are resolved the way HTML-AAM defines them, implicit or explicit, and an
 element with an explicit `role` is matched only by that role, so
 `<a role="button">` is a button and not a link. One limit: an input's `list` is
-not followed, so one with suggestions stays a `textbox` rather than a `combobox`.
+not followed, so one with suggestions keeps its usual role rather than `combobox`.
 The accessible name comes from
 `aria-labelledby`, `aria-label`, an associated `<label>`, a `<legend>`, `alt`,
 the `value` of a `button`, `submit` or `reset` input, the element's own text
@@ -232,8 +232,10 @@ keyboard user stranded.
 
 ## One match, or a failure
 
-An expectation that names a single element fails when the page has more than
-one match, as well as when it has none:
+Most expectations that name a single element fail when the page has more than
+one match, as well as when they find none. `fileUpload` and `hiddenInput` do not,
+as two file inputs with one name are a way to take several files, and
+`unambiguous-field-names` reports two hidden inputs with one name:
 
 ```
 x input(email) — 2 elements matched, so this assertion is ambiguous

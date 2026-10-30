@@ -50,6 +50,8 @@ resolves in it too. A key that is not defined in that language is reported as
 missing, even when `conf/messages` defines it and Play would render that English
 on the page, rather than silently compared against itself, which is what a plain
 `doc.title mustBe messages("x.y")` does, passing while the page shows a raw key.
+`conf/messages` still counts for English, and for the first language
+`play.i18n.langs` names.
 
 With `TwirlSpecDsl`, where the spec owns its `Messages`, the same thing is
 done explicitly:

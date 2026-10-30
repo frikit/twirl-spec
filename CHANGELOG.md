@@ -88,7 +88,8 @@ that has no id.
 - `landmarks-are-distinguishable` no longer counts an unnamed `<aside>` in an article or
   a section as a landmark, so two of them there pass, and treats an element with a
   sectioning role as it does the tag, so a `<header>` in `<div role="main">` is not a
-  second banner.
+  second banner. A landmark's name goes by `aria-labelledby` first, as everywhere else,
+  so two with different `aria-label`s and one `aria-labelledby` target can now fail.
 - `aria-required-attr` asks a `meter` for `aria-valuenow`, and a `separator` for it
   when it can take focus. `aria-attr-value-is-allowed` fails `aria-checked="mixed"` on
   `switch`, `radio` and `menuitemradio`, which read it as false.
@@ -161,11 +162,14 @@ that has no id.
   `conf/messages` satisfied a Welsh assertion on a page showing English, against
   what the README promised. The default files still count for English, in any
   region, and for the first language `play.i18n.langs` names.
-- `i18n-nothing-lost` and `i18n-actually-translated` read text with no id, and
-  the whole of an element with one. They compared only what sat directly in an
-  element with an id, which on most pages is hardly any of the content: a Welsh
-  page left entirely in English, or with a paragraph emptied, reported nothing.
-  `i18n-actually-translated` also reads the title.
+- `i18n-nothing-lost` and `i18n-actually-translated` read text with no id, and the
+  whole of a block of text with one, such as a paragraph or a heading. They compared
+  only what sat directly in an element with an id, which on most pages is hardly any
+  of the content: a Welsh page left entirely in English, or with a paragraph emptied,
+  reported nothing. An id on a wrapper such as a `<section>` still means what sits
+  directly in it, so `i18n-nothing-lost` can miss text lost from a plain `<div>`
+  inside one. `i18n-actually-translated` also reads the title, and leaves out what
+  reads as data.
 - `i18n-same-links` notices two links with ids swapping their destinations. It
   compared only the set of places, which is unchanged by a swap.
 - Warnings follow one policy everywhere. `translateConsistently` and the
@@ -208,7 +212,8 @@ that has no id.
   where a GOV.UK radio group's and date input's links go, to the first radio and
   the day. It needed a link to `#field`, so it could not pass on those. It also
   holds the entries to the order the summary lists them in, as it always said it
-  did, so a spec naming them in another order can fail where it passed.
+  did, so a spec naming them in another order can fail where it passed. Each entry
+  now answers for one link, so a summary listing one field twice has a link to spare.
 - `fieldError(field, key)` follows the control or its fieldset to the error they
   announce, where the error's id is not `field-error`.
 - `timeoutDialog` finds the `meta[name=hmrc-timeout-dialog]` play-frontend-hmrc
