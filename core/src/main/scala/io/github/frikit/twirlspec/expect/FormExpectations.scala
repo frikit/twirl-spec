@@ -685,7 +685,9 @@ final case class DateInputExpectation(
 
     val missingParts = resolved.collect { case (part, None) => part }
 
-    if (missingParts.nonEmpty)
+    if (parts.isEmpty)
+      Seq(Violation(rule, "a date input with no parts asserts nothing"))
+    else if (missingParts.nonEmpty)
       Seq(
         Violation(
           rule = rule,

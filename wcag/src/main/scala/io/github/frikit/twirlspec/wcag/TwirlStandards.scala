@@ -109,7 +109,8 @@ object TwirlStandards extends RuleSet {
     },
     Rule("no-scala-leakage", "no Scala value leaks into the rendered page") {
       page =>
-        val body = page.text
+        // A value can as well leak into the <title>.
+        val body = Text.normalise(page.document.text())
         val markers = Seq(
           "Some(",
           "None)",
@@ -118,10 +119,14 @@ object TwirlStandards extends RuleSet {
           "Map(",
           "ArraySeq(",
           "$anonfun",
+          "$$Lambda",
           "@scala.",
           "null null"
         )
-        markers.filter(body.contains).map { m =>
+        (markers.filter(body.contains) ++ ObjectShaped
+          .findAllIn(body)
+          .toList
+          .distinct).map { m =>
           Violation(
             "no-scala-leakage",
             s"""the page contains "$m"""",
@@ -133,6 +138,14 @@ object TwirlStandards extends RuleSet {
         }
     }
   )
+
+  /** What an object says for itself: `models.Name@6f2b958e` with no `toString`,
+    * and `FullName(John,None,Smith)` as a case class. The class is capitalised,
+    * the hash is not followed by more address, and `None` needs the constructor
+    * around it, so `Bob@decade-mail.com` and `John,None,Smith` are left alone.
+    */
+  private val ObjectShaped =
+    "\\b(?:[a-z_][\\w$]*\\.)*[A-Z][\\w$]*(?:@[0-9a-f]{5,8}\\b(?![.\\w-])|\\([^()]*\\bNone\\b[^()]*\\))".r
 
   /** Looks like `some.message.key`. */
   private val KeyShaped = "^[a-z][A-Za-z0-9_-]*(\\.[A-Za-z0-9_-]+){1,6}$".r

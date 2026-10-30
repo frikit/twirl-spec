@@ -790,12 +790,14 @@ final class Page(
 
   // ------------------------------------------------------------------ content
 
-  /** The page's visible text, normalised. */
-  def text: String = Text.normalise(document.text())
+  /** The page's visible text, normalised: its body, and not the `<title>`,
+    * which is shown in a browser's tab rather than on the page.
+    */
+  def text: String = Text.normalise(document.body().text())
 
   /** Whether the page's visible text contains this, after normalisation. */
   def contains(needle: String): Boolean =
-    Text.containsText(document.text(), needle)
+    Text.containsText(document.body().text(), needle)
 
   /** The page's structural skeleton, for review and snapshotting. */
   /** Building this touches most of the page, and a failure message is not an

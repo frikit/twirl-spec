@@ -103,6 +103,43 @@ class ExposureSpec extends AnyWordSpec with Matchers {
     }
   }
 
+  "A name" should {
+    def nameOf(body: String) = {
+      val page = pageOf(body)
+      page.accessibleName(page.document.getElementById("x"))
+    }
+
+    "not come from what the markup hides inside the element" in {
+      nameOf(
+        """<a id="x" href="/next"><span hidden>Continue</span></a>"""
+      ) mustBe ""
+      nameOf(
+        """<a id="x" href="/next">Next <span hidden>page</span></a>"""
+      ) mustBe "Next"
+    }
+
+    "come to a fieldset from ARIA, then its own legend, and not its content" in {
+      nameOf(
+        """<span id="l">Asked</span><fieldset id="x" aria-labelledby="l"><legend>Pick</legend></fieldset>"""
+      ) mustBe "Asked"
+      nameOf(
+        """<fieldset id="x" aria-label="Asked"><legend>Pick</legend></fieldset>"""
+      ) mustBe "Asked"
+      nameOf(
+        """<fieldset id="x"><legend>Pick</legend><p>More</p></fieldset>"""
+      ) mustBe "Pick"
+      nameOf(
+        """<fieldset id="x"><p>Words</p><fieldset><legend>Inner</legend></fieldset></fieldset>"""
+      ) mustBe ""
+    }
+
+    "still come from a hidden element named directly" in {
+      nameOf(
+        """<span id="l" hidden>Go</span><button id="x" aria-labelledby="l"></button>"""
+      ) mustBe "Go"
+    }
+  }
+
   "errorAt" should {
     def error(id: String) =
       s"""<p id="$id" class="govuk-error-message">$id</p>"""

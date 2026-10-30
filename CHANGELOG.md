@@ -77,6 +77,26 @@ that has no id.
 
 - `heading` fails on a page with more than one `<h1>`, as its documentation said. Two
   headings read as one, so `<h1>A</h1><h1>B</h1>` passed `headingText("A B")`.
+- Words in a `hidden` element no longer name what they sit in, as words under
+  `aria-hidden` already did, so `<a href="/next"><span hidden>Continue</span></a>` now
+  fails `link-has-name`.
+- `grouped-choices` reads every member of a group. It read only the first, so a
+  fieldset that closed before the second radio passed. What the group needs is a
+  fieldset in common with an accessible name, so an empty legend no longer counts, an
+  `aria-labelledby` on the fieldset does, and two forms can each have a group of one
+  name.
+- A fieldset is named by ARIA and then its own legend. It could borrow the legend of
+  one nested in it, or fall back on all the text it holds.
+- `label-for-resolves` fails a label pointing at what no label can name, such as a
+  `<div>`, which clicking the label does nothing for. A custom element is left alone,
+  as a script can make it labelable.
+- `contentText`, `noContent`, `page.text` and `page.contains` read the page's body. They
+  read the `<title>` too, so `contentText` could pass on words only in the tab.
+  `no-scala-leakage` still reads the title.
+- `no-scala-leakage` reports an object with no `toString`, a lambda, and a case class
+  holding `None` in the middle.
+- `dateInput(...).withParts()` with no parts fails, where it threw
+  `NoSuchElementException`.
 - The adopting guide's spec base ignored `#report-technical-issue` and
   `#hmrc-timeout`, which play-frontend-hmrc does not render, so a base copied from
   it left out nothing. It now mixes in `HmrcServiceChecks`. Other guides had drifted

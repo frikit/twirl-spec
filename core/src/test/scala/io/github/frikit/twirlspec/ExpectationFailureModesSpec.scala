@@ -100,6 +100,28 @@ class ExpectationFailureModesSpec
     }
   }
 
+  "dateInput" should {
+    "say so when asked for no parts, rather than crash" in {
+      dateInput("value").withParts().check(bare).map(_.message) mustBe Seq(
+        "a date input with no parts asserts nothing"
+      )
+    }
+  }
+
+  "the page's text" should {
+    "not include the title, which is not on the page" in {
+      val page = Page.fromString(
+        "<!DOCTYPE html><html><head><title>In the tab</title></head><body><p>On the page</p></body></html>",
+        english,
+        messages
+      )
+      page.text mustBe "On the page"
+      page.contains("In the tab") mustBe false
+      contentText("In the tab").check(page) must not be empty
+      contentText("On the page").check(page) mustBe empty
+    }
+  }
+
   "expectations looking for something that is not there" should {
     "each report a missing element" in {
       failsOn(bare, "heading", heading("kitchenSink.heading"))

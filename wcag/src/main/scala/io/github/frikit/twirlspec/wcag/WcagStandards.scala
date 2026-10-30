@@ -224,31 +224,42 @@ object WcagStandards extends RuleSet {
         .select("input[type=radio], input[type=checkbox]")
         .asScala
         .toList
-        .groupBy(_.attr("name"))
+        // Two forms can each have a group of one name, and those are two groups.
+        .groupBy(e => (page.formOwner(e), e.attr("name")))
         .filter(_._2.size > 1)
 
-      groups.toSeq.sortBy(_._1).flatMap { case (name, members) =>
-        Option(members.head.closest("fieldset")) match {
-          case None =>
-            Seq(
-              Violation(
-                "grouped-choices",
-                s"""the "$name" group is not inside a <fieldset>"""
-              )
-                .withHint(
-                  "WCAG 1.3.1 — use govukRadios / govukCheckboxes with a fieldset"
-                )
+      groups.toSeq.sortBy(_._1._2).flatMap { case ((_, name), members) =>
+        // A group can have subgroups of its own, so what its members need is a
+        // fieldset in common, and not the same nearest one.
+        val fieldsets =
+          members
+            .map(_.parents.asScala.toList.filter(_.tagName() == "fieldset"))
+        val shared = fieldsets.reduce((a, b) => a.filter(b.contains))
+        if (shared.exists(page.accessibleName(_).nonEmpty)) Nil
+        else if (shared.nonEmpty)
+          Seq(
+            Violation(
+              "grouped-choices",
+              s"""the "$name" fieldset has no <legend> that names it"""
             )
-          case Some(fieldset) =>
-            if (fieldset.select("legend").isEmpty)
-              Seq(
-                Violation(
-                  "grouped-choices",
-                  s"""the "$name" fieldset has no <legend>"""
-                )
+          )
+        else if (fieldsets.exists(_.isEmpty))
+          Seq(
+            Violation(
+              "grouped-choices",
+              s"""the "$name" group is not all inside a <fieldset>"""
+            )
+              .withHint(
+                "WCAG 1.3.1 — use govukRadios / govukCheckboxes with a fieldset"
               )
-            else Nil
-        }
+          )
+        else
+          Seq(
+            Violation(
+              "grouped-choices",
+              s"""the "$name" group is split across fieldsets"""
+            )
+          )
       }
     },
     Rule(
@@ -558,7 +569,14 @@ object WcagStandards extends RuleSet {
         .select("label[for]")
         .asScala
         .toList
-        .filter(e => page.byId(e.attr("for")).isEmpty)
+        .filterNot(e =>
+          page
+            .byId(e.attr("for"))
+            .elements
+            // A custom element is labelable if a script says so, which the
+            // markup cannot show, so it is not for this rule to judge.
+            .exists(t => t.is(Labelable) || t.tagName().contains("-"))
+        )
         .map(e =>
           Violation(
             "label-for-resolves",
@@ -676,6 +694,10 @@ object WcagStandards extends RuleSet {
     * is not a landmark.
     */
   private val MainLandmark = "main, [role=main]"
+
+  /** What a `<label for>` can name, per the HTML specification. */
+  private val Labelable =
+    "input:not([type=hidden]), select, textarea, button, meter, output, progress"
 
   /** What `submit-has-name` reads. */
   private val SubmitControls =

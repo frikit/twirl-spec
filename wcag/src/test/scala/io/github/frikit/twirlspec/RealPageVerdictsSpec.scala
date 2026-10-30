@@ -41,6 +41,136 @@ class RealPageVerdictsSpec extends AnyWordSpec with Matchers with TwirlSpec {
 
   private def on(body: String) = found(document(body))
 
+  "grouped-choices" should {
+    val rule = "grouped-choices"
+    def radio(id: String) =
+      s"""<label for="$id">$id</label><input type="radio" id="$id" name="value">"""
+    def fieldset(body: String, legend: String = "<legend>Pick</legend>") =
+      s"<fieldset>$legend$body</fieldset>"
+
+    "pass radios in one fieldset with a legend" in {
+      on(fieldset(radio("a") + radio("b"))) must not contain rule
+    }
+
+    "notice a group a fieldset holds only part of, either way round" in {
+      on(fieldset(radio("a")) + radio("b")) must contain(rule)
+      on(radio("a") + fieldset(radio("b"))) must contain(rule)
+    }
+
+    "notice a group split across two fieldsets" in {
+      on(fieldset(radio("a")) + fieldset(radio("b"))) must contain(rule)
+    }
+
+    "notice a group in no fieldset at all" in {
+      on(radio("a") + radio("b")) must contain(rule)
+    }
+
+    "notice a fieldset with no legend, or one that says nothing" in {
+      on(fieldset(radio("a") + radio("b"), "")) must contain(rule)
+      on(fieldset(radio("a") + radio("b"), "<legend></legend>")) must
+        contain(rule)
+      on(
+        fieldset(
+          radio("a") + radio("b"),
+          """<legend><span aria-hidden="true">Pick</span></legend>"""
+        )
+      ) must contain(rule)
+    }
+
+    "take a name from ARIA where the legend says nothing" in {
+      on(
+        """<h2 id="q">Pick</h2><fieldset aria-labelledby="q"><legend></legend>""" +
+          radio("a") + radio("b") + "</fieldset>"
+      ) must not contain rule
+    }
+
+    "not let an outer fieldset borrow the legend of one nested in it" in {
+      on(
+        "<fieldset>" + radio("a") + radio("b") + fieldset("<p>x</p>") +
+          "</fieldset>"
+      ) must contain(rule)
+    }
+
+    "pass a group with subgroups inside one named fieldset" in {
+      on(
+        fieldset(radio("a") + fieldset(radio("b"), "<legend>Sub</legend>"))
+      ) must not contain rule
+      on(
+        fieldset(
+          fieldset(radio("a"), "<legend>One</legend>") +
+            fieldset(radio("b"), "<legend>Two</legend>")
+        )
+      ) must not contain rule
+    }
+
+    "keep apart two forms with a group of one name each" in {
+      def form(action: String, ids: String*) =
+        s"""<form method="post" action="$action">${fieldset(
+            ids.map(radio).mkString
+          )}</form>"""
+      on(form("/a", "a", "b") + form("/b", "c", "d")) must not contain rule
+    }
+  }
+
+  "label-for-resolves" should {
+    val rule = "label-for-resolves"
+    def labelled(target: String) = s"""<label for="x">X</label>$target"""
+
+    "notice a label pointing at nothing, or at what no label can name" in {
+      on(labelled("")) must contain(rule)
+      on(labelled("""<div id="x"></div>""")) must contain(rule)
+      on(labelled("""<input type="hidden" id="x">""")) must contain(rule)
+    }
+
+    "pass each element a label can name" in {
+      Seq(
+        """<input id="x">""",
+        """<input type="radio" id="x" name="x">""",
+        """<select id="x"></select>""",
+        """<textarea id="x"></textarea>""",
+        """<button id="x"></button>""",
+        """<meter id="x"></meter>""",
+        """<output id="x"></output>""",
+        """<progress id="x"></progress>""",
+        """<my-checkbox id="x"></my-checkbox>"""
+      ).foreach(target =>
+        withClue(target)(on(labelled(target)) must not contain rule)
+      )
+    }
+  }
+
+  "no-scala-leakage" should {
+    val rule = "no-scala-leakage"
+
+    "notice an object with no toString, a lambda, and a case class holding None" in {
+      Seq(
+        "models.Name@6f2b958e",
+        "Name@6f2b95",
+        "views.html.page$$Lambda$123",
+        "FullName(John,None,Smith)",
+        "models.FullName(None,Smith,1)"
+      ).foreach(leak => withClue(leak)(on(s"<p>$leak</p>") must contain(rule)))
+    }
+
+    "notice a value in the title as well as the body" in {
+      found(document("", title = "Some(Ada)")) must contain(rule)
+    }
+
+    "leave alone an email address, and prose that looks a little like one" in {
+      Seq(
+        "Bob@decade.com",
+        "Bob@decade-mail.com",
+        "bob@decade",
+        "None, thanks",
+        "None of these",
+        "John,None,Smith",
+        "Yes (None of these apply)"
+      ).foreach(words =>
+        withClue(words)(on(s"<p>$words</p>") must not contain rule)
+      )
+    }
+  }
+
   "unambiguous-field-names" should {
     val rule = "unambiguous-field-names"
     val token = """<input type="hidden" name="csrfToken" value="t">"""
