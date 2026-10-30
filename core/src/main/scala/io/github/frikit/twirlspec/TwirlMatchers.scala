@@ -141,7 +141,9 @@ trait TwirlMatchers { self: TwirlSpecDsl =>
 
   /** Assert against a page directly, outside a matcher. */
   def checkPage(page: Page, expectations: Seq[Expectation]): CheckReport =
-    CheckReport(page, Expectation.all(expectations).check(page), "page")
+    Trace.checked(
+      CheckReport(page, Expectation.all(expectations).check(page), "page")
+    )
 
   private def matcherFor(
       expectations: Seq[Expectation],
@@ -149,8 +151,9 @@ trait TwirlMatchers { self: TwirlSpecDsl =>
   ): Matcher[Page] =
     new Matcher[Page] {
       def apply(page: Page): MatchResult = {
-        val report =
+        val report = Trace.checked(
           CheckReport(page, Expectation.all(expectations).check(page), subject)
+        )
         val ok = report.passed && (!failOnWarnings || report.warnings.isEmpty)
 
         if (ok && reportWarnings && report.warnings.nonEmpty) surface(report)

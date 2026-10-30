@@ -67,6 +67,9 @@ trait CoverageChecks extends TwirlSpecDsl {
             trackedAttributes,
             coverageScope
           )
+        io.github.frikit.twirlspec.Trace.debug(
+          s"coverage of '${page.title}' (${page.lang.code}): ${missing.size} unasserted"
+        )
         MatchResult(
           missing.isEmpty,
           if (missing.isEmpty) ""

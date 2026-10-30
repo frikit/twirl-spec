@@ -68,9 +68,13 @@ trait I18nChecks extends TwirlSpecDsl {
     basePage(pages, base) match {
       case None       => Nil
       case Some(from) =>
-        pages
+        val differences = pages
           .filterNot(_ eq from)
           .flatMap(to => rules.flatMap(_.check(from, to)))
+        io.github.frikit.twirlspec.Trace.debug(
+          s"compared ${pages.size - 1} translation(s) of '${from.title}' with ${from.lang.code}: ${differences.size} difference(s)"
+        )
+        differences
     }
   }
 

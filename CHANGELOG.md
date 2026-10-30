@@ -10,6 +10,16 @@ release, and each one has a GitHub Release whose notes are its section here. Eve
 recorded in full; earlier lines are kept to one entry each, so the file stays
 readable.
 
+## [2.4.0] - 2026-10-30
+
+### Added
+
+- The library traces what it does at `DEBUG` through Play's logger, under
+  `io.github.frikit.twirlspec`: the application it builds and the settings it
+  builds it with, each page rendered, each check and the rules it failed, and
+  each coverage and language comparison. A service turns it on with one
+  logger line in `logback-test.xml`; nothing is written at any other level.
+
 ## [2.3.0] - 2026-10-14
 
 Two verdicts change in this release, so it is a minor version.
@@ -330,7 +340,8 @@ the Twirl entry points in `twirl-spec-quality`; language parity in
 them in `twirl-spec-all`. The renames a service built against a 0.x snapshot
 would meet are listed in [the adoption guide](docs/adopting.md).
 
-[Unreleased]: https://github.com/frikit/twirl-spec/compare/v2.3.0...HEAD
+[Unreleased]: https://github.com/frikit/twirl-spec/compare/v2.4.0...HEAD
+[2.4.0]: https://github.com/frikit/twirl-spec/compare/v2.3.0...v2.4.0
 [2.3.0]: https://github.com/frikit/twirl-spec/compare/v2.2.0...v2.3.0
 [2.2.0]: https://github.com/frikit/twirl-spec/compare/v2.1.0...v2.2.0
 [2.1.0]: https://github.com/frikit/twirl-spec/compare/v2.0.1...v2.1.0

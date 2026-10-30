@@ -910,6 +910,23 @@ Every check runs, so one failing run shows every problem rather than one per
 re-run. The outline underneath is the page's skeleton — worth printing on its
 own while building a view, and stable enough to commit as a structural snapshot.
 
+## Seeing what the library did
+
+The library traces its main steps at `DEBUG` through Play's logger, under the
+name `io.github.frikit.twirlspec`, so the logback configuration a service's
+tests already use governs it: the application built and the settings it was
+built with, each page rendered, each check and the rules it failed, and each
+coverage and language comparison. The message-file checks, `entryPointsAgree`
+and the template scan write nothing. One line in `logback-test.xml` turns it
+on:
+
+```xml
+<logger name="io.github.frikit.twirlspec" level="DEBUG"/>
+```
+
+Nothing is written at any other level, so a service whose test logging sits
+above `DEBUG`, as test configurations usually do, hears nothing.
+
 ## Speed
 
 `SharedApplication` keeps one application per distinct configuration for the

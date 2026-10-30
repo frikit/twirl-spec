@@ -188,6 +188,18 @@ because on any single render it is; and markup that arrives from a helper is
 invisible to it. Both are limits of scanning without rendering, and the
 rendered-page rule `tags-are-balanced` sees the truth.
 
+## Seeing what the library did
+
+The library traces its work at `DEBUG` through Play's logger, under the name
+`io.github.frikit.twirlspec`: the application it built and with which
+settings, each page it rendered, each check and the rules it failed, and each
+coverage or language comparison. The logback configuration the service's tests
+use governs it, so one line in `logback-test.xml` turns it on:
+
+```xml
+<logger name="io.github.frikit.twirlspec" level="DEBUG"/>
+```
+
 ## Something else
 
 The README lists every expectation, matcher and rule. If the library does

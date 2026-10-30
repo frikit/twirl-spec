@@ -32,13 +32,13 @@ trait TwirlSpecDsl
 
   /** Parse rendered HTML into a page that can be asked questions. */
   def render(html: Html)(implicit messages: Messages): Page =
-    Page(html).belongingTo(getClass.getName)
+    Trace.rendered(Page(html).belongingTo(getClass.getName))
 
   /** Parse rendered HTML into a page for an explicit language and its messages,
     * rather than the implicit ones.
     */
   def render(html: Html, lang: Lang, messages: Messages): Page =
-    Page(html, lang, messages).belongingTo(getClass.getName)
+    Trace.rendered(Page(html, lang, messages).belongingTo(getClass.getName))
 
   /** Render the same view in a given language, which must be one the
     * application is configured for.
@@ -47,7 +47,11 @@ trait TwirlSpecDsl
       lang: Lang
   )(html: Messages => Html)(implicit messagesApi: MessagesApi): Page = {
     val messages = configuredMessages(lang, messagesApi)
-    Page(html(messages), messages.lang, messages).belongingTo(getClass.getName)
+    Trace.rendered(
+      Page(html(messages), messages.lang, messages).belongingTo(
+        getClass.getName
+      )
+    )
   }
 
   /** `Messages` for a language, refusing the fallback Play makes when the
