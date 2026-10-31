@@ -104,3 +104,34 @@ parameter including the implicit ones, flattened, in order. The check reaches
 the methods by reflection, so a spec does not have to spell out each
 template's arity by hand, and a template whose parameters changed fails here
 with the entry point named.
+
+`haveAgreeingEntryPoints` asks the same of every template under a directory, so
+no template can be left out of a list. There is one list of stand-ins, and each
+template gets the first of each type its `render` declares, with what `apply`
+gives as the baseline:
+
+```scala
+"the generated entry points" in {
+  Path.of("app/views") must haveAgreeingEntryPoints(form, false, "a name", Nil, None, request, messages)
+}
+```
+
+The directory is one Twirl compiles from, such as `app` or `src/main/twirl`, or
+the `views` directory inside it, and each template's class is worked out from
+its path as Twirl works it out. A type with no stand-in fails, naming the
+template and the type, rather than skipping the template, and so does a
+directory that is not there or holds no templates. `render` takes a repeated
+parameter as an array, so an array is its stand-in. `Form[A]` and `Form[B]` are
+one class at runtime, so a template reading its form's value can be handed the
+wrong one and throw. It takes arguments of its own, by the class it compiles to,
+and they have to name a template that is there:
+
+```scala
+Path.of("app/views") must haveAgreeingEntryPoints(form, false, request, messages)
+  .forTemplate("views.html.register.dateOfBirthView")(dateForm, request, messages)
+```
+
+A template with `@this` comes from `TwirlSpec`'s application; a spec base with an
+application of its own overrides `templateInstance` to ask that one. Stand-ins
+reach Twirl's methods without being a good page, so this is no test of what a
+template shows.

@@ -6,7 +6,7 @@ than one per re-run. This is what a red `display` prints, and how to read it.
 ```
 page failed 2 checks:
 
-  x title — text did not start with the expected value
+  x title — text did not read as the expected value
         expected  "What is your name?"
         actual    "What is you name?"
 

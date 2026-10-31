@@ -70,6 +70,20 @@ class RoleQuerySpec extends AnyWordSpec with Matchers with TwirlSpec {
       page.byRole("img").size mustBe 1
     }
 
+    "count what carries the name, where one is given" in {
+      check(role("button").namedText("Continue").occurring(1)) mustBe empty
+      check(role("button").namedMatching("^C".r).occurring(2)) mustBe empty
+      check(role("button").namedText("Continue").occurring(2)) must
+        not be empty
+      check(role("button").namedText("Nothing").occurring(0)) mustBe empty
+      check(role("button").namedText("Continue").occurring(0)) must
+        not be empty
+    }
+
+    "report a name it cannot resolve, with nothing to count" in {
+      check(role("button").named("no.such.key").occurring(1)) must have size 1
+    }
+
     "resolve each role HTML-AAM gives an element, and no other" in {
       def inTable(cell: String) = s"<table><tr>$cell</tr></table>"
       Seq(

@@ -147,14 +147,43 @@ final class Page(
     * messages.
     */
   def named(name: String, selector: String): Selection = {
-    val elements = document.select(selector).asScala.toList
+    val elements = inScope(selector)
     record(elements)
     Selection(name, selector, elements)
   }
 
+  /** Where this page's questions look: the whole document, or the one element
+    * `within` narrowed them to. What one element says of another by id, such as
+    * `for` or `aria-describedby`, still resolves across the whole document, as
+    * it does in a browser.
+    */
+  private var scope: Element = document
+
+  /** This page with its questions narrowed to one of its elements. It is the
+    * same page, with the same nodes and the same coverage record, so an
+    * assertion made here counts for the page.
+    */
+  private[twirlspec] def scopedTo(root: Element): Page = {
+    val inside = withLang(lang, messages)
+    inside.recording = recording
+    inside.scope = root
+    inside
+  }
+
+  /** What this selector matches where this page's questions look, recording
+    * nothing. It is read against the whole document and then narrowed, so
+    * `table tbody tr` still finds the rows of the `<tbody>` it was narrowed to.
+    */
+  private[twirlspec] def inScope(selector: String): List[Element] =
+    narrowed(document.select(selector).asScala.toList)
+
+  private def narrowed(elements: List[Element]): List[Element] =
+    if (scope eq document) elements
+    else elements.filter(e => (e eq scope) || e.parents.contains(scope))
+
   /** Elements with this ARIA role, implicit or explicit. */
   def byRole(role: String): Selection = {
-    val elements = Roles.matching(document, role)
+    val elements = narrowed(Roles.matching(document, role))
     record(elements)
     Selection(s"role=$role", Roles.selectorFor(role), elements)
   }
@@ -164,8 +193,7 @@ final class Page(
     Selection(
       s"""role=$role name="$name"""",
       Roles.selectorFor(role),
-      Roles
-        .matching(document, role)
+      narrowed(Roles.matching(document, role))
         .filter(e => Text.same(AccessibleName.of(document, e), name))
     )
 
@@ -245,10 +273,7 @@ final class Page(
       .values
       .map(_.last)
       .toSet
-    document
-      .select("input, select, textarea")
-      .asScala
-      .toList
+    inScope("input, select, textarea")
       .filter(e => e.attr("name").nonEmpty && !isDisabled(e))
       .flatMap { e =>
         val values = e.tagName() match {
@@ -330,15 +355,31 @@ final class Page(
       says(e.id(), elementId)
     )
 
+  /** What a link or a reference leads to, wherever on the page it is. */
+  private[twirlspec] def byIdAnywhere(elementId: String): Selection =
+    exactly(
+      s"#$elementId",
+      Page.idSelector(elementId),
+      "[id]",
+      anywhere = true
+    )(e => says(e.id(), elementId))
+
   /** The elements among these whose attributes pass an exact test. Jsoup's
     * `[a="x"]` ignores case, where an id and a name do not, and throws on a
     * value with a quote in it, so values are compared rather than written into
     * the selector, and `shown` is what a failure message calls it.
     */
-  private def exactly(name: String, shown: String, among: String)(
+  private def exactly(
+      name: String,
+      shown: String,
+      among: String,
+      anywhere: Boolean = false
+  )(
       test: Element => Boolean
   ): Selection = {
-    val elements = document.select(among).asScala.toList.filter(test)
+    val found =
+      if (anywhere) document.select(among).asScala.toList else inScope(among)
+    val elements = found.filter(test)
     record(elements)
     Selection(name, shown, elements)
   }
@@ -370,10 +411,7 @@ final class Page(
 
   /** Every heading with its level, in document order. */
   def headings: List[(Int, String)] =
-    document
-      .select("h1, h2, h3, h4, h5, h6")
-      .asScala
-      .toList
+    inScope("h1, h2, h3, h4, h5, h6")
       .map(e => (e.tagName().substring(1).toInt, Text.normalise(e.text())))
 
   /** The GOV.UK caption above a heading, in any of its sizes. */
@@ -400,7 +438,7 @@ final class Page(
   def languageToggle: Selection = {
     val selector =
       ".hmrc-language-select, nav[aria-label='Language switcher'], a[hreflang]"
-    val elements = document.select(selector).asScala.toList.filter { e =>
+    val elements = inScope(selector).filter { e =>
       !e.hasAttr("hreflang") || !e
         .attr("hreflang")
         .toLowerCase
@@ -451,12 +489,7 @@ final class Page(
     )
 
   private[twirlspec] def errorSummaryLinkElements: List[Element] =
-    document
-      .select(
-        ".govuk-error-summary a[href], .govuk-error-summary__list a[href]"
-      )
-      .asScala
-      .toList
+    inScope(".govuk-error-summary a[href], .govuk-error-summary__list a[href]")
 
   /** The error summary entries whose link lands on nothing: a link to
     * `#firstName` when the input is `id="value"` leaves a keyboard user
@@ -464,7 +497,7 @@ final class Page(
     */
   def errorSummaryDanglingLinks: List[(String, String)] =
     errorSummaryLinks.filter { case (target, _) =>
-      target.nonEmpty && byId(target).isEmpty
+      target.nonEmpty && byIdAnywhere(target).isEmpty
     }
 
   /** Every inline error message. */
@@ -474,10 +507,7 @@ final class Page(
     * hidden "Error:" prefix stripped.
     */
   def fieldErrors: Map[String, String] =
-    document
-      .select(".govuk-error-message")
-      .asScala
-      .toList
+    inScope(".govuk-error-message")
       .map(e => e.id().stripSuffix("-error") -> errorWords(e))
       .toMap
 
@@ -497,10 +527,8 @@ final class Page(
     * the error's id from something other than the field's name.
     */
   private[twirlspec] def errorOf(field: String): Option[Element] = {
-    val controls = document.select("input, select, textarea").asScala.toList
-    document
-      .select(".govuk-error-message")
-      .asScala
+    val controls = inScope("input, select, textarea")
+    inScope(".govuk-error-message")
       .find(_.id() == s"$field-error")
       .orElse(announcedBy(controls.filter(isCalled(_, field))))
       .orElse(
@@ -523,8 +551,8 @@ final class Page(
     * it lands on says it is described by, and only then a field's of that name.
     */
   private[twirlspec] def errorAt(target: String): Option[Element] =
-    announcedBy(withRecordingPaused(byId(target)).elements)
-      .orElse(errorOf(target))
+    announcedBy(withRecordingPaused(byIdAnywhere(target)).elements)
+      .orElse(scopedTo(document).errorOf(target))
 
   /** Whether a name or id is one of a date's parts, as `dob.day` is of `dob`.
     * It goes by the parts rather than the prefix, because `a-b` is usually a
@@ -541,7 +569,7 @@ final class Page(
     */
   private[twirlspec] def landsOn(target: String, field: String): Boolean =
     target == field ||
-      withRecordingPaused(byId(target)).elements.exists { e =>
+      withRecordingPaused(byIdAnywhere(target)).elements.exists { e =>
         e.attr("name") == field || isPartOf(e.attr("name"), field)
       }
 
@@ -623,18 +651,18 @@ final class Page(
 
   /** Every control on the page that a user can type into or choose from. */
   def formControls: List[Element] =
-    document
-      .select(
-        "input:not([type=hidden]):not([type=submit]):not([type=button]), select, textarea"
-      )
-      .asScala
-      .toList
+    inScope(
+      "input:not([type=hidden]):not([type=submit]):not([type=button]), select, textarea"
+    )
 
   /** The labels pointing at this field. */
   def labelFor(fieldId: String): Selection =
-    exactly(s"label for $fieldId", s"""label[for="$fieldId"]""", "label[for]")(
-      e => says(e.attr("for"), fieldId)
-    )
+    exactly(
+      s"label for $fieldId",
+      s"""label[for="$fieldId"]""",
+      "label[for]",
+      anywhere = true
+    )(e => says(e.attr("for"), fieldId))
 
   /** Every legend. */
   def legends: Selection = named("legend", "legend")
@@ -649,7 +677,8 @@ final class Page(
     exactly(
       s"hint for $fieldId",
       s"""[id="$fieldId-hint"], [id="$fieldId"] .govuk-hint""",
-      "[id], .govuk-hint"
+      "[id], .govuk-hint",
+      anywhere = true
     )(e =>
       e.id() == s"$fieldId-hint" ||
         e.hasClass("govuk-hint") &&
@@ -686,10 +715,7 @@ final class Page(
 
   /** Summary list rows as (key, value, action texts). */
   def summaryRows: List[(String, String, List[String])] =
-    document
-      .select(".govuk-summary-list__row")
-      .asScala
-      .toList
+    inScope(".govuk-summary-list__row")
       .map { row =>
         val k = Text.normalise(row.select(".govuk-summary-list__key").text())
         val v = Text.normalise(row.select(".govuk-summary-list__value").text())
@@ -800,11 +826,14 @@ final class Page(
   /** The page's visible text, normalised: its body, and not the `<title>`,
     * which is shown in a browser's tab rather than on the page.
     */
-  def text: String = Text.normalise(document.body().text())
+  def text: String = Text.normalise(visibleText)
 
   /** Whether the page's visible text contains this, after normalisation. */
   def contains(needle: String): Boolean =
-    Text.containsText(document.body().text(), needle)
+    Text.containsText(visibleText, needle)
+
+  private def visibleText: String =
+    if (scope eq document) document.body().text() else scope.text()
 
   /** The page's structural skeleton, for review and snapshotting. */
   /** Building this touches most of the page, and a failure message is not an
@@ -820,6 +849,7 @@ final class Page(
     read.owner = owner
     read.group = group
     read.ownRecord = ownRecord
+    read.scope = scope
     read
   }
 

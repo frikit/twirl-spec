@@ -10,6 +10,43 @@ release, and each one has a GitHub Release whose notes are its section here. Eve
 recorded in full; earlier lines are kept to one entry each, so the file stays
 readable.
 
+## [2.5.0] - 2026-10-31
+
+### Rules
+
+- `post-form-has-csrf-token`, new, and in no rule set, so nothing changes until a
+  service asks for it with `SecurityStandards.csrfToken()`: a form posting back to the
+  service carries its CSRF token, which Play's filter otherwise answers with a 403. It
+  blocks, as whoever adds it has asked for it. A form posting to a full address is left
+  alone, and a service with another token name can give it.
+
+### Added
+
+- `within(selector)(expectations*)` asks expectations of one part of the page, for a
+  page with two tables or a search form before the form under test. What it names has
+  to be one element. What an element says of another by id still reaches the whole
+  page, and so do the standards. What is asserted inside counts for coverage.
+- `columnHeaders(keys*)` reads the column headers of one table, where `tableHeaders`
+  reads every header cell on the page, row headers included.
+- `haveAgreeingEntryPoints(standIns*)` asks of every template under a directory what
+  `entryPointsAgree` asks of one, with what `apply` gives as the baseline. Each template
+  gets the first stand-in of each type its `render` declares, a type with none fails by
+  name, and `forTemplate` gives one template arguments of its own. A spec base with an
+  application other than `TwirlSpec`'s overrides the new `templateInstance`.
+
+### Fixed
+
+Each of these can fail a page that passed.
+
+- `title` and `titleText` have to be the whole title, up to the suffix a layout puts
+  after it. Starting with the words was enough, so `titleText("Your name")` passed on
+  "Your name and address - Service - GOV.UK". The suffix is set off by a dash, a bar or
+  a middle dot with a space either side; a title with another shape takes
+  `title(matching(...))` or `exactTitle`.
+- `role(...).named(...).occurring(n)` counts what carries the name. It counted every
+  element with the role, so one Save button among two passed `occurring(2)`, and
+  `occurring(1)` failed. `occurring(0)` now says no element carries the name.
+
 ## [2.4.1] - 2026-10-31
 
 ### Fixed
@@ -569,6 +606,7 @@ them in `twirl-spec-all`. The renames a service built against a 0.x snapshot
 would meet are listed in [the adoption guide](docs/adopting.md).
 
 [Unreleased]: https://github.com/frikit/twirl-spec/compare/v2.4.0...HEAD
+[2.5.0]: https://github.com/frikit/twirl-spec/compare/v2.4.1...v2.5.0
 [2.4.1]: https://github.com/frikit/twirl-spec/compare/v2.4.0...v2.4.1
 [2.4.0]: https://github.com/frikit/twirl-spec/compare/v2.3.0...v2.4.0
 [2.3.0]: https://github.com/frikit/twirl-spec/compare/v2.2.0...v2.3.0
