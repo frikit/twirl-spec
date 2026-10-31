@@ -491,6 +491,7 @@ listed again here.
 | `assertEverythingExcept` | As `assertEverything`, but these ids, links or tracking values are deliberately not asserted. |
 | `unassertedContent` | What this spec has asserted so far, for a spec that wants to report rather than fail. |
 | `entryPointsAgree` | Twirl's generated `render`, `f` and `ref` all agree with `apply`. |
+| `haveAgreeingEntryPoints` | The same of every template under a directory, called with stand-ins chosen by type. |
 
 **Languages**
 
@@ -587,6 +588,9 @@ Ways a page can leak or be turned against its reader.
 | `no-password-in-get` | a password is never submitted in a URL |
 | `no-javascript-href` | links do not carry javascript: URLs |
 | `target-blank-is-safe` | a link opening a new tab cannot reach back *(warning)* |
+
+`SecurityStandards.csrfToken()` is a rule in no set, for a Play service to add to
+`standardsRules`: a form posting back to the service carries its CSRF token.
 
 ### `GovukStandards`
 
@@ -825,7 +829,15 @@ memberNameView must entryPointsAgree(
 ```
 
 The arguments are the ones `render` takes: every parameter including the
-implicit ones, flattened, in order.
+implicit ones, flattened, in order. One line asks the same of every template
+under a directory, which get the first stand-in of each type their `render`
+declares. A type with no stand-in fails, naming the template and the type, and
+`forTemplate` gives one template arguments of its own:
+
+```scala
+Path.of("app/views") must haveAgreeingEntryPoints(form, false, "a name", Nil, None, request, messages)
+  .forTemplate("views.html.register.dateOfBirthView")(dateForm, request, messages)
+```
 
 ## A catalogue of pages
 

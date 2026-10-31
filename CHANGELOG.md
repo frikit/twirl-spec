@@ -28,6 +28,11 @@ readable.
   page, and so do the standards. What is asserted inside counts for coverage.
 - `columnHeaders(keys*)` reads the column headers of one table, where `tableHeaders`
   reads every header cell on the page, row headers included.
+- `haveAgreeingEntryPoints(standIns*)` asks of every template under a directory what
+  `entryPointsAgree` asks of one, with what `apply` gives as the baseline. Each template
+  gets the first stand-in of each type its `render` declares, a type with none fails by
+  name, and `forTemplate` gives one template arguments of its own. A spec base with an
+  application other than `TwirlSpec`'s overrides the new `templateInstance`.
 
 ### Fixed
 

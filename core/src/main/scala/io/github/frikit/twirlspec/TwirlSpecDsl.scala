@@ -132,4 +132,19 @@ trait TwirlSpecDsl
     * }}}
     */
   protected def alertHook(message: String): Unit = println(message)
+
+  /** An instance of a template's class, for a check going through a directory
+    * of templates. There is no application here to ask for one. [[TwirlSpec]]
+    * asks its own, and a spec base with an application can do the same in one
+    * line:
+    *
+    * {{{
+    * override protected def templateInstance(template: Class[_]): AnyRef =
+    *   app.injector.instanceOf(template).asInstanceOf[AnyRef]
+    * }}}
+    */
+  protected def templateInstance(template: Class[_]): AnyRef =
+    throw new IllegalStateException(
+      s"${template.getName} needs an instance and this spec base has no application to ask: override templateInstance"
+    )
 }

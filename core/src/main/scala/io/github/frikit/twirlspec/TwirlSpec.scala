@@ -141,4 +141,7 @@ trait TwirlSpec extends TwirlSpecDsl with SuiteLifecycle {
     languages.map(lang => inLanguage(lang)(render(html, lang, messages)))
 
   override protected def alertHook(message: String): Unit = alert(message)
+
+  override protected def templateInstance(template: Class[_]): AnyRef =
+    app.injector.instanceOf(template).asInstanceOf[AnyRef]
 }
