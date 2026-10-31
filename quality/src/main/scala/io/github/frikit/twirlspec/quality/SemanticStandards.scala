@@ -21,6 +21,7 @@ import io.github.frikit.twirlspec.standards._
 import io.github.frikit.twirlspec.expect.Violation
 import io.github.frikit.twirlspec.page.Text
 import io.github.frikit.twirlspec.standards.Rule.Warning
+import org.jsoup.nodes.{Comment, Element, TextNode}
 
 import scala.jdk.CollectionConverters._
 
@@ -92,9 +93,10 @@ object SemanticStandards extends RuleSet {
       severity = Warning
     ) { page =>
       page.document
-        .select("br + br")
+        .select("br")
         .asScala
         .toList
+        .filter(followsBreak)
         .map(_ =>
           Violation(
             "no-br-for-layout",
@@ -106,5 +108,20 @@ object SemanticStandards extends RuleSet {
         )
     }
   )
+
+  /** Whether a line break comes straight after another, with nothing said
+    * between them. A selector cannot ask this: `br + br` looks only at
+    * elements, so it also matches the breaks between the lines of an address.
+    */
+  private def followsBreak(br: Element): Boolean =
+    Iterator
+      .iterate(br.previousSibling())(_.previousSibling())
+      .takeWhile(_ != null)
+      .find {
+        case text: TextNode => Text.normalise(text.text()).nonEmpty
+        case _: Comment     => false
+        case _              => true
+      }
+      .exists(_.nodeName() == "br")
 
 }

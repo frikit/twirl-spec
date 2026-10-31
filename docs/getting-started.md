@@ -8,7 +8,7 @@ passing spec, and shows what a failing one looks like.
 Everything in one line, which is right for most services:
 
 ```scala
-libraryDependencies += "io.github.frikit" %% "twirl-spec-all" % "2.4.0" % Test
+libraryDependencies += "io.github.frikit" %% "twirl-spec-all" % "2.4.1" % Test
 ```
 
 Or pick modules. The core carries the page model, the DSL and the matchers and
@@ -17,14 +17,14 @@ them in:
 
 ```scala
 libraryDependencies ++= Seq(
-  "io.github.frikit" %% "twirl-spec-core"     % "2.4.0" % Test,
-  "io.github.frikit" %% "twirl-spec-wcag"     % "2.4.0" % Test, // accessibility, rendering, safety
-  "io.github.frikit" %% "twirl-spec-govuk"    % "2.4.0" % Test, // GOV.UK Design System error conventions
-  "io.github.frikit" %% "twirl-spec-quality"  % "2.4.0" % Test, // semantics, page weight, metadata, coverage
-  "io.github.frikit" %% "twirl-spec-aria"     % "2.4.0" % Test, // ARIA correctness
-  "io.github.frikit" %% "twirl-spec-html"     % "2.4.0" % Test, // HTML validity
-  "io.github.frikit" %% "twirl-spec-i18n"     % "2.4.0" % Test, // language parity
-  "io.github.frikit" %% "twirl-spec-messages" % "2.4.0" % Test  // message-file integrity
+  "io.github.frikit" %% "twirl-spec-core"     % "2.4.1" % Test,
+  "io.github.frikit" %% "twirl-spec-wcag"     % "2.4.1" % Test, // accessibility, rendering, safety
+  "io.github.frikit" %% "twirl-spec-govuk"    % "2.4.1" % Test, // GOV.UK Design System error conventions
+  "io.github.frikit" %% "twirl-spec-quality"  % "2.4.1" % Test, // semantics, page weight, metadata, coverage
+  "io.github.frikit" %% "twirl-spec-aria"     % "2.4.1" % Test, // ARIA correctness
+  "io.github.frikit" %% "twirl-spec-html"     % "2.4.1" % Test, // HTML validity
+  "io.github.frikit" %% "twirl-spec-i18n"     % "2.4.1" % Test, // language parity
+  "io.github.frikit" %% "twirl-spec-messages" % "2.4.1" % Test  // message-file integrity
 )
 ```
 

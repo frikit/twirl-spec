@@ -10,6 +10,16 @@ release, and each one has a GitHub Release whose notes are its section here. Eve
 recorded in full; earlier lines are kept to one entry each, so the file stays
 readable.
 
+## [2.4.1] - 2026-10-31
+
+### Fixed
+
+- `no-br-for-layout` no longer warns of the breaks between lines, as in an address. It
+  looked for `br + br`, which skips the text between two elements, so
+  `1 High Street<br>Newcastle<br>NE1 1AA` warned, on any address shown a line at a
+  time. Breaks with nothing said between them still warn, across a space, a
+  non-breaking space or a comment.
+
 ## [2.4.0] - 2026-10-31
 
 Verdicts change in this release, so it is a minor version. `assertEverything`
@@ -559,6 +569,7 @@ them in `twirl-spec-all`. The renames a service built against a 0.x snapshot
 would meet are listed in [the adoption guide](docs/adopting.md).
 
 [Unreleased]: https://github.com/frikit/twirl-spec/compare/v2.4.0...HEAD
+[2.4.1]: https://github.com/frikit/twirl-spec/compare/v2.4.0...v2.4.1
 [2.4.0]: https://github.com/frikit/twirl-spec/compare/v2.3.0...v2.4.0
 [2.3.0]: https://github.com/frikit/twirl-spec/compare/v2.2.0...v2.3.0
 [2.2.0]: https://github.com/frikit/twirl-spec/compare/v2.1.0...v2.2.0

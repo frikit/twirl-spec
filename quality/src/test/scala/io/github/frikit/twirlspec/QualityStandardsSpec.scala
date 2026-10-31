@@ -91,9 +91,26 @@ class QualityStandardsSpec extends AnyWordSpec with Matchers with TwirlSpec {
         not contain "no-presentational-markup"
     }
 
-    "warn about consecutive line breaks" in {
-      fired("<p>One<br><br>Two</p>") must contain("no-br-for-layout")
-      fired("<p>Line one<br>Line two</p>") must not contain "no-br-for-layout"
+    "warn about line breaks with nothing said between them" in {
+      Seq(
+        "<p>One<br><br>Two</p>",
+        "<p>One<br> <br>Two</p>",
+        "<p>One<br>&nbsp;<br>Two</p>",
+        "<p>One<br><!-- a gap --><br>Two</p>"
+      ).foreach(html =>
+        withClue(html)(fired(html) must contain("no-br-for-layout"))
+      )
+    }
+
+    "leave alone the breaks between lines, as an address has" in {
+      Seq(
+        "<p>Line one<br>Line two</p>",
+        "<p>1 High Street<br />Newcastle<br />NE1 1AA</p>",
+        "<p>One<br><span>Two</span><br>Three</p>",
+        "<p><br>One</p>"
+      ).foreach(html =>
+        withClue(html)(fired(html) must not contain "no-br-for-layout")
+      )
     }
   }
 
