@@ -16,22 +16,16 @@
 
 package views
 
-import io.github.frikit.twirlspec.{GovukServiceChecks, TwirlSpec}
-import io.github.frikit.twirlspec.i18n.TranslationConfig
+import io.github.frikit.twirlspec.{HmrcServiceChecks, TwirlSpec}
 import io.github.frikit.twirlspec.messages.MessagesIntegrity
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
-// every rule, less the search-result ones a GOV.UK service has no use for
-trait ViewSpecBase extends AnyWordSpec with Matchers with TwirlSpec with GovukServiceChecks {
+// every rule, less the search-result ones a GOV.UK service has no use for,
+// with what every service on play-frontend-hmrc would otherwise write here
+trait ViewSpecBase extends AnyWordSpec with Matchers with TwirlSpec with HmrcServiceChecks {
 
   // the languages come from play.i18n.langs in conf/application.conf
-
-  // what every page inherits from the layout, so coverage does not ask each spec for it
-  override def coverageIgnored: Set[String] = Set("#report-technical-issue", "#hmrc-timeout")
-
-  // text that is the same in every language by design
-  override def translationConfig = TranslationConfig(sameTextIsFine = Set("GOV.UK", "HMRC"))
 
   // the service is bilingual, so the message files must be too
   override def messagesIntegrityConfig = MessagesIntegrity.Config(requireTranslations = true)

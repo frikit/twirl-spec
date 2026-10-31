@@ -212,8 +212,8 @@ class ExclusionsSpec extends AnyWordSpec with Matchers with TwirlSpec {
     "keep a page built directly to itself, and share it with the page in another language" in {
       val built = Page.fromString("""<p id="x">x</p>""", english, messages)
       built.byId("x")
-      built.touchedAnchors mustBe Set("#x")
-      built.withLang(english, messages).touchedAnchors mustBe Set("#x")
+      built.touchedAnchors must contain("#x")
+      built.withLang(english, messages).touchedAnchors must contain("#x")
       Page
         .fromString("""<p id="x">x</p>""", english, messages)
         .touchedAnchors mustBe empty

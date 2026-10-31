@@ -216,12 +216,25 @@ object AriaVocabulary {
     "heading" -> Set("aria-level"),
     "menuitemcheckbox" -> Set("aria-checked"),
     "menuitemradio" -> Set("aria-checked"),
+    "meter" -> Set("aria-valuenow"),
     "option" -> Set("aria-selected"),
     "radio" -> Set("aria-checked"),
     "scrollbar" -> Set("aria-valuenow"),
     "slider" -> Set("aria-valuenow"),
     "switch" -> Set("aria-checked")
   )
+
+  /** Roles that mean nothing without these attributes if they can take focus: a
+    * separator that moves is a control, and one that does not is a line.
+    */
+  val requiredWhenFocusable: Map[String, Set[String]] = Map(
+    "separator" -> Set("aria-valuenow")
+  )
+
+  /** Roles that are either on or off, on which `aria-checked="mixed"` is read
+    * as false.
+    */
+  val noMixedState: Set[String] = Set("menuitemradio", "radio", "switch")
 
   /** Roles that are only meaningful inside one of these. */
   val requiredParents: Map[String, Set[String]] = Map(
@@ -303,6 +316,8 @@ object AriaVocabulary {
     "tel-national",
     "tel-area-code",
     "tel-local",
+    "tel-local-prefix",
+    "tel-local-suffix",
     "tel-extension",
     "email",
     "impp"
@@ -311,5 +326,14 @@ object AriaVocabulary {
   /** Prefixes a token may carry before the field name. */
   val autocompleteModifiers: Set[String] =
     Set("shipping", "billing", "home", "work", "mobile", "fax", "pager")
+
+  /** The modifiers that say what kind of contact a field is. */
+  private[twirlspec] val autocompleteContactKinds: Set[String] =
+    Set("home", "work", "mobile", "fax", "pager")
+
+  /** The fields a contact kind may come before. */
+  private[twirlspec] def isContactField(field: String): Boolean =
+    field == "email" || field == "impp" || field == "tel" ||
+      field.startsWith("tel-") && autocompleteTokens(field)
 
 }

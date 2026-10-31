@@ -19,6 +19,8 @@ package io.github.frikit.twirlspec.render
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 
+import io.github.frikit.twirlspec.Trace
+
 /** One Play application per distinct configuration, shared by every spec in the
   * JVM.
   */
@@ -39,9 +41,12 @@ object SharedApplication {
     "play.filters.csp.nonce.enabled" -> false
   )
 
-  private val cache = new ApplicationCache(config =>
+  private val cache = new ApplicationCache({ config =>
+    Trace.debug(
+      s"building a Play application with ${config.size} settings over the service's own: ${config.keys.toSeq.sorted.mkString(", ")}"
+    )
     new GuiceApplicationBuilder().configure(config).build()
-  )
+  })
 
   /** The application for this configuration, building it on first use. */
   def apply(configuration: Map[String, Any]): Application = cache(

@@ -18,7 +18,7 @@ package io.github.frikit.twirlspec.wcag
 
 import io.github.frikit.twirlspec.standards._
 
-import io.github.frikit.twirlspec.expect.Violation
+import io.github.frikit.twirlspec.expect.{Matching, Violation}
 import io.github.frikit.twirlspec.page.Text
 
 import scala.jdk.CollectionConverters._
@@ -32,15 +32,27 @@ object TwirlStandards extends RuleSet {
       "no unresolved message key is shown to a citizen"
     ) { page =>
       val scope = if (page.main.nonEmpty) page.main(0) else page.document.body()
-      scope
-        .select(
-          "h1, h2, h3, h4, h5, h6, p, li, label, legend, span, td, th, a, strong, dt, dd, caption, summary"
-        )
+      val families = page.messageKeyFamilies
+      // Everything a citizen can be shown, wherever a template put it, but not
+      // what is someone's own text or is there to be read literally.
+      val written = scope
+        .select("*")
         .asScala
         .toList
-        .map(e => Text.normalise(e.ownText()))
-        .filter(t => t.nonEmpty && KeyShaped.pattern.matcher(t).matches())
-        .filterNot(t => FileLike.contains(t.split("\\.").last.toLowerCase))
+        .filter(_.closest("textarea, pre, code, kbd, samp") == null)
+        .map(_.ownText())
+      val attributes = Seq("aria-label", "alt", "placeholder").flatMap(a =>
+        scope.select(s"[$a]").asScala.map(_.attr(a))
+      )
+      val buttons = scope
+        .select("input[type=submit], input[type=button], input[type=reset]")
+        .asScala
+        .map(_.attr("value"))
+      // A layout appends the service's name, and an error state prefixes one.
+      val title = Matching.stripErrorPrefix(page, page.title).split(" - ").head
+      (title +: (written ++ attributes ++ buttons))
+        .map(Text.normalise)
+        .filter(looksLikeAKey(_, families))
         .distinct
         .map { t =>
           Violation(
@@ -68,14 +80,20 @@ object TwirlStandards extends RuleSet {
     ) { page =>
       page.document
         .select(
-          "input:not([type=checkbox]):not([type=radio]):not([type=submit]):not([type=button]), select, textarea"
+          "input:not([type=checkbox]):not([type=radio]):not([type=submit]):not([type=button]):not([type=reset]):not([type=image]), select, textarea"
         )
         .asScala
         .toList
-        .filter(_.attr("name").nonEmpty)
-        .groupBy(_.attr("name"))
+        // A form submits only its own controls and only enabled ones, so two
+        // forms each with a token are not an ambiguity, and a name ending in []
+        // asks Play for a list.
+        .filter(e => e.attr("name").nonEmpty && !page.isDisabled(e))
+        .filter(page.formOwner(_).isDefined)
+        .filterNot(_.attr("name").endsWith("[]"))
+        .groupBy(e => (page.formOwner(e), e.attr("name")))
         .collect {
-          case (name, controls) if controls.size > 1 => (name, controls.size)
+          case ((_, name), controls) if controls.size > 1 =>
+            (name, controls.size)
         }
         .toSeq
         .sortBy(_._1)
@@ -91,7 +109,8 @@ object TwirlStandards extends RuleSet {
     },
     Rule("no-scala-leakage", "no Scala value leaks into the rendered page") {
       page =>
-        val body = page.text
+        // A value can as well leak into the <title>.
+        val body = Text.normalise(page.document.text())
         val markers = Seq(
           "Some(",
           "None)",
@@ -100,10 +119,14 @@ object TwirlStandards extends RuleSet {
           "Map(",
           "ArraySeq(",
           "$anonfun",
+          "$$Lambda",
           "@scala.",
           "null null"
         )
-        markers.filter(body.contains).map { m =>
+        (markers.filter(body.contains) ++ ObjectShaped
+          .findAllIn(body)
+          .toList
+          .distinct).map { m =>
           Violation(
             "no-scala-leakage",
             s"""the page contains "$m"""",
@@ -116,8 +139,35 @@ object TwirlStandards extends RuleSet {
     }
   )
 
-  /** Looks like `some.message.key` and resolves to nothing. */
-  private val KeyShaped = "^[a-z][A-Za-z0-9]*(\\.[A-Za-z0-9_]+){1,6}$".r
+  /** What an object says for itself: `models.Name@6f2b958e` with no `toString`,
+    * and `FullName(John,None,Smith)` as a case class. The class is capitalised,
+    * the hash is not followed by more address, and `None` needs the constructor
+    * around it, so `Bob@decade-mail.com` and `John,None,Smith` are left alone.
+    */
+  private val ObjectShaped =
+    "\\b(?:[a-z_][\\w$]*\\.)*[A-Z][\\w$]*(?:@[0-9a-f]{5,8}\\b(?![.\\w-])|\\([^()]*\\bNone\\b[^()]*\\))".r
+
+  /** Looks like `some.message.key`. */
+  private val KeyShaped = "^[a-z][A-Za-z0-9_-]*(\\.[A-Za-z0-9_-]+){1,6}$".r
+
+  /** A version rather than a key: `v1.2`. */
+  private val VersionShaped = "^[a-z]?[0-9]+(\\.[0-9]+)+$".r
+
+  /** Could as well be someone's answer as a key: `john.smith`. */
+  private val NameShaped = "^[a-z-]+\\.[a-z-]+$".r
+
+  /** Whether these words read as an unresolved message key rather than as
+    * something with a dot in it. A pair of plain lowercase words is a key only
+    * when the service has keys beginning with the first of them: `site.maybe`
+    * beside `site.yes`, and not a username.
+    */
+  private def looksLikeAKey(text: String, families: Set[String]): Boolean =
+    KeyShaped.pattern.matcher(text).matches() &&
+      !text.startsWith("www.") &&
+      !VersionShaped.pattern.matcher(text).matches() &&
+      !FileLike.contains(text.split("\\.").last.toLowerCase) &&
+      (!NameShaped.pattern.matcher(text).matches() ||
+        families.contains(text.takeWhile(_ != '.')))
 
   private val FileLike = Set(
     "pdf",

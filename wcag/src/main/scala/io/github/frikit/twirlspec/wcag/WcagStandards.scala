@@ -104,7 +104,7 @@ object WcagStandards extends RuleSet {
             Violation("html-lang", "the <html> element has no lang attribute")
               .withHint("WCAG 3.1.1")
           )
-        case Some(l) if !l.startsWith(page.lang.code) =>
+        case Some(l) if !page.declaresItsLanguage(l) =>
           Seq(
             Violation.mismatch(
               "html-lang",
@@ -224,31 +224,42 @@ object WcagStandards extends RuleSet {
         .select("input[type=radio], input[type=checkbox]")
         .asScala
         .toList
-        .groupBy(_.attr("name"))
+        // Two forms can each have a group of one name, and those are two groups.
+        .groupBy(e => (page.formOwner(e), e.attr("name")))
         .filter(_._2.size > 1)
 
-      groups.toSeq.sortBy(_._1).flatMap { case (name, members) =>
-        Option(members.head.closest("fieldset")) match {
-          case None =>
-            Seq(
-              Violation(
-                "grouped-choices",
-                s"""the "$name" group is not inside a <fieldset>"""
-              )
-                .withHint(
-                  "WCAG 1.3.1 — use govukRadios / govukCheckboxes with a fieldset"
-                )
+      groups.toSeq.sortBy(_._1._2).flatMap { case ((_, name), members) =>
+        // A group can have subgroups of its own, so what its members need is a
+        // fieldset in common, and not the same nearest one.
+        val fieldsets =
+          members
+            .map(_.parents.asScala.toList.filter(_.tagName() == "fieldset"))
+        val shared = fieldsets.reduce((a, b) => a.filter(b.contains))
+        if (shared.exists(page.accessibleName(_).nonEmpty)) Nil
+        else if (shared.nonEmpty)
+          Seq(
+            Violation(
+              "grouped-choices",
+              s"""the "$name" fieldset has no <legend> that names it"""
             )
-          case Some(fieldset) =>
-            if (fieldset.select("legend").isEmpty)
-              Seq(
-                Violation(
-                  "grouped-choices",
-                  s"""the "$name" fieldset has no <legend>"""
-                )
+          )
+        else if (fieldsets.exists(_.isEmpty))
+          Seq(
+            Violation(
+              "grouped-choices",
+              s"""the "$name" group is not all inside a <fieldset>"""
+            )
+              .withHint(
+                "WCAG 1.3.1 — use govukRadios / govukCheckboxes with a fieldset"
               )
-            else Nil
-        }
+          )
+        else
+          Seq(
+            Violation(
+              "grouped-choices",
+              s"""the "$name" group is split across fieldsets"""
+            )
+          )
       }
     },
     Rule(
@@ -258,7 +269,7 @@ object WcagStandards extends RuleSet {
         Some(Criterion("4.1.2", "Name, Role, Value", Level.A, WcagVersion.V2_0))
     ) { page =>
       page.document
-        .select("button[type=submit], input[type=submit], button:not([type])")
+        .select(SubmitControls)
         .asScala
         .toList
         .filter(e => page.accessibleName(e).isEmpty)
@@ -267,6 +278,53 @@ object WcagStandards extends RuleSet {
             "submit-has-name",
             "a submit control has no accessible name"
           ).withHint("WCAG 4.1.2")
+        )
+    },
+    Rule(
+      "button-has-name",
+      "every other button has an accessible name",
+      severity = Warning,
+      criterion =
+        Some(Criterion("4.1.2", "Name, Role, Value", Level.A, WcagVersion.V2_0))
+    ) { page =>
+      // An <input type="reset"> with no value is called "Reset" by the browser,
+      // and what submit-has-name and link-has-name report is theirs to report.
+      page.document
+        .select(
+          "button[type=button], button[type=reset], input[type=button], input[type=image], [role~=(?i)^\\s*button(\\s|$)]"
+        )
+        .asScala
+        .toList
+        .filterNot(_.is(s"$SubmitControls, a[href]"))
+        .filter(page.isExposed)
+        .filter(e => page.accessibleName(e).isEmpty)
+        .map(e =>
+          Violation(
+            "button-has-name",
+            "a button has no accessible name",
+            actual = Some(Text.preview(e.outerHtml(), 90))
+          ).withHint("WCAG 4.1.2")
+        )
+    },
+    Rule(
+      "iframe-has-name",
+      "every frame has an accessible name",
+      severity = Warning,
+      criterion =
+        Some(Criterion("4.1.2", "Name, Role, Value", Level.A, WcagVersion.V2_0))
+    ) { page =>
+      page.document
+        .select("iframe")
+        .asScala
+        .toList
+        .filter(page.isExposed)
+        .filter(e => page.accessibleName(e).isEmpty)
+        .map(e =>
+          Violation(
+            "iframe-has-name",
+            "a frame has no accessible name",
+            actual = Some(Text.preview(e.outerHtml(), 90))
+          ).withHint("""WCAG 4.1.2 — a title="" saying what the frame holds""")
         )
     },
     Rule(
@@ -348,11 +406,8 @@ object WcagStandards extends RuleSet {
       page.links.elements
         .filter(_.attr("target") == "_blank")
         .filterNot { e =>
-          val t = Text.normalise(e.text()).toLowerCase
-          t.contains("new tab") || t.contains("new window") || t.contains(
-            "tab newydd"
-          ) ||
-          e.attr("aria-label").toLowerCase.contains("new tab")
+          val said = s"${Text.normalise(e.text())} ${e.attr("aria-label")}"
+          NewTabWords.exists(said.toLowerCase.contains)
         }
         .map(e =>
           Violation(
@@ -374,10 +429,8 @@ object WcagStandards extends RuleSet {
       // 1.3.5 applies to fields collecting information *about the user*, which cannot be detected in general.
       page.formControls
         .filter(e => e.attr("autocomplete").isEmpty)
-        .filter { e =>
-          val name = (e.attr("name") + " " + e.id()).toLowerCase
-          PersonalFieldNames.exists(name.contains)
-        }
+        .filterNot(e => AutocompleteDoesNotApply(e.attr("type").toLowerCase))
+        .filter(e => collectsAboutTheUser(e.attr("name") + " " + e.id()))
         .map { e =>
           Violation(
             "input-purpose-autocomplete",
@@ -433,9 +486,13 @@ object WcagStandards extends RuleSet {
       // The hint below tells a reader to add tabindex="-1". That has to be
       // enough to satisfy the rule, so an element taken out of the tab order
       // no longer counts as focusable — otherwise following the advice leaves
-      // the test red.
+      // the test red. A disabled control and anything hidden or inert take no
+      // focus either.
       def stillFocusable(e: Element): Boolean =
-        e.is(focusable) && !removedFromTabOrder(e)
+        e.is(focusable) && !removedFromTabOrder(e) &&
+          !e.is("input[type=hidden]") &&
+          !(e.is("button, input, select, textarea") && page.isDisabled(e)) &&
+          e.closest("[hidden], [inert]") == null
       page.document
         .select("[aria-hidden=true]")
         .asScala
@@ -512,7 +569,14 @@ object WcagStandards extends RuleSet {
         .select("label[for]")
         .asScala
         .toList
-        .filter(e => page.byId(e.attr("for")).isEmpty)
+        .filterNot(e =>
+          page
+            .byId(e.attr("for"))
+            .elements
+            // A custom element is labelable if a script says so, which the
+            // markup cannot show, so it is not for this rule to judge.
+            .exists(t => t.is(Labelable) || t.tagName().contains("-"))
+        )
         .map(e =>
           Violation(
             "label-for-resolves",
@@ -564,14 +628,41 @@ object WcagStandards extends RuleSet {
     }
   )
 
+  /** How a link says it opens a new tab, in the languages a GOV.UK service is
+    * offered in: "yn agor tab newydd", "yn agor tab neu ffenestr newydd", and
+    * "yn agor ffenestr neu dab newydd", as the mutation of tab has it.
+    */
+  private val NewTabWords = Seq(
+    "new tab",
+    "new window",
+    "tab newydd",
+    "dab newydd",
+    "ffenestr newydd"
+  )
+
+  /** The input types HTML does not let `autocomplete` apply to. */
+  private val AutocompleteDoesNotApply =
+    Set("checkbox", "radio", "file", "image", "reset", "range", "color")
+
+  /** Whether a control's name and id read as one of the autofill tokens. The
+    * short tokens have to be whole words, so `hotelName` is not a telephone.
+    */
+  private def collectsAboutTheUser(name: String): Boolean =
+    name
+      .split("[^A-Za-z]+|(?<=[a-z])(?=[A-Z])")
+      .map(_.toLowerCase)
+      .exists(PersonalFieldWords) ||
+      PersonalFieldNames.exists(name.toLowerCase.contains)
+
+  /** Autofill tokens short enough to turn up inside other words. */
+  private val PersonalFieldWords = Set("tel", "phone", "telephone")
+
   /** Substrings of the autofill tokens WCAG 1.3.5 enumerates, which is what
     * makes the heuristic defensible rather than a guess.
     */
   private val PersonalFieldNames =
     Set(
       "email",
-      "tel",
-      "phone",
       "postcode",
       "postal-code",
       "given-name",
@@ -603,6 +694,14 @@ object WcagStandards extends RuleSet {
     * is not a landmark.
     */
   private val MainLandmark = "main, [role=main]"
+
+  /** What a `<label for>` can name, per the HTML specification. */
+  private val Labelable =
+    "input:not([type=hidden]), select, textarea, button, meter, output, progress"
+
+  /** What `submit-has-name` reads. */
+  private val SubmitControls =
+    "button[type=submit], input[type=submit], button:not([type])"
 
   /** WCAG 1.4.4 asks for text at 200%, so a viewport that caps the scale below
     * 2 is the one that takes the zoom away.

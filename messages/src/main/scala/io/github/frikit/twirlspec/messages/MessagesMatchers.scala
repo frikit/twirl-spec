@@ -18,9 +18,11 @@ package io.github.frikit.twirlspec.messages
 
 import org.scalatest.matchers.{MatchResult, Matcher}
 import play.api.i18n.MessagesApi
-import io.github.frikit.twirlspec.expect.{Severity, Violation}
+import io.github.frikit.twirlspec.TwirlSpecDsl
+import io.github.frikit.twirlspec.expect.{Outcome, Severity, Violation}
 
 import java.io.File
+import scala.util.control.NonFatal
 
 /** Matchers over a service's message files. */
 trait MessagesMatchers {
@@ -55,14 +57,27 @@ trait MessagesMatchers {
     val errors = violations.filter(_.severity == Severity.Error)
     val warnings = violations.filter(_.severity == Severity.Warning)
 
+    // A spec on the DSL decides what its warnings do. Without one they fail
+    // nothing, and standard output is the only place left to say them.
+    val spec = Option(this).collect { case dsl: TwirlSpecDsl => dsl }
+    val ok =
+      errors.isEmpty && (warnings.isEmpty || !spec.exists(_.failOnWarnings))
+    if (ok)
+      try
+        spec.fold(if (warnings.nonEmpty) println(Outcome.surfaced(warnings)))(
+          _.surfaceWarnings(warnings)
+        )
+      catch { case NonFatal(_) => () }
+
     val body = errors.map(_.render()).mkString("\n\n")
     val warned =
       if (warnings.isEmpty) ""
       else "\n\n  warnings:\n" + warnings.map(_.render("  ")).mkString("\n")
+    val headline = Outcome.headline(subject, errors.size, warnings.size)
 
     MatchResult(
-      errors.isEmpty,
-      s"\n$subject failed ${errors.size} check(s):\n\n$body$warned\n",
+      ok,
+      s"\n$headline\n\n$body$warned\n",
       s"$subject passed every check, but were expected not to"
     )
   }

@@ -72,8 +72,8 @@ judges a page against a design system you are not using.
 | Artifact | Depends on | What it adds |
 |---|---|---|
 | `twirl-spec-core` | — | Page model, expectation DSL, ScalaTest matchers, `Rule` infrastructure |
-| `twirl-spec-wcag` | core | 29 rules: 21 tagged with a WCAG success criterion, 1 structural convention, 4 for Twirl rendering, 3 for safety |
-| `twirl-spec-govuk` | core, wcag | 5 GOV.UK Design System conventions |
+| `twirl-spec-wcag` | core | 31 rules: 23 tagged with a WCAG success criterion, 1 structural convention, 4 for Twirl rendering, 3 for safety |
+| `twirl-spec-govuk` | core, wcag | 10 GOV.UK Design System conventions |
 | `twirl-spec-quality` | core | 12 rules: semantics, page weight and metadata, plus the coverage and entry-point checks |
 | `twirl-spec-aria` | core | 16 ARIA correctness rules, the static half of what an automated tool reports |
 | `twirl-spec-html` | core | 3 HTML validity rules: unclosed elements named with their line, unknown elements and attributes |
@@ -254,7 +254,9 @@ role("radio").occurring(2)
 
 Roles are resolved the way HTML-AAM defines them, implicit or explicit, and an
 element carrying an explicit `role` is matched only by that role — so
-`<a role="button">` is a button and not a link. The accessible name comes from
+`<a role="button">` is a button and not a link. One limit: an input's `list` is
+not followed, so one with suggestions keeps its usual role rather than `combobox`.
+The accessible name comes from
 `aria-labelledby`, `aria-label`, an associated `<label>`, a `<legend>`, `alt`,
 the `value` of a `button`, `submit` or `reset` input, the element's own text
 (or the `alt` of an image standing in for it), and finally `title` — in that
@@ -275,11 +277,14 @@ This is a working subset of the accessible name computation, not the whole
 specification: it resolves one hop of `aria-labelledby` and knows nothing that
 depends on CSS or JavaScript.
 
-Text expectations also take a regular expression anywhere a string is accepted:
+An expectation that takes an `Expected`, as `title`, `heading`, `caption` and
+`headingAtLevel` do, also takes a regular expression:
 
 ```scala
 heading(matching("Sign\\s+up".r))
 ```
+
+The ones that take a message key, such as `paragraph` and `labelled`, do not.
 
 ### Control state, form values and reading order
 
@@ -364,7 +369,7 @@ listed again here.
 |---|---|
 | `applicationConfig` | Extra configuration for this suite's application, over the view-test defaults. |
 | `app` | The shared application for that configuration. |
-| `inject` | An instance from the application's injector, usually a view. |
+| `inject` | An instance from the application's injector, usually a view; arguments straight after it apply the view. |
 | `languages` | Every language the application is configured for, English first. |
 | `currentLang` | The language the current block is running in. |
 | `inLanguage` | Run a block with `messages` and a request for the given language in scope. |
@@ -378,8 +383,8 @@ listed again here.
 | | |
 |---|---|
 | `standardsRules` | Which rules run alongside every `display(...)`: none in the core, and each rule module adds its own. |
-| `failOnWarnings` | Whether warnings fail the test. |
-| `reportWarnings` | Whether passing tests still surface their warnings in the test output. |
+| `failOnWarnings` | Whether warnings fail the test, for `display`, the language comparison and the message files alike. |
+| `reportWarnings` | Whether passing tests still surface their warnings: through ScalaTest's alert under `TwirlSpec`, on standard output with `TwirlSpecDsl` alone. |
 | `display` | The page shows all of this, and holds to every rule `standardsRules` resolves to. |
 | `displayOnly` | As `display`, but without the standards — for the rare page that has to break a rule, or while a legacy view is being brought up to standard. |
 | `meetStandards` | Whatever `standardsRules` resolves to, for a spec that has its own assertions already. |
@@ -403,8 +408,8 @@ listed again here.
 | `noBackLink` | There is no back link, for a page a citizen must not reverse out of. |
 | `languageToggle` | A language switcher, however it is rendered. |
 | `timeoutDialog` | The session-timeout dialog is wired up. |
-| `signOutLink` | A sign out link is present, and points where it should. |
-| `phaseBanner` | The alpha or beta phase banner is present, with the phase it names. |
+| `signOutLink` | A sign out link is present. |
+| `phaseBanner` | The alpha or beta phase banner is present. |
 | `subheading` | An `h2` with the given message key. |
 | `headingAtLevel` | A heading at a given level says this. |
 
@@ -467,9 +472,9 @@ listed again here.
 | `noErrors` | No error summary and no inline error messages anywhere on the page. |
 | `errorTitlePrefix` | GOV.UK requires the browser title of a page in an error state to be prefixed, so screen reader users hear that something went wrong before the page name. |
 | `errorSummaryTitle` | The heading above the error summary. |
-| `errorSummary` | The error summary lists exactly these `field -> message key` entries, in order, and every entry links to an element that exists on the page. |
+| `errorSummary` | The error summary lists exactly these `field -> message key` entries, in order, and every entry links to an element that exists on the page: the field, or one of its controls, as a radio group's first radio or a date input's day. |
 | `errorSummaryContaining` | The error summary mentions this field, whatever else it lists. |
-| `fieldError` | The inline error message rendered against a specific field. |
+| `fieldError` | The inline error message rendered against a specific field: by the id `field-error`, or the one its control or fieldset announces. |
 | `labelledByLegend` | For the rare text input that is legitimately labelled by a legend rather than a label. |
 
 **Coverage and entry points**
@@ -479,6 +484,7 @@ listed again here.
 | `trackedAttributes` | Attributes that mark an element as worth asserting, beyond ids and links. |
 | `coverageScope` | Which part of the page a spec answers for. |
 | `coverageIgnored` | Ids, links or tracking values every page in this project inherits from its layout. |
+| `coverageIgnoredSelectors` | CSS selectors for blocks every page inherits, for a block with no id whose words change with the language. |
 | `assertEverything` | Every id, link and tracked element on the page was asserted by some test in this spec. |
 | `assertEverythingExcept` | As `assertEverything`, but these ids, links or tracking values are deliberately not asserted. |
 | `unassertedContent` | What this spec has asserted so far, for a spec that wants to report rather than fail. |
@@ -496,15 +502,15 @@ listed again here.
 
 ## The rules
 
-65 rules in nine sets across five optional modules, kept apart so a
+72 rules in nine sets across five optional modules, kept apart so a
 project is only judged against what it actually uses.
 
 | Set | Module | Rules | Covers |
 |---|---|---|---|
-| `WcagStandards` | `twirl-spec-wcag` | 22 | Accessibility |
+| `WcagStandards` | `twirl-spec-wcag` | 24 | Accessibility |
 | `TwirlStandards` | `twirl-spec-wcag` | 4 | Play rendering mistakes |
 | `SecurityStandards` | `twirl-spec-wcag` | 3 | Ways a page can leak or be turned against its reader |
-| `GovukStandards` | `twirl-spec-govuk` | 5 | GOV.UK Design System error conventions |
+| `GovukStandards` | `twirl-spec-govuk` | 10 | GOV.UK Design System conventions |
 | `AriaStandards` | `twirl-spec-aria` | 16 | ARIA correctness |
 | `HtmlStandards` | `twirl-spec-html` | 3 | Basic HTML validity, read from the source rather than the repaired tree, so an unclosed element is named along with the line it opened on |
 | `SemanticStandards` | `twirl-spec-quality` | 4 | Markup that parses but does not mean what it looks like |
@@ -523,9 +529,14 @@ System's pattern. Its `scripts-are-deferred` also leaves alone HMRC's
 tracking-consent script, which the platform puts in the head on purpose, and
 still reports the service's own. Mix it in after any rule trait of your own.
 
+An HMRC service on play-frontend-hmrc wants `HmrcServiceChecks`: the same again,
+with the report-a-problem link every page inherits left out of coverage in
+whichever language it reads, and "HMRC" allowed to read the same in every
+language.
+
 ### `WcagStandards`
 
-Accessibility: 21 rules each enforce a WCAG success criterion, and `one-h1` is a structural convention WCAG does not require but almost everyone wants.
+Accessibility: 23 rules each enforce a WCAG success criterion, and `one-h1` is a structural convention WCAG does not require but almost everyone wants.
 
 | Rule | Checks | Criterion |
 |---|---|---|
@@ -539,6 +550,8 @@ Accessibility: 21 rules each enforce a WCAG success criterion, and `one-h1` is a
 | `labelled-controls` | every form control has an accessible name | 3.3.2 Labels or Instructions · A · WCAG 2.0 |
 | `grouped-choices` | radios and checkboxes sit in a fieldset with a legend | 1.3.1 Info and Relationships · A · WCAG 2.0 |
 | `submit-has-name` | the submit control has an accessible name | 4.1.2 Name, Role, Value · A · WCAG 2.0 |
+| `button-has-name` | every other button has an accessible name *(warning)* | 4.1.2 Name, Role, Value · A · WCAG 2.0 |
+| `iframe-has-name` | every frame has an accessible name *(warning)* | 4.1.2 Name, Role, Value · A · WCAG 2.0 |
 | `table-header-scope` | table headers declare a scope *(warning)* | 1.3.1 Info and Relationships · A · WCAG 2.0 |
 | `link-has-name` | every link has an accessible name | 2.4.4 Link Purpose (In Context) · A · WCAG 2.0 |
 | `link-text-is-meaningful` | link text makes sense out of context *(warning)* | 2.4.9 Link Purpose (Link Only) · AAA · WCAG 2.0 |
@@ -584,6 +597,11 @@ Ways a page can leak or be turned against its reader.
 | `error-hidden-prefix` | an inline error carries a visually hidden prefix |
 | `error-summary-targets` | every error summary link lands on an element |
 | `error-summary-focusable` | the error summary can take focus *(warning)* |
+| `error-in-summary` | an inline error has an entry in the error summary *(warning)* |
+| `error-summary-has-inline` | an error summary entry has an inline error beside its field *(warning)* |
+| `error-summary-wording` | an error reads the same in the summary and beside its field *(warning)* |
+| `skip-link-target` | the skip link lands on an element *(warning)* |
+| `link-names-distinct` | links called the same go to the same place *(warning)* |
 
 ### `AriaStandards`
 
@@ -627,7 +645,11 @@ application, no injector and no render:
 
 ```scala
 TagBalance.checkTemplate(Files.readString(template))
+Path.of("app/views") must haveBalancedTemplates    // every template under here
 ```
+
+The matcher names each problem by its file and line, and fails on a directory
+with no templates, so a wrong path cannot pass for ever.
 
 A template is two languages at once, and only one of them writes tags, so the
 Scala is taken out first — `@if(page < total)` is a comparison, not the start of
@@ -711,7 +733,7 @@ Criteria currently covered:
 | 3.1.1 Language of Page | A | 2.0 | `html-lang` |
 | 3.2.5 Change on Request | AAA | 2.0 | `new-tab-is-announced` |
 | 3.3.2 Labels or Instructions | A | 2.0 | `labelled-controls`, `label-for-resolves` |
-| 4.1.2 Name, Role, Value | A | 2.0 | `unique-ids`, `submit-has-name`, `no-aria-hidden-focusable` |
+| 4.1.2 Name, Role, Value | A | 2.0 | `unique-ids`, `submit-has-name`, `button-has-name`, `iframe-has-name`, `no-aria-hidden-focusable` |
 | 1.3.5 Identify Input Purpose | AA | 2.1 | `input-purpose-autocomplete` |
 
 This is a useful subset, not full WCAG coverage. A static check over rendered
@@ -754,28 +776,34 @@ already run.
 ```
 7 things on this page were never asserted:
   id (3): #sub-header, #sub-header-link, #upload-file
-  link (1): "upload a new file or download one that is waiting."
+  link (1): link "upload a new file or download one that is waiting." -> /upload
   tracking (1): data-journey-click=link - click:File not available:Choose something else to do
 ```
 
 Assertions are recorded by what they touch, not by the selector they used, so
-asserting `#action-list > *` does not count as asserting `#action-list`. They
+asserting `#action-list > *` does not count as asserting `#action-list`. An
+expectation that looks through several elements to find one counts only what it
+found: `link("x.help")` asserts that link, not every link on the page. A link is
+its words and where it goes, so two links reading "Change" and going to
+different places are two things to assert. They
 count for the page they were made on — every render of exactly that markup —
 so one view's assertions never pass another view that shares its ids. States of
 one view that should be measured as a whole share a name:
 `render(view(form)).coveredAs("name-page")`.
 
-Three things are adjustable, usually once on a project's spec base:
+Four things are adjustable, usually once on a project's spec base:
 
 ```scala
-override def coverageScope: String        = "main, #main-content"   // the layout is not the view spec's problem
-override def coverageIgnored: Set[String] = Set("#content")         // what every page inherits
-override def trackedAttributes: Set[String] = Set("data-journey-click")
+override def coverageScope: String                 = "main, #main-content"   // the layout is not the view spec's problem
+override def coverageIgnored: Set[String]          = Set("#print-link")      // what every page inherits, by id
+override def coverageIgnoredSelectors: Set[String] = Set(".page-tools")      // or by selector, where it has no id
+override def trackedAttributes: Set[String]        = Set("data-journey-click")
 ```
 
-Ignoring a block ignores what it holds: disclaiming the layout's
-`#report-technical-issue` wrapper does not then hold the spec to the link
-inside it.
+Ignoring a block ignores what it holds, so disclaim only what is inherited:
+`#content` on `<main id="content">` would take the whole page out, and
+`assertEverything` would pass with nothing asserted. `HmrcServiceChecks` already
+leaves out play-frontend-hmrc's report-a-problem link.
 
 `assertEverythingExcept("#id")` covers the one-off case, and
 `unassertedContent(page)` reports without failing.
@@ -797,6 +825,38 @@ memberNameView must entryPointsAgree(
 The arguments are the ones `render` takes: every parameter including the
 implicit ones, flattened, in order.
 
+## A catalogue of pages
+
+Most of what a service's pages need is the same for each: to meet the standards
+in every language, blank and with errors, and to say the same thing in each
+language. `PageCatalogue`, in `twirl-spec-all`, makes that a table, with two
+tests per page:
+
+```scala
+import io.github.frikit.twirlspec.PageCatalogue
+
+class EveryPageSpec extends ViewSpecBase with PageCatalogue {
+  catalogue(
+    staticPage("Info")(inject[InfoView](draftId, index)),
+    formPage("Name", nameForm)(inject[NameView](_, draftId)),
+    formPage("Date of birth", dobForm, "part of a date" -> Map("value.day" -> "1"))(
+      inject[DateOfBirthView](_, draftId)
+    ),
+    staticPage("Not found")(inject[PageNotFoundView]()).exceptTranslation("i18n-same-links")
+  )
+}
+```
+
+A form page is rendered blank, with the errors of an empty submission, and with
+those of each submission named; a submission that gives no errors fails its test.
+Nothing is rendered until a test runs, so each state renders in the language
+under test. Every state runs in every language, and a failure reports each that
+went wrong, by state and language.
+
+It writes its tests in the `AnyWordSpec` style. In another style, mix in
+`PageCases`, which has the same `staticPage` and `formPage`, and call
+`checkStandards(page)` and `checkTranslation(page)` from tests of your own.
+
 ## Languages
 
 ```scala
@@ -808,10 +868,12 @@ implicit ones, flattened, in order.
 ```
 
 `inLanguage(lang) { … }` swaps the implicit `messages` and request for a block.
-A key that is not defined in that language is reported as missing, rather than
-silently compared against itself — which is what a plain
+A key that is not defined in that language is reported as missing, even when
+`conf/messages` defines it and Play would render that English on the page,
+rather than silently compared against itself — which is what a plain
 `doc.title mustBe messages("x.y")` does, passing happily while the page shows a
-raw key.
+raw key. `conf/messages` still counts for English, and for the first language
+`play.i18n.langs` names.
 
 The languages are the ones the service's `conf/application.conf` declares in
 `play.i18n.langs`. A language that is not among them fails the spec rather than
@@ -841,6 +903,7 @@ whichever languages the application is configured for are the ones compared.
 | `i18n-same-ids` | every language renders the same elements |
 | `i18n-same-links` | every language links to the same places |
 | `i18n-same-controls` | every language collects the same fields |
+| `i18n-same-submissions` | every language offers the same choices and submits to the same place *(warning)* |
 | `i18n-same-headings` | every language has the same heading structure |
 | `i18n-nothing-lost` | no text present in the base language goes missing |
 | `i18n-actually-translated` | the page is translated, not copied *(warning)* |
@@ -909,6 +972,23 @@ form POST /register/name
 Every check runs, so one failing run shows every problem rather than one per
 re-run. The outline underneath is the page's skeleton — worth printing on its
 own while building a view, and stable enough to commit as a structural snapshot.
+
+## Seeing what the library did
+
+The library traces its main steps at `DEBUG` through Play's logger, under the
+name `io.github.frikit.twirlspec`, so the logback configuration a service's
+tests already use governs it: the application built and the settings it was
+built with, each page rendered, each check and the rules it failed, and each
+coverage and language comparison. The message-file checks, `entryPointsAgree`
+and the template scan write nothing. One line in `logback-test.xml` turns it
+on:
+
+```xml
+<logger name="io.github.frikit.twirlspec" level="DEBUG"/>
+```
+
+Nothing is written at any other level, so a service whose test logging sits
+above `DEBUG`, as test configurations usually do, hears nothing.
 
 ## Speed
 

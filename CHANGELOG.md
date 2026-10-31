@@ -10,6 +10,234 @@ release, and each one has a GitHub Release whose notes are its section here. Eve
 recorded in full; earlier lines are kept to one entry each, so the file stays
 readable.
 
+## [2.4.0] - 2026-10-31
+
+Verdicts change in this release, so it is a minor version. `assertEverything`
+can fail where it passed before, because it no longer counts what an expectation
+merely looked through as asserted. A Welsh assertion can fail where it passed
+before, because a message defined only in English no longer satisfies it, and
+`translateConsistently` can fail on a page it passed, because it now reads text
+that has no id.
+
+### Rules
+
+- `i18n-same-submissions`, new, as a warning: every language offers the same
+  choices, by what they submit rather than their labels or their order, and each
+  form submits to the same place. A service that loads a separate Welsh list of
+  countries can drop one from it without any other check noticing.
+- `messages.malformed`, new, as a warning: a message MessageFormat cannot parse, such
+  as `Hello {0` or `Hello {name}`, throws when it is shown, however the rest of the
+  checks read it.
+- `button-has-name`, new, as a warning: a button that does not submit has an
+  accessible name, as `submit-has-name` asks of one that does. An icon-only button
+  with no label is called nothing at all.
+- `iframe-has-name`, new, as a warning: a frame has an accessible name, for WCAG
+  4.1.2. A frame the markup hides, such as a tag manager's, is left alone, and what
+  is inside an `<iframe>` no longer counts as its name.
+- `error-in-summary`, `error-summary-has-inline` and `error-summary-wording`, new,
+  as warnings: an inline error has an entry in the error summary, an entry has an
+  inline error beside its field, and the two read the same, as the GOV.UK Design
+  System asks.
+- `skip-link-target`, new, as a warning: the skip link lands on an element. On a
+  page whose main content has another id, it silently does nothing.
+- `link-names-distinct`, new, as a warning: links called the same go to the same
+  place. It goes by the name announced, so a summary list's "Change" links pass with
+  their hidden context, and fail without it.
+
+### Added
+
+- The library traces what it does at `DEBUG` through Play's logger, under
+  `io.github.frikit.twirlspec`: the application it builds and the settings it
+  builds it with, each page rendered, each check and the rules it failed, and
+  each coverage and language comparison. A service turns it on with one
+  logger line in `logback-test.xml`; nothing is written at any other level.
+- `PageCatalogue`, in `twirl-spec-all`: a table of a service's pages, with two tests
+  per page, the standards in every language and the comparison across them, over
+  each of its states. `staticPage` has one state; `formPage` is blank, with the
+  errors of an empty submission, and with those of each submission named, and fails
+  on one that gives no errors. A page can be excused from rules it names. Every state
+  runs in every language, and a failure reports each that went wrong. `PageCases`
+  offers the same pages and checks to any other test style.
+- `HmrcServiceChecks`: `GovukServiceChecks` with what an HMRC service would
+  otherwise write on its spec base. The report-a-problem link every page inherits
+  is left out of coverage in whichever language it reads, and "HMRC" may read the
+  same in every language.
+- `coverageIgnoredSelectors` leaves out a block by CSS selector, with what it
+  holds, for one with no id, and `ContentCoverage.unassertedOutside` beside
+  `unasserted`.
+- `Path.of("app/views") must haveBalancedTemplates` checks every template under a
+  directory, names each problem by its file and line, and fails on a directory
+  with no templates. `TagBalance.templatesUnder` lists them.
+
+### Changed
+
+- Arguments straight after `inject[MyView]` apply the view, where they used to bind
+  to `inject`'s own `ClassTag` and fail to compile. `inject[MyView].apply(...)`
+  still works and compiled code is unaffected. The one source change is passing a
+  `ClassTag` explicitly, which now needs `using`.
+
+### Fixed
+
+- `role(...)` and `page.byRole` find what HTML-AAM says, as the README claimed:
+  `complementary`, `rowheader`, `searchbox`, `spinbutton`, `slider`, `listbox`,
+  `option`, `rowgroup`, `region`, `dialog`, `progressbar`, `meter`, `status`, `term`,
+  `definition` and `figure`, which matched nothing. `role("textbox")` no longer finds
+  a search input, `role("columnheader")` a row's `<th>`, or `role("combobox")` a
+  `<select>` showing several rows. `banner`, `contentinfo` and `complementary` go by
+  where the element sits, so a `<header>` in an article is no banner.
+- `landmarks-are-distinguishable` no longer counts an unnamed `<aside>` in an article or
+  a section as a landmark, so two of them there pass, and treats an element with a
+  sectioning role as it does the tag, so a `<header>` in `<div role="main">` is not a
+  second banner. A landmark's name goes by `aria-labelledby` first, as everywhere else,
+  so two with different `aria-label`s and one `aria-labelledby` target can now fail.
+- `aria-required-attr` asks a `meter` for `aria-valuenow`, and a `separator` for it
+  when it can take focus. `aria-attr-value-is-allowed` fails `aria-checked="mixed"` on
+  `switch`, `radio` and `menuitemradio`, which read it as false.
+- `textArea(...).withValue` compares what the textarea holds, as `formValues` does. It
+  squashed the page's side only, so `withValue("a\nb")` failed on a textarea holding
+  those two lines, and `withValue("a b")` passed.
+- `basedOn` fails when no page is in the language it names. It measured against the
+  first page in silence, and took that for a pass.
+- The page outline leaves a CSRF token out of a form's action, as it differs on every
+  render and the outline is meant to be stable enough to commit.
+- The release plan reads only `vX.Y.Z` tags in the branch's own history. A `v9.0.0` on
+  another branch was taken for the last release, which could skip a release or jump a
+  version, and a `v2.4.0-rc1` aborted the plan.
+- `heading` fails on a page with more than one `<h1>`, as its documentation said. Two
+  headings read as one, so `<h1>A</h1><h1>B</h1>` passed `headingText("A B")`.
+- Words in a `hidden` element no longer name what they sit in, as words under
+  `aria-hidden` already did, so `<a href="/next"><span hidden>Continue</span></a>` now
+  fails `link-has-name`.
+- `grouped-choices` reads every member of a group. It read only the first, so a
+  fieldset that closed before the second radio passed. What the group needs is a
+  fieldset in common with an accessible name, so an empty legend no longer counts, an
+  `aria-labelledby` on the fieldset does, and two forms can each have a group of one
+  name.
+- A fieldset is named by ARIA and then its own legend. It could borrow the legend of
+  one nested in it, or fall back on all the text it holds.
+- `label-for-resolves` fails a label pointing at what no label can name, such as a
+  `<div>`, which clicking the label does nothing for. A custom element is left alone,
+  as a script can make it labelable.
+- `contentText`, `noContent`, `page.text` and `page.contains` read the page's body. They
+  read the `<title>` too, so `contentText` could pass on words only in the tab.
+  `no-scala-leakage` still reads the title.
+- `no-scala-leakage` reports an object with no `toString`, a lambda, and a case class
+  holding `None` in the middle.
+- `dateInput(...).withParts()` with no parts fails, where it threw
+  `NoSuchElementException`.
+- The adopting guide's spec base ignored `#report-technical-issue` and
+  `#hmrc-timeout`, which play-frontend-hmrc does not render, so a base copied from
+  it left out nothing. It now mixes in `HmrcServiceChecks`. Other guides had drifted
+  from the code too: which expectations take a regular expression, what `signOutLink`
+  and `phaseBanner` check, and when two specs share an application.
+- `assertEverything` credits what an assertion found, not what it looked
+  through. One `link(...)` counted every link on the page as asserted, and one
+  `role(...).named(...)` every element with the role; `paragraph`, `tableRow`,
+  `formPostsTo`, `hiddenInput`, `appearsBefore`, `caption`, the component text
+  expectations and the caption read by `heading` did the same on a smaller scale.
+  Each now counts only the elements it matched, and `link`, `formPostsTo` and
+  `appearsBefore` count nothing when they fail.
+- A link's identity for coverage is its words and where it goes, so of two links
+  reading "Change" and going to different places, asserting one no longer covers
+  the other. The report names the destination, and `coverageIgnored` still takes
+  `link "Change"` for every link with those words.
+- `trackedAttributes` works beyond the default: an attribute it adds could never
+  be covered, because what an assertion touched was recorded with the default
+  list.
+- `summaryRow`, `summaryList`, `dateInput`, `subheading`, `headingAtLevel`,
+  `fieldError`, `errorSummary`, `formValues`, `tableRow`, `legendIs` and
+  `describedAs` now count as asserting what they check: the row, its key and any
+  value or action named; the date input's container; the heading; the inline
+  error; the summary links they name and where those go; the controls behind a
+  submitted value; a row's cells; the legend; the elements describing a control.
+  `assertEverything` reported all of these as unasserted.
+- `paragraph`, `caption`, `warning`, `insetText`, `notificationBanner`,
+  `panelTitle`, `panelBody` and `detailsSummary` find the words within one
+  element. They searched every match's text run together, so words spanning two
+  of them passed.
+- `headingAtLevel` honours `matching(...)` and `anyText`, which it compared as
+  literal words.
+- A message key resolves in a language only when that language defines it. Play's
+  `isDefinedAt` also answers from the default files, so a key only in
+  `conf/messages` satisfied a Welsh assertion on a page showing English, against
+  what the README promised. The default files still count for English, in any
+  region, and for the first language `play.i18n.langs` names.
+- `i18n-nothing-lost` and `i18n-actually-translated` read text with no id, and the
+  whole of a block of text with one, such as a paragraph or a heading. They compared
+  only what sat directly in an element with an id, which on most pages is hardly any
+  of the content: a Welsh page left entirely in English, or with a paragraph emptied,
+  reported nothing. An id on a wrapper such as a `<section>` still means what sits
+  directly in it, so `i18n-nothing-lost` can miss text lost from a plain `<div>`
+  inside one. `i18n-actually-translated` also reads the title, and leaves out what
+  reads as data.
+- `i18n-same-links` notices two links with ids swapping their destinations. It
+  compared only the set of places, which is unchanged by a swap.
+- Warnings follow one policy everywhere. `translateConsistently` and the
+  message-file matchers ignored `failOnWarnings` and dropped their warnings on a
+  passing run, so `i18n-actually-translated` could not be seen at all unless
+  another rule failed. A spec with `failOnWarnings` on can now fail where it
+  passed.
+- With `TwirlSpecDsl` alone, the route for a spec base with its own application,
+  a passing check's warnings go to standard output. They went nowhere, against
+  what the docs said. `alertHook` routes them to ScalaTest's alert in one line.
+- A failure caused only by warnings says so, rather than "page failed 0 checks".
+- A page with two forms no longer fails. `unambiguous-field-names` read the whole
+  document as one submission, so two forms each with a CSRF token failed it, and
+  `landmarks-are-distinguishable` counted every form as a landmark, which a form
+  is only once it has a name. The first now goes by the form each control belongs
+  to, leaves out what submits nothing, and accepts a name ending in `[]`.
+- An id or a name is compared exactly. Jsoup's attribute selector ignores case, so
+  `element("name")` passed on `id="Name"` and a reference to `Hint` resolved to
+  `hint`, and it throws on a value with a quote in it, so such an id ended a rule
+  with a `SelectorParseException` rather than a verdict.
+- `no-raw-message-keys` reads everything in the main content rather than a list of
+  elements, which left out buttons, hints, inset text, panels, details and options,
+  and also the title, `aria-label`, `alt`, `placeholder` and a button's value. A
+  key may have a hyphen. It also stops failing what is not a key: a version such as
+  `v1.2`, and a plain pair of words such as `john.smith`, which could be someone's
+  answer, unless the service has keys beginning with the first of them.
+- `no-aria-hidden-focusable` leaves alone what takes no focus: a disabled control,
+  a hidden input, and anything inside `hidden` or `inert`.
+- `labelled-controls` reads an image button's `alt` as its name, and `role("button")`
+  finds one.
+- `input-purpose-autocomplete` does not ask it of a control it does not apply to,
+  such as a radio, and reads `tel` and `phone` as whole words, so `hotelName` is not
+  a telephone.
+- `autocomplete-is-valid` follows the autofill grammar. A valid
+  `section-person1 given-name` failed it, and an invalid `given-name family-name`
+  passed.
+- `html-lang` and `i18n-lang-attribute` accept any region of the page's language,
+  in any case, and do not take `english` for `en`.
+- `errorSummary(field -> key)` accepts a link to any control of the field, which is
+  where a GOV.UK radio group's and date input's links go, to the first radio and
+  the day. It needed a link to `#field`, so it could not pass on those. It also
+  holds the entries to the order the summary lists them in, as it always said it
+  did, so a spec naming them in another order can fail where it passed. Each entry
+  now answers for one link, so a summary listing one field twice has a link to spare.
+- `fieldError(field, key)` follows the control or its fieldset to the error they
+  announce, where the error's id is not `field-error`.
+- `timeoutDialog` finds the `meta[name=hmrc-timeout-dialog]` play-frontend-hmrc
+  renders. It looked only for a `data-module` no current page has, so it failed on
+  every HMRC page.
+- `new-tab-is-announced` knows the Welsh "yn agor tab neu ffenestr newydd" and "yn
+  agor ffenestr neu dab newydd", and reads `aria-label` for all of its phrases.
+- `tags-are-balanced` and `TagBalance.check` do not read a `>` inside a quoted
+  attribute value as the end of the tag, so an attribute holding markup, such as
+  `srcdoc`, no longer reports stray tags.
+- `TagBalance.checkTemplate` is not thrown by an apostrophe in a named fragment,
+  which hid every problem from there to the end of the template.
+- `known-elements` and `known-attributes` know more of SVG, including `desc`, with
+  which a graphic describes itself, and `pathLength`.
+- `aria-required-parent` and `aria-required-children` read `aria-owns`, so a child
+  owned from elsewhere in the document no longer fails both.
+- `aria-required-attr` does not ask an element for state its HTML already gives it,
+  such as `aria-level` of `<h2 role="heading">`.
+- `entryPointsAgree` handles a template with more than 22 parameters in one list,
+  whose `f` is a `FunctionXXL`. It reported that `f` produced different HTML.
+- `haveNoDuplicateKeys` reports a file that is not there, or being given none,
+  rather than passing on a wrong path. It no longer reads a line of a value carrying
+  on past a backslash as a key of its own.
+
 ## [2.3.0] - 2026-10-14
 
 Two verdicts change in this release, so it is a minor version.
@@ -330,7 +558,8 @@ the Twirl entry points in `twirl-spec-quality`; language parity in
 them in `twirl-spec-all`. The renames a service built against a 0.x snapshot
 would meet are listed in [the adoption guide](docs/adopting.md).
 
-[Unreleased]: https://github.com/frikit/twirl-spec/compare/v2.3.0...HEAD
+[Unreleased]: https://github.com/frikit/twirl-spec/compare/v2.4.0...HEAD
+[2.4.0]: https://github.com/frikit/twirl-spec/compare/v2.3.0...v2.4.0
 [2.3.0]: https://github.com/frikit/twirl-spec/compare/v2.2.0...v2.3.0
 [2.2.0]: https://github.com/frikit/twirl-spec/compare/v2.1.0...v2.2.0
 [2.1.0]: https://github.com/frikit/twirl-spec/compare/v2.0.1...v2.1.0

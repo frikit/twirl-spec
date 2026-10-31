@@ -64,13 +64,18 @@ trait FormExpectations {
   /** A hidden input with this name carries this value. */
   def hiddenInput(name: String, value: String): Expectation =
     Expectation(s"hiddenInput($name)") { page =>
-      val sel = page.css(s"""input[type=hidden][name="$name"]""")
+      val sel = page
+        .withRecordingPaused(page.css("input[type=hidden]"))
+        .filter(e => name.nonEmpty && e.attr("name") == name)
       if (sel.isEmpty)
         Seq(Violation.missing(s"hiddenInput($name)", sel.selector))
       else {
+        // Only the first is read, so only that one is asserted.
         val actual = sel.attr("value").getOrElse("")
-        if (actual == value) Nil
-        else Seq(Violation.mismatch(s"hiddenInput($name)", value, actual))
+        if (actual == value) {
+          page.record(sel.elements.take(1))
+          Nil
+        } else Seq(Violation.mismatch(s"hiddenInput($name)", value, actual))
       }
     }
 
@@ -112,17 +117,21 @@ trait FormExpectations {
 
   private def formTo(method: String, url: String): Expectation =
     Expectation(s"form $method $url") { page =>
-      if (page.forms.isEmpty) Seq(Violation.missing("form", "form"))
+      // Only the first form is asked about, so only that one is asserted.
+      val forms = page.withRecordingPaused(page.forms)
+      if (forms.isEmpty) Seq(Violation.missing("form", "form"))
       else {
-        val actualUrl = page.formAction.getOrElse("")
-        val actualMethod = page.formMethod.getOrElse("GET")
+        val actualUrl = forms.attr("action").getOrElse("")
+        val actualMethod = forms.attr("method").fold("GET")(_.toUpperCase)
         val urlIssue =
           if (actualUrl == url) Nil
           else Seq(Violation.mismatch("form action", url, actualUrl))
         val methodIssue =
           if (actualMethod.equalsIgnoreCase(method)) Nil
           else Seq(Violation.mismatch("form method", method, actualMethod))
-        urlIssue ++ methodIssue
+        val issues = urlIssue ++ methodIssue
+        if (issues.isEmpty) page.record(forms.elements.take(1))
+        issues
       }
     }
 
@@ -132,11 +141,15 @@ trait FormExpectations {
     */
   def formValues(expected: (String, String)*): Expectation =
     Expectation("formValues") { page =>
-      val submitted = page.formSubmission
+      val submitted = page.submittedControls
       expected.toSeq.flatMap { case (field, want) =>
-        submitted.collect { case (`field`, value) => value } match {
-          case values if values.exists(Text.same(_, want)) => Nil
-          case Nil                                         =>
+        submitted.collect { case (_, `field`, value) => value } match {
+          case values if values.exists(Text.same(_, want)) =>
+            page.record(submitted.collect {
+              case (e, `field`, value) if Text.same(value, want) => e
+            })
+            Nil
+          case Nil =>
             Seq(
               Violation(
                 s"formValues($field)",
@@ -144,7 +157,7 @@ trait FormExpectations {
                 expected = Some(want),
                 actual = Some(
                   if (submitted.isEmpty) "(no named controls)"
-                  else submitted.map(_._1).distinct.sorted.mkString(", ")
+                  else submitted.map(_._2).distinct.sorted.mkString(", ")
                 )
               )
             )
@@ -201,13 +214,15 @@ trait FormExpectations {
       ) match {
         case Left(v)  => Seq(v)
         case Right(e) =>
-          Matching.compare(
+          val issues = Matching.compare(
             s"describedAs($nameOrId)",
             Expected.Key(key, args.toSeq),
             page.accessibleDescription(e),
             page,
             Matching.Exact
           )
+          if (issues.isEmpty) page.record(page.describedBy(e))
+          issues
       }
     }
 
@@ -304,7 +319,7 @@ trait FormExpectations {
       Expected.Key(key, args.toSeq).resolve(page) match {
         case Left(v)      => Seq(v.copy(rule = s"fieldError($field)"))
         case Right(value) =>
-          page.fieldErrors.get(field) match {
+          page.errorOf(field) match {
             case None =>
               Seq(
                 Violation(
@@ -319,12 +334,16 @@ trait FormExpectations {
                       s"errors on: ${page.fieldErrors.keys.toList.sorted.mkString(", ")}"
                   )
                 ).withHint(
-                  s"""the govuk error message element should have id="$field-error""""
+                  s"""the govuk error message element should have id="$field-error", or the control or its fieldset should name it in aria-describedby"""
                 )
               )
-            case Some(found) =>
-              if (Text.same(found, value)) Nil
-              else Seq(Violation.mismatch(s"fieldError($field)", value, found))
+            case Some(error) =>
+              val found = page.errorWords(error)
+              if (Text.same(found, value)) {
+                page.record(List(error))
+                Nil
+              } else
+                Seq(Violation.mismatch(s"fieldError($field)", value, found))
           }
       }
     }
@@ -394,7 +413,7 @@ final case class TextInputExpectation(
 
         val valueIssues = value.toSeq.flatMap { expectedValue =>
           val actual =
-            if (tag == "textarea") Text.normalise(element.text())
+            if (tag == "textarea") page.textareaValue(element)
             else element.attr("value")
           if (actual == expectedValue) Nil
           else
@@ -666,7 +685,9 @@ final case class DateInputExpectation(
 
     val missingParts = resolved.collect { case (part, None) => part }
 
-    if (missingParts.nonEmpty)
+    if (parts.isEmpty)
+      Seq(Violation(rule, "a date input with no parts asserts nothing"))
+    else if (missingParts.nonEmpty)
       Seq(
         Violation(
           rule = rule,
@@ -685,6 +706,8 @@ final case class DateInputExpectation(
         )
       )
     else {
+      // The container the fields sit in is part of what this asserts.
+      page.byId(name)
       val partIds = resolved.collect { case (part, Some(id)) => (part, id) }
       val labelIssues = partIds.flatMap { case (part, id) =>
         FormChecks.labelIssues(
@@ -695,9 +718,7 @@ final case class DateInputExpectation(
           labelRequired = true
         )
       }
-      val first = page.css(
-        io.github.frikit.twirlspec.page.Page.idSelector(partIds.head._2)
-      )(0)
+      val first = page.byId(partIds.head._2)(0)
       val legendIssues =
         legend.toSeq.flatMap(FormChecks.legendIssues(page, rule, first, _))
       val hintIssues = hint.toSeq.flatMap(
@@ -719,11 +740,7 @@ object DateInputExpectation {
       part: String
   ): Option[String] =
     List(s"$name.$part", s"$name-$part", part)
-      .find(candidate =>
-        page
-          .css(io.github.frikit.twirlspec.page.Page.idSelector(candidate))
-          .nonEmpty
-      )
+      .find(candidate => page.byId(candidate).nonEmpty)
 
 }
 
@@ -746,70 +763,128 @@ final case class ErrorSummaryExpectation(
       )
     else {
       val actual = page.errorSummaryLinks
+      val fields = entries.map(_._1)
+      val answering = ErrorSummaryExpectation.answering(
+        page,
+        fields,
+        actual.map(_._1)
+      )
 
-      val entryIssues = entries.flatMap { case (field, expected) =>
-        expected.resolve(page) match {
-          case Left(v)      => Seq(v.copy(rule = s"errorSummary($field)"))
-          case Right(value) =>
-            actual.find(_._1 == field) match {
-              case None =>
-                Seq(
-                  Violation(
-                    rule = s"errorSummary($field)",
-                    message =
-                      "the error summary has no entry linking to this field",
-                    expected = Some(s"""<a href="#$field">$value</a>"""),
-                    actual = Some(
-                      if (actual.isEmpty) "(summary has no links)"
-                      else
-                        actual
-                          .map { case (t, x) => s"#$t -> $x" }
-                          .mkString(" | ")
+      val entryIssues =
+        entries.zip(answering).flatMap { case ((field, expected), link) =>
+          expected.resolve(page) match {
+            case Left(v)      => Seq(v.copy(rule = s"errorSummary($field)"))
+            case Right(value) =>
+              link.map(actual) match {
+                case None =>
+                  Seq(
+                    Violation(
+                      rule = s"errorSummary($field)",
+                      message =
+                        "the error summary has no entry linking to this field",
+                      expected = Some(s"""<a href="#$field">$value</a>"""),
+                      actual = Some(
+                        if (actual.isEmpty) "(summary has no links)"
+                        else
+                          actual
+                            .map { case (t, x) => s"#$t -> $x" }
+                            .mkString(" | ")
+                      )
                     )
                   )
-                )
-              case Some((_, text)) if !Text.same(text, value) =>
-                Seq(Violation.mismatch(s"errorSummary($field)", value, text))
-              case _ => Nil
-            }
-        }
-      }
-
-      val unexpected =
-        if (!exhaustive) Nil
-        else {
-          val expectedFields = entries.map(_._1).toSet
-          actual.map(_._1).filterNot(expectedFields.contains) match {
-            case Nil     => Nil
-            case surplus =>
-              Seq(
-                Violation(
-                  rule = "errorSummary",
-                  message =
-                    s"the error summary has entries that were not expected: ${surplus.mkString(", ")}",
-                  expected = Some(entries.map(_._1).mkString(", ")),
-                  actual = Some(actual.map(_._1).mkString(", "))
-                )
-              )
+                case Some((_, text)) if !Text.same(text, value) =>
+                  Seq(Violation.mismatch(s"errorSummary($field)", value, text))
+                case Some((target, _)) =>
+                  // What this asserted: the entry, and where it goes.
+                  page.record(link.toList.map(page.errorSummaryLinkElements))
+                  page.byId(target)
+                  Nil
+              }
           }
+        }
+
+      val used = answering.flatten
+      val surplus =
+        actual.indices.filterNot(used.contains).map(actual(_)._1).toList
+      val unexpected =
+        if (!exhaustive || surplus.isEmpty) Nil
+        else
+          Seq(
+            Violation(
+              rule = "errorSummary",
+              message =
+                s"the error summary has entries that were not expected: ${surplus.mkString(", ")}",
+              expected = Some(fields.mkString(", ")),
+              actual = Some(actual.map(_._1).mkString(", "))
+            )
+          )
+
+      val outOfOrder =
+        if (!exhaustive || used == used.sorted) Nil
+        else {
+          val reached = fields
+            .zip(answering)
+            .collect { case (field, Some(i)) => (i, field) }
+            .sortBy(_._1)
+            .map(_._2)
+          Seq(
+            Violation(
+              rule = "errorSummary",
+              message = "the error summary lists these in a different order",
+              expected = Some(fields.filter(reached.contains).mkString(", ")),
+              actual = Some(reached.mkString(", "))
+            )
+          )
         }
 
       // Every summary link must land somewhere.
       val danglingLinks =
-        page.errorSummaryDanglingLinks.map { case (target, text) =>
-          Violation(
-            rule = "errorSummary link target",
-            message =
-              s"summary entry links to #$target but no element on the page has that id",
-            expected = Some(s"an element with id `$target`"),
-            actual = Some(text)
-          ).withHint(
-            "WCAG 2.4.3 — the link must move focus to the field it describes"
-          )
+        page.withRecordingPaused(page.errorSummaryDanglingLinks).map {
+          case (target, text) =>
+            Violation(
+              rule = "errorSummary link target",
+              message =
+                s"summary entry links to #$target but no element on the page has that id",
+              expected = Some(s"an element with id `$target`"),
+              actual = Some(text)
+            ).withHint(
+              "WCAG 2.4.3 — the link must move focus to the field it describes"
+            )
         }
 
-      entryIssues ++ unexpected ++ danglingLinks
+      entryIssues ++ unexpected ++ outOfOrder ++ danglingLinks
     }
+
+}
+
+/** How an error summary's links are matched to what a spec expects of them. */
+object ErrorSummaryExpectation {
+
+  /** Which link answers for each field, by its position, each link for one
+    * field at most: first a link to the field itself, so a control of `a` does
+    * not take the place of `#a`, and then a link to one of its controls.
+    */
+  private[twirlspec] def answering(
+      page: Page,
+      fields: List[String],
+      targets: List[String]
+  ): List[Option[Int]] = {
+    def assign(
+        sofar: List[Option[Int]],
+        lands: (String, String) => Boolean
+    ): List[Option[Int]] =
+      fields
+        .zip(sofar)
+        .foldLeft((List.empty[Option[Int]], sofar.flatten.toSet)) {
+          case ((out, used), (_, taken @ Some(_))) => (out :+ taken, used)
+          case ((out, used), (field, _))           =>
+            val hit =
+              targets.indices.find(i => !used(i) && lands(targets(i), field))
+            (out :+ hit, used ++ hit)
+        }
+        ._1
+    assign(assign(fields.map(_ => None), _ == _), page.landsOn)
+  }
 
 }
 
@@ -876,10 +951,7 @@ private[twirlspec] object FormChecks {
 
       val candidates =
         if (referrers.nonEmpty) referrers
-        else
-          page
-            .css(io.github.frikit.twirlspec.page.Page.idSelector(fieldId))
-            .elements
+        else page.byId(fieldId).elements
 
       val describedByValues = candidates.flatMap { element =>
         val own = element.attr("aria-describedby")
@@ -931,14 +1003,17 @@ private[twirlspec] object FormChecks {
         val legend = fieldset.select("legend").asScala.toList
         if (legend.isEmpty)
           Seq(Violation.missing(s"$rule legend", "fieldset > legend"))
-        else
-          Matching.compare(
+        else {
+          val issues = Matching.compare(
             s"$rule legend",
             expected,
             legend.head.text(),
             page,
             Matching.Exact
           )
+          if (issues.isEmpty) page.record(legend.take(1))
+          issues
+        }
     }
 
   def enclosingFieldsetHintId(member: Element): Option[String] =

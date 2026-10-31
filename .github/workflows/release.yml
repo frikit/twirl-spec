@@ -64,12 +64,12 @@ jobs:
           GPG_SIGNING_KEY: ${{ secrets.GPG_SIGNING_KEY }}
           GPG_SIGNING_PASSWORD: ${{ secrets.GPG_SIGNING_PASSWORD }}
           SKIP: ${{ steps.plan.outputs.skip }}
+          TAGGED: ${{ steps.plan.outputs.tagged }}
         run: |
           set -euo pipefail
-          tagged="$(git for-each-ref --count=1 --points-at HEAD --sort=-version:refname --format='%(refname:short)' 'refs/tags/v*')"
-          echo "tagged=$tagged" >> "$GITHUB_OUTPUT"
-          if [ -n "$tagged" ]; then
-            echo "::notice::This commit is already released as $tagged; its GitHub Release is made sure of, and nothing is published."
+          echo "tagged=$TAGGED" >> "$GITHUB_OUTPUT"
+          if [ -n "$TAGGED" ]; then
+            echo "::notice::This commit is already released as $TAGGED; its GitHub Release is made sure of, and nothing is published."
             echo "release=false" >> "$GITHUB_OUTPUT"
           elif [ "$GITHUB_EVENT_NAME" = "push" ] && [ "$SKIP" = "true" ]; then
             echo "::notice::Every commit since the last release says [skip release]; verified only."

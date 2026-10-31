@@ -97,7 +97,7 @@ class MessagesEdgeCasesSpec
         MessagesIntegrity.Config(requireTranslations = false)
       )(api)
       result.matches mustBe false
-      result.failureMessage must include("failed 2 check(s)")
+      result.failureMessage must include("failed 2 checks")
       result.failureMessage must include("`k` has an empty value")
     }
   }

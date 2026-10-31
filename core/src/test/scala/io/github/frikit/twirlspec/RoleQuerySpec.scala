@@ -70,6 +70,67 @@ class RoleQuerySpec extends AnyWordSpec with Matchers with TwirlSpec {
       page.byRole("img").size mustBe 1
     }
 
+    "resolve each role HTML-AAM gives an element, and no other" in {
+      def inTable(cell: String) = s"<table><tr>$cell</tr></table>"
+      Seq(
+        "complementary" -> "<aside>x</aside>",
+        "rowheader" -> inTable("""<th scope="row">x</th>"""),
+        "rowheader" -> inTable("""<th scope="rowgroup">x</th>"""),
+        "columnheader" -> inTable("""<th scope="col">x</th>"""),
+        "columnheader" -> inTable("<th>x</th>"),
+        "searchbox" -> """<input type="search">""",
+        "spinbutton" -> """<input type="number">""",
+        "slider" -> """<input type="range">""",
+        "combobox" -> "<select></select>",
+        "combobox" -> """<select size="1"></select>""",
+        "listbox" -> "<select multiple></select>",
+        "listbox" -> """<select size="4"></select>""",
+        "listbox" -> """<select size="10"></select>""",
+        "complementary" -> "<main><aside>x</aside></main>",
+        "complementary" -> """<article><aside aria-label="x">y</aside></article>""",
+        "complementary" -> """<section><aside title="x">y</aside></section>""",
+        "banner" -> "<header>x</header>",
+        "contentinfo" -> "<footer>x</footer>",
+        "region" -> """<section aria-label="x"></section>""",
+        "region" -> """<section title="x"></section>""",
+        "region" -> """<section aria-labelledby="h"><h2 id="h">x</h2></section>""",
+        "dialog" -> "<dialog></dialog>",
+        "progressbar" -> "<progress></progress>",
+        "meter" -> "<meter></meter>",
+        "status" -> "<output></output>",
+        "term" -> "<dfn>x</dfn>",
+        "definition" -> "<dl><dd>x</dd></dl>",
+        "figure" -> "<figure></figure>"
+      ).foreach { case (role, markup) =>
+        withClue(s"$role in $markup: ") {
+          Page.fromString(markup, english, messages).byRole(role).size mustBe 1
+        }
+      }
+      Seq(
+        "textbox" -> """<input type="search">""",
+        "columnheader" -> inTable("""<th scope="row">x</th>"""),
+        "rowheader" -> inTable("<th>x</th>"),
+        "combobox" -> "<select multiple></select>",
+        "combobox" -> """<select size="4"></select>""",
+        "listbox" -> """<select size="1"></select>""",
+        "region" -> "<section></section>",
+        "region" -> """<section aria-label=" "></section>""",
+        "complementary" -> "<article><aside>x</aside></article>",
+        "complementary" -> "<section><aside>x</aside></section>",
+        "banner" -> "<article><header>x</header></article>",
+        "banner" -> "<main><header>x</header></main>",
+        "banner" -> """<div role="main"><header>x</header></div>""",
+        "contentinfo" -> """<div role="region"><footer>x</footer></div>""",
+        "complementary" -> """<div role="article"><aside>x</aside></div>""",
+        "contentinfo" -> "<section><footer>x</footer></section>"
+      ).foreach { case (role, markup) =>
+        withClue(s"$role in $markup: ") {
+          Page.fromString(markup, english, messages).byRole(role).isEmpty mustBe
+            true
+        }
+      }
+    }
+
     "treat an explicit role as overriding the implicit one" in {
       // <a role="button"> is a button, and is no longer a link.
       page.byRole("button", "Cancel").size mustBe 1

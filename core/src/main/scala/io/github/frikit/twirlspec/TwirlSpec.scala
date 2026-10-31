@@ -43,9 +43,9 @@ trait TwirlSpec extends TwirlSpecDsl with SuiteLifecycle {
   lazy val app: Application = SharedApplication(applicationConfig)
 
   /** An instance from the application's injector: `inject[MyView]` is how a
-    * spec gets the view it tests.
+    * spec gets the view it tests, and `inject[MyView](form, index)` applies it.
     */
-  def inject[A](implicit tag: ClassTag[A]): A = app.injector.instanceOf[A]
+  def inject[A](using tag: ClassTag[A]): A = app.injector.instanceOf[A]
 
   /** The application's `MessagesApi`, held as a stable value for the implicits
     * below.

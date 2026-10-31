@@ -39,11 +39,14 @@ object AccessibleName {
     */
   private val ValueNamedInputTypes = Set("button", "submit", "reset")
 
-  /** The controls whose content is their value rather than their name: the text
-    * inside a `<textarea>` and the options inside a `<select>` are not what the
-    * control is announced as.
+  /** The elements whose content is not their name: the text inside a
+    * `<textarea>` and the options inside a `<select>` are not what the control
+    * is announced as, what is inside an `<iframe>` is for a browser that cannot
+    * show frames, and a `<fieldset>` is named by its legend and not by all it
+    * holds.
     */
-  private val ContentIsNotTheName = Set("input", "select", "textarea")
+  private val ContentIsNotTheName =
+    Set("input", "select", "textarea", "iframe", "fieldset")
 
   /** The accessible name of an element in this document. */
   def of(document: Document, e: Element): String =
@@ -51,12 +54,13 @@ object AccessibleName {
       () => fromLabelledBy(document, e),
       () => e.attr("aria-label"),
       () => labelFor(document, e),
-      () => if (e.tagName() == "img") e.attr("alt") else "",
+      () => if (e.tagName() == "img" || isImageInput(e)) e.attr("alt") else "",
       () =>
         if (e.tagName() == "fieldset")
-          e.select("legend")
+          // Its own legend, and not one of a fieldset nested inside it.
+          e.children()
             .asScala
-            .headOption
+            .find(_.tagName() == "legend")
             .map(legend => announcedText(legend))
             .getOrElse("")
         else "",
@@ -84,6 +88,9 @@ object AccessibleName {
       .map(target => announcedText(target))
       .mkString(" ")
 
+  private def isImageInput(e: Element): Boolean =
+    e.tagName() == "input" && e.attr("type").equalsIgnoreCase("image")
+
   private def valueIsTheName(e: Element): Boolean =
     e.tagName() == "input" &&
       ValueNamedInputTypes.contains(e.attr("type").toLowerCase)
@@ -92,7 +99,7 @@ object AccessibleName {
     * it names nothing it sits inside: the arrow in
     * `<a>Next<span aria-hidden="true"> →</span></a>` is not part of the name.
     */
-  private val NotAnnounced = "[aria-hidden=true]"
+  private val NotAnnounced = "[aria-hidden=true], [hidden]"
 
   /** An image whose alt text is announced. A presentational image's alt is
     * ignored, so it names nothing either.

@@ -66,7 +66,7 @@ object AriaStandards extends RuleSet {
       "aria-attr-value-is-allowed",
       "an aria- attribute taking a fixed set of values carries one of them"
     ) { page =>
-      elementsWith(page, _ => true).flatMap { e =>
+      val anywhere = elementsWith(page, _ => true).flatMap { e =>
         AriaVocabulary.tokenValues.toSeq.sortBy(_._1).flatMap {
           case (attr, allowed) =>
             val value = e.attr(attr)
@@ -82,6 +82,17 @@ object AriaStandards extends RuleSet {
             else Nil
         }
       }
+      val onItsRole = rolesOn(page).collect {
+        case (e, role)
+            if AriaVocabulary.noMixedState.contains(role) &&
+              e.attr("aria-checked").trim.equalsIgnoreCase("mixed") =>
+          Violation(
+            "aria-attr-value-is-allowed",
+            s"""aria-checked="mixed" means nothing on role="$role", which reads it as false""",
+            actual = Some(e.attr("aria-checked"))
+          ).at(describe(e))
+      }
+      anywhere ++ onItsRole
     },
     Rule(
       "aria-role-is-real",
@@ -108,12 +119,16 @@ object AriaStandards extends RuleSet {
     Rule("aria-required-attr", "a role that depends on state declares it") {
       page =>
         rolesOn(page).flatMap { case (e, role) =>
-          AriaVocabulary.requiredAttributes
-            .getOrElse(role, Set.empty)
-            .toList
-            .sorted
+          val whenFocusable =
+            if (e.is(Focusable) && !(e.is(Control) && page.isDisabled(e)))
+              AriaVocabulary.requiredWhenFocusable.getOrElse(role, Set.empty)
+            else Set.empty[String]
+          (AriaVocabulary.requiredAttributes.getOrElse(role, Set.empty)
+            ++ whenFocusable).toList.sorted
             .collect {
-              case attr if !e.hasAttr(attr) =>
+              case attr
+                  if !e.hasAttr(attr) &&
+                    !NativeState.get(role).exists(e.is) =>
                 Violation(
                   "aria-required-attr",
                   s"""role="$role" needs $attr""",
@@ -130,7 +145,9 @@ object AriaStandards extends RuleSet {
     ) { page =>
       rolesOn(page).flatMap { case (e, role) =>
         AriaVocabulary.requiredParents.get(role).toSeq.flatMap { allowed =>
-          if (ancestorRoles(e).exists(allowed.contains)) Nil
+          val owners = ownersOf(page, e)
+          val context = owners.flatMap(roleOf) ++ owners.flatMap(ancestorRoles)
+          if ((ancestorRoles(e) ++ context).exists(allowed.contains)) Nil
           else
             Seq(
               Violation(
@@ -150,7 +167,11 @@ object AriaStandards extends RuleSet {
     ) { page =>
       rolesOn(page).flatMap { case (e, role) =>
         AriaVocabulary.requiredChildren.get(role).toSeq.flatMap { allowed =>
-          val found = e.getAllElements.asScala.filterNot(_ eq e).flatMap(roleOf)
+          val contained =
+            e.getAllElements.asScala.filterNot(_ eq e).flatMap(roleOf)
+          val owned =
+            ownedBy(e).flatMap(_.getAllElements.asScala).flatMap(roleOf)
+          val found = contained ++ owned
           if (found.exists(allowed.contains)) Nil
           else
             Seq(
@@ -234,12 +255,7 @@ object AriaStandards extends RuleSet {
     ) { page =>
       page.document.select("[autocomplete]").asScala.toSeq.flatMap { e =>
         val raw = e.attr("autocomplete").toLowerCase.trim
-        val tokens = raw.split("\\s+").filter(_.nonEmpty).toList
-        val body =
-          tokens.filterNot(AriaVocabulary.autocompleteModifiers.contains)
-        val ok = raw.isEmpty || body.nonEmpty && body
-          .forall(AriaVocabulary.autocompleteTokens.contains)
-        if (ok) Nil
+        if (raw.isEmpty || autocompleteIsValid(e, raw)) Nil
         else
           Seq(
             Violation(
@@ -375,7 +391,7 @@ object AriaStandards extends RuleSet {
         .sortBy(_._1)
         .flatMap { case (role, group) =>
           // A landmark is named by aria-label or aria-labelledby, never by what it contains.
-          val names = group.map { case (e, _) => landmarkName(page, e) }
+          val names = group.map { case (e, _) => landmarkName(e) }
           if (group.size > 1 && names.distinct.size < group.size)
             Seq(
               Violation(
@@ -394,17 +410,96 @@ object AriaStandards extends RuleSet {
     }
   )
 
-  private def landmarkName(page: Page, e: Element): String =
-    if (e.hasAttr("aria-label")) e.attr("aria-label").trim
-    else if (e.hasAttr("aria-labelledby"))
-      e.attr("aria-labelledby")
-        .split("\\s+")
-        .filter(_.nonEmpty)
-        .flatMap(id =>
-          Option(page.document.getElementById(id)).map(_.text().trim)
-        )
-        .mkString(" ")
-    else ""
+  /** The autofill grammar: `on` or `off` alone; or an optional section, an
+    * optional `shipping` or `billing`, one field, which a contact kind such as
+    * `home` may come before where the field is a way of contacting someone, and
+    * an optional `webauthn`, on an input or a textarea. A hidden input cannot
+    * say `on` or `off`, having no user to ask.
+    */
+  private def autocompleteIsValid(e: Element, raw: String): Boolean = {
+    val tokens = raw.split("\\s+").toList
+    val afterSection = tokens match {
+      case section :: rest if section.startsWith("section-") => rest
+      case all                                               => all
+    }
+    val afterAddress = afterSection match {
+      case ("shipping" | "billing") :: rest => rest
+      case all                              => all
+    }
+    def ends(rest: List[String]) =
+      rest.isEmpty || rest == List("webauthn") && e.is("input, textarea")
+    def isField(name: String) =
+      AriaVocabulary.autocompleteTokens(name) && name != "on" && name != "off"
+    afterAddress match {
+      case List("on" | "off") =>
+        tokens.size == 1 && !e.is("input[type=hidden]")
+      case kind :: field :: rest
+          if AriaVocabulary.autocompleteContactKinds(kind) =>
+        AriaVocabulary.isContactField(field) && ends(rest)
+      case field :: rest => isField(field) && ends(rest)
+      case Nil           => false
+    }
+  }
+
+  /** HTML that supplies a role's required state itself: a heading's level is in
+    * its tag, and a native checkbox has a checked state whatever its
+    * attributes.
+    */
+  private val NativeState = Map(
+    "heading" -> "h1, h2, h3, h4, h5, h6",
+    "checkbox" -> "input[type=checkbox]",
+    "switch" -> "input[type=checkbox]",
+    "radio" -> "input[type=radio]",
+    "option" -> "option",
+    "slider" -> "input[type=range]",
+    "meter" -> "meter",
+    "combobox" -> "select"
+  )
+
+  /** What can take focus, by a script if not by the tab key, unless disabled.
+    */
+  private val Focusable = "a[href], button, input, select, textarea, [tabindex]"
+
+  /** What disabling takes the focus from. */
+  private val Control = "button, input, select, textarea"
+
+  /** What `aria-owns` makes this element's own, wherever it sits in the
+    * document. Only the one step is followed, so a cycle cannot trap this.
+    */
+  private def ownedBy(e: Element): Seq[Element] =
+    e.attr("aria-owns")
+      .split("\\s+")
+      .filter(_.nonEmpty)
+      .toSeq
+      .flatMap(id => Option(e.ownerDocument().getElementById(id)))
+
+  /** The elements whose `aria-owns` names this one or anything it sits in,
+    * since what an owned element holds is owned too.
+    */
+  private def ownersOf(page: Page, e: Element): Seq[Element] = {
+    val ids = (e +: e.parents.asScala.toSeq).map(_.id()).filter(_.nonEmpty)
+    page.document
+      .select("[aria-owns]")
+      .asScala
+      .toSeq
+      .filter(_.attr("aria-owns").split("\\s+").exists(ids.contains))
+  }
+
+  /** What a landmark is called, from the first of these that says anything. */
+  private def landmarkName(e: Element): String = {
+    val labelledBy = e
+      .attr("aria-labelledby")
+      .split("\\s+")
+      .filter(_.nonEmpty)
+      .flatMap(id =>
+        Option(e.ownerDocument().getElementById(id)).map(_.text().trim)
+      )
+      .mkString(" ")
+      .trim
+    Seq(labelledBy, e.attr("aria-label").trim, e.attr("title").trim)
+      .find(_.nonEmpty)
+      .getOrElse("")
+  }
 
   private def elementsWith(page: Page, p: Element => Boolean): Seq[Element] =
     page.document.getAllElements.asScala.toSeq.filter(p)
@@ -426,13 +521,24 @@ object AriaStandards extends RuleSet {
   /** A header or footer is the page's own only when nothing sectioning encloses
     * it.
     */
-  private val sectioning = "article, aside, main, nav, section"
+  private val sectioning =
+    "article, aside, main, nav, section, [role=article], [role=complementary], [role=main], [role=navigation], [role=region]"
+
+  /** An aside is the page's own in `<main>` too, and only a name makes one
+    * anywhere else a landmark.
+    */
+  private val asideBelongsTo =
+    "article, aside, nav, section, [role=article], [role=complementary], [role=navigation], [role=region]"
 
   private def implicitRole(e: Element): Option[String] = e.tagName match {
-    case "nav"    => Some("navigation")
-    case "aside"  => Some("complementary")
-    case "main"   => Some("main")
-    case "form"   => Some("form")
+    case "nav"   => Some("navigation")
+    case "aside" =>
+      Option.when(
+        landmarkName(e).nonEmpty || e.parent().closest(asideBelongsTo) == null
+      )("complementary")
+    case "main" => Some("main")
+    // A form is a landmark only once it has a name to be told apart by.
+    case "form"   => Option.when(landmarkName(e).nonEmpty)("form")
     case "header" => Option.when(e.closest(sectioning) == null)("banner")
     case "footer" => Option.when(e.closest(sectioning) == null)("contentinfo")
     case "ul" | "ol" => Some("list")

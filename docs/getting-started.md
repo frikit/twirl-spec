@@ -8,7 +8,7 @@ passing spec, and shows what a failing one looks like.
 Everything in one line, which is right for most services:
 
 ```scala
-libraryDependencies += "io.github.frikit" %% "twirl-spec-all" % "2.3.0" % Test
+libraryDependencies += "io.github.frikit" %% "twirl-spec-all" % "2.4.0" % Test
 ```
 
 Or pick modules. The core carries the page model, the DSL and the matchers and
@@ -17,14 +17,14 @@ them in:
 
 ```scala
 libraryDependencies ++= Seq(
-  "io.github.frikit" %% "twirl-spec-core"     % "2.3.0" % Test,
-  "io.github.frikit" %% "twirl-spec-wcag"     % "2.3.0" % Test, // accessibility, rendering, safety
-  "io.github.frikit" %% "twirl-spec-govuk"    % "2.3.0" % Test, // GOV.UK Design System error conventions
-  "io.github.frikit" %% "twirl-spec-quality"  % "2.3.0" % Test, // semantics, page weight, metadata, coverage
-  "io.github.frikit" %% "twirl-spec-aria"     % "2.3.0" % Test, // ARIA correctness
-  "io.github.frikit" %% "twirl-spec-html"     % "2.3.0" % Test, // HTML validity
-  "io.github.frikit" %% "twirl-spec-i18n"     % "2.3.0" % Test, // language parity
-  "io.github.frikit" %% "twirl-spec-messages" % "2.3.0" % Test  // message-file integrity
+  "io.github.frikit" %% "twirl-spec-core"     % "2.4.0" % Test,
+  "io.github.frikit" %% "twirl-spec-wcag"     % "2.4.0" % Test, // accessibility, rendering, safety
+  "io.github.frikit" %% "twirl-spec-govuk"    % "2.4.0" % Test, // GOV.UK Design System error conventions
+  "io.github.frikit" %% "twirl-spec-quality"  % "2.4.0" % Test, // semantics, page weight, metadata, coverage
+  "io.github.frikit" %% "twirl-spec-aria"     % "2.4.0" % Test, // ARIA correctness
+  "io.github.frikit" %% "twirl-spec-html"     % "2.4.0" % Test, // HTML validity
+  "io.github.frikit" %% "twirl-spec-i18n"     % "2.4.0" % Test, // language parity
+  "io.github.frikit" %% "twirl-spec-messages" % "2.4.0" % Test  // message-file integrity
 )
 ```
 
@@ -78,8 +78,10 @@ class MyViewSpec extends AnyWordSpec with Matchers with TwirlSpec with WcagCheck
 transactional service, `GovukServiceChecks` is the better start: every trait,
 less the three rules about search results (`not-noindex`,
 `has-meta-description`, `title-is-concise`), which a service reached from
-GOV.UK would see warn on every page. Without a rule trait, `display` checks
-exactly what you asked and nothing else.
+GOV.UK would see warn on every page. `HmrcServiceChecks` is the same again for a
+service on play-frontend-hmrc, with the report-a-problem link every page inherits
+left out of coverage. Without a rule trait, `display` checks exactly what you
+asked and nothing else.
 
 ## 4. Write the first spec
 
@@ -129,9 +131,10 @@ Three things to notice:
   compared against itself. When you really mean exact words, wrap them:
   `titleText("What is your name?")`, or `literal("...")` where an expectation
   takes an `Expected`.
-- **Expectations that name one element fail when they find more than one.**
+- **Most expectations that name one element fail when they find more than one.**
   `textInput("value")` with two matching inputs is a failure, not a silent
-  pick of the first. Use `cssSelector` and `elementCount` for groups.
+  pick of the first, and so is `heading` on a page with two `<h1>`s. Use
+  `cssSelector` and `elementCount` for groups.
 - **Every check runs.** One red test shows every problem on the page, followed
   by the page's outline, so you fix them in one round.
 

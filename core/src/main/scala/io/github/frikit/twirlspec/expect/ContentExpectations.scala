@@ -55,7 +55,15 @@ trait ContentExpectations {
 
   /** The message appears inside a paragraph. */
   def paragraph(key: String, args: Any*): Expectation =
-    contentIn("paragraph", _.paragraphs.text, Expected.Key(key, args.toSeq))
+    Expectation("paragraph") { page =>
+      oneSays(
+        "paragraph",
+        page.withRecordingPaused(page.paragraphs),
+        Expected.Key(key, args.toSeq),
+        page,
+        Contains
+      )
+    }
 
   /** The text of a GOV.UK warning callout. */
   def warning(key: String, args: Any*): Expectation =
@@ -167,8 +175,24 @@ trait ContentExpectations {
           (k, Text.normalise(v))
         }
         val actual = page.summaryRows.map { case (k, v, _) => (k, v) }
-        if (actual == expected) Nil
-        else
+        if (actual == expected) {
+          // What it read counts as asserted; the rows' actions it did not read.
+          page.record(
+            page.document
+              .select(".govuk-summary-list__row")
+              .asScala
+              .toList
+              .flatMap(row =>
+                row :: row
+                  .select(
+                    ".govuk-summary-list__key, .govuk-summary-list__value"
+                  )
+                  .asScala
+                  .toList
+              )
+          )
+          Nil
+        } else
           Seq(
             Violation.mismatch(
               "summaryList",
@@ -209,17 +233,25 @@ trait ContentExpectations {
   /** A row whose cells read exactly like this. */
   def tableRow(cells: String*): Expectation = Expectation("tableRow") { page =>
     val expected = cells.toList.map(Text.normalise)
-    val rows = page.css("table tbody tr").elements.map { tr =>
-      tr.select("td, th").asScala.toList.map(c => Text.normalise(c.text()))
-    }
-    if (rows.contains(expected)) Nil
+    def words(cells: List[org.jsoup.nodes.Element]) =
+      cells.map(c => Text.normalise(c.text()))
+    val rows =
+      page.withRecordingPaused(page.css("table tbody tr")).elements.map { tr =>
+        tr :: tr.select("td, th").asScala.toList
+      }
+    val reading = rows.filter(row => words(row.tail) == expected)
+    page.record(reading.flatten)
+    if (reading.nonEmpty) Nil
     else
       Seq(
         Violation.mismatch(
           "tableRow",
           expected.mkString(" | "),
           if (rows.isEmpty) "(no table rows)"
-          else rows.map(_.mkString(" | ")).mkString("\n                ")
+          else
+            rows
+              .map(row => words(row.tail).mkString(" | "))
+              .mkString("\n                ")
         )
       )
   }
@@ -234,12 +266,17 @@ trait ContentExpectations {
   def appearsBefore(first: String, second: String): Expectation =
     Expectation(s"$first before $second") { page =>
       val rule = s"order($first before $second)"
-      (page.css(first).headOption, page.css(second).headOption) match {
+      // Only the first match of each is asked about, so only those are asserted.
+      page.withRecordingPaused(
+        (page.css(first).headOption, page.css(second).headOption)
+      ) match {
         case (None, _)          => Seq(Violation.missing(rule, first))
         case (_, None)          => Seq(Violation.missing(rule, second))
         case (Some(a), Some(b)) =>
-          if (page.positionOf(a) < page.positionOf(b)) Nil
-          else
+          if (page.positionOf(a) < page.positionOf(b)) {
+            page.record(List(a, b))
+            Nil
+          } else
             Seq(
               Violation(
                 rule,
@@ -351,9 +388,9 @@ trait ContentExpectations {
       expected: Expected
   ): Expectation =
     Expectation(rule) { page =>
-      val sel = select(page)
+      val sel = page.withRecordingPaused(select(page))
       present(rule, sel) match {
-        case Nil  => compare(rule, expected, sel.text, page, Contains)
+        case Nil  => oneSays(rule, sel, expected, page, Contains)
         case errs => errs
       }
     }
@@ -381,13 +418,15 @@ final case class LinkExpectation(
 
   def check(page: Page): Seq[Violation] = {
     val rule = description
+    // Looking through the links asserts none of them: only what this finds does.
+    val links = page.withRecordingPaused(page.links)
 
     val candidates = id match {
-      case Some(elementId) => page.byId(elementId)
+      case Some(elementId) => page.withRecordingPaused(page.byId(elementId))
       case None            =>
         text.resolve(page) match {
           case Left(_)      => Selection.empty(rule, "a[href]")
-          case Right(value) => page.links.containing(value)
+          case Right(value) => links.containing(value)
         }
     }
 
@@ -404,9 +443,8 @@ final case class LinkExpectation(
                 else id.map("#" + _).getOrElse("")
               ),
               actual = Some(
-                if (page.links.isEmpty) "(no links on the page)"
-                else
-                  page.links.texts.filter(_.nonEmpty).take(12).mkString(" | ")
+                if (links.isEmpty) "(no links on the page)"
+                else links.texts.filter(_.nonEmpty).take(12).mkString(" | ")
               )
             )
           )
@@ -422,13 +460,25 @@ final case class LinkExpectation(
                 Matching.Exact
               )
 
+          val pinned = href.fold(candidates.elements)(url =>
+            candidates.elements.filter(e =>
+              e.hasAttr("href") && e.attr("href") == url
+            )
+          )
+
           val hrefIssues = href.toSeq.flatMap { url =>
-            val actual = candidates.attrs("href")
-            if (actual.contains(url)) Nil
+            if (pinned.nonEmpty) Nil
             else
-              Seq(Violation.mismatch(s"$rule href", url, actual.mkString(", ")))
+              Seq(
+                Violation.mismatch(
+                  s"$rule href",
+                  url,
+                  candidates.attrs("href").mkString(", ")
+                )
+              )
           }
 
+          if (textIssues.isEmpty) page.record(pinned)
           textIssues ++ hrefIssues
         }
     }
@@ -502,9 +552,17 @@ final case class SummaryRowExpectation(
             val actionText = actions.map(a => Text.normalise(a.text()))
             val actionHrefs = actions.map(_.attr("href"))
 
+            page.record(
+              r :: r.select(".govuk-summary-list__key").asScala.toList
+            )
+
             val valueIssues = value.toSeq.flatMap { expected =>
-              if (Text.same(actualValue, expected)) Nil
-              else
+              if (Text.same(actualValue, expected)) {
+                page.record(
+                  r.select(".govuk-summary-list__value").asScala.toList
+                )
+                Nil
+              } else
                 Seq(Violation.mismatch(s"$rule value", expected, actualValue))
             }
 
@@ -517,8 +575,14 @@ final case class SummaryRowExpectation(
                     want.forall(w =>
                       actionText.exists(a => Text.containsText(a, w))
                     )
-                  ) Nil
-                  else
+                  ) {
+                    page.record(
+                      actions.filter(a =>
+                        want.exists(w => Text.containsText(a.text(), w))
+                      )
+                    )
+                    Nil
+                  } else
                     Seq(
                       Violation.mismatch(
                         s"$rule actions",
@@ -531,8 +595,10 @@ final case class SummaryRowExpectation(
             }
 
             val hrefIssues = changeHref.toSeq.flatMap { url =>
-              if (actionHrefs.contains(url)) Nil
-              else
+              if (actionHrefs.contains(url)) {
+                page.record(actions.filter(_.attr("href") == url))
+                Nil
+              } else
                 Seq(
                   Violation.mismatch(
                     s"$rule change link",
@@ -577,7 +643,9 @@ final case class RoleExpectation(
 
   def check(page: Page): Seq[Violation] = {
     val rule = description
-    val matches = page.byRole(roleName)
+    // A name narrows what this asserts; with none, it asserts all of the role.
+    val matches = page.withRecordingPaused(page.byRole(roleName))
+    if (name.isEmpty) page.record(matches.elements)
 
     val countIssues = count.toSeq.flatMap { expected =>
       if (matches.size == expected) Nil
@@ -599,6 +667,7 @@ final case class RoleExpectation(
               )
             case _ => page.byRole(roleName, value).elements
           }
+          page.record(named)
           if (named.nonEmpty) Nil
           else
             Seq(

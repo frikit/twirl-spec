@@ -19,7 +19,7 @@ package io.github.frikit.twirlspec.page
 import org.jsoup.Jsoup
 import org.jsoup.parser.Parser
 import org.jsoup.nodes.{Document, Element}
-import play.api.i18n.{Lang, Messages}
+import play.api.i18n.{Lang, Messages, MessagesImpl}
 import play.twirl.api.Html
 
 import scala.collection.mutable
@@ -135,7 +135,7 @@ final class Page(
 
   private[twirlspec] def record(elements: List[Element]): Unit =
     if (recording && elements.nonEmpty) {
-      val names = elements.flatMap(e => Anchors.namesOf(e))
+      val names = elements.flatMap(Anchors.touchedBy)
       if (owner.isEmpty) ownRecord.synchronized(ownRecord ++= names)
       else CoverageRegistry.record(coverageGroup, names)
     }
@@ -188,14 +188,32 @@ final class Page(
 
   /** The description an assistive technology reads after the name. */
   def accessibleDescription(e: org.jsoup.nodes.Element): String =
-    Text.normalise(
-      e.attr("aria-describedby")
-        .split("\\s+")
-        .filter(_.nonEmpty)
-        .flatMap(id => Option(document.getElementById(id)))
-        .map(_.text())
-        .mkString(" ")
-    )
+    Text.normalise(describedBy(e).map(_.text()).mkString(" "))
+
+  /** Whether assistive technology is told about this element, as far as the
+    * markup says: neither it nor anything above it is hidden. It knows nothing
+    * of stylesheets, so it answers for `hidden` and an inline style, not for a
+    * class that hides.
+    */
+  private[twirlspec] def isExposed(e: Element): Boolean = {
+    val lineage = e :: e.parents.asScala.toList
+    e.closest(Page.NotExposed) == null &&
+    !lineage.exists(Page.inlineStyle(_, "display").contains("none")) &&
+    // An element can show itself inside something hidden, so the nearest that
+    // says anything of its own decides.
+    !lineage
+      .flatMap(Page.inlineStyle(_, "visibility"))
+      .find(value => value != "inherit" && value != "unset")
+      .contains("hidden")
+  }
+
+  /** The elements that say what `aria-describedby` points at. */
+  private[twirlspec] def describedBy(e: Element): List[Element] =
+    e.attr("aria-describedby")
+      .split("\\s+")
+      .filter(_.nonEmpty)
+      .toList
+      .flatMap(id => Option(document.getElementById(id)))
 
   /** What the page's forms would submit as their markup stands — before any
     * script runs or anyone types — as name and value pairs in document order.
@@ -212,7 +230,11 @@ final class Page(
     * control sends nothing, and neither do buttons, reset controls or image
     * inputs. A name can appear more than once, as a group of checkboxes does.
     */
-  def formSubmission: Seq[(String, String)] = {
+  def formSubmission: Seq[(String, String)] =
+    submittedControls.map { case (_, name, value) => (name, value) }
+
+  /** [[formSubmission]], with the control each name and value comes from. */
+  private[twirlspec] def submittedControls: List[(Element, String, String)] = {
     // Disabled radios still take part in their group, so the survivor is
     // found before disabled controls are left out.
     val keptRadios = document
@@ -229,30 +251,36 @@ final class Page(
       .toList
       .filter(e => e.attr("name").nonEmpty && !isDisabled(e))
       .flatMap { e =>
-        val name = e.attr("name")
-        e.tagName() match {
-          case "textarea" => List(name -> e.wholeText())
-          case "select"   => selectedOptions(e).map(o => name -> optionValue(o))
+        val values = e.tagName() match {
+          case "textarea" => List(textareaValue(e))
+          case "select"   => selectedOptions(e).map(optionValue)
           case _          =>
             e.attr("type").toLowerCase match {
               case "checkbox" =>
-                if (e.hasAttr("checked")) List(name -> checkedValue(e)) else Nil
+                if (e.hasAttr("checked")) List(checkedValue(e)) else Nil
               case "radio" =>
-                if (keptRadios.contains(e)) List(name -> checkedValue(e))
-                else Nil
-              case "file"                                  => List(name -> "")
+                if (keptRadios.contains(e)) List(checkedValue(e)) else Nil
+              case "file"                                  => List("")
               case "submit" | "button" | "reset" | "image" => Nil
-              case _ => List(name -> e.attr("value"))
+              case _ => List(e.attr("value"))
             }
         }
+        values.map(value => (e, e.attr("name"), value))
       }
   }
+
+  /** What a textarea holds, as a browser reads it: its text as written, with
+    * its line breaks and spaces, less the one line break HTML drops right after
+    * the opening tag.
+    */
+  private[twirlspec] def textareaValue(e: Element): String =
+    e.wholeText().replaceAll("\r\n?", "\n").stripPrefix("\n")
 
   /** The form a control belongs to. A `form` attribute names it by id, and then
     * it is that form or, where the id names no form, none at all; without one
     * it is the form the control sits in.
     */
-  private def formOwner(
+  private[twirlspec] def formOwner(
       e: org.jsoup.nodes.Element
   ): Option[org.jsoup.nodes.Element] =
     if (e.hasAttr("form"))
@@ -261,7 +289,7 @@ final class Page(
     else Option(e.closest("form"))
 
   /** What a checked box or radio submits: its value, or `on` without one. */
-  private def checkedValue(e: org.jsoup.nodes.Element): String =
+  private[twirlspec] def checkedValue(e: org.jsoup.nodes.Element): String =
     if (e.hasAttr("value")) e.attr("value") else "on"
 
   /** The value each name submits: [[formSubmission]] as a map, keeping the last
@@ -298,7 +326,29 @@ final class Page(
     * an id with a dot in it works.
     */
   def byId(elementId: String): Selection =
-    named(s"#$elementId", Page.idSelector(elementId))
+    exactly(s"#$elementId", Page.idSelector(elementId), "[id]")(e =>
+      says(e.id(), elementId)
+    )
+
+  /** The elements among these whose attributes pass an exact test. Jsoup's
+    * `[a="x"]` ignores case, where an id and a name do not, and throws on a
+    * value with a quote in it, so values are compared rather than written into
+    * the selector, and `shown` is what a failure message calls it.
+    */
+  private def exactly(name: String, shown: String, among: String)(
+      test: Element => Boolean
+  ): Selection = {
+    val elements = document.select(among).asScala.toList.filter(test)
+    record(elements)
+    Selection(name, shown, elements)
+  }
+
+  private def isCalled(e: Element, nameOrId: String): Boolean =
+    says(e.attr("name"), nameOrId) || says(e.id(), nameOrId)
+
+  /** An attribute that is absent reads as empty, so nothing is called "". */
+  private def says(attribute: String, wanted: String): Boolean =
+    wanted.nonEmpty && attribute == wanted
 
   // ------------------------------------------------------------- page framing
 
@@ -308,6 +358,12 @@ final class Page(
   /** The `lang` attribute of the `<html>` element, if it has one. */
   def htmlLang: Option[String] =
     Option(document.selectFirst("html")).map(_.attr("lang")).filter(_.nonEmpty)
+
+  /** Whether a `lang` value names this page's language: in any region and any
+    * case, as a language tag is read.
+    */
+  private[twirlspec] def declaresItsLanguage(declared: String): Boolean =
+    declared.toLowerCase.takeWhile(_ != '-') == lang.language.toLowerCase
 
   /** The `<h1>` elements; a page should have exactly one. */
   def h1: Selection = named("h1", "h1")
@@ -368,7 +424,10 @@ final class Page(
 
   /** The HMRC session timeout dialog. */
   def timeoutDialog: Selection =
-    named("timeout dialog", "[data-module=hmrc-timeout-dialog]")
+    named(
+      "timeout dialog",
+      "meta[name=hmrc-timeout-dialog], [data-module=hmrc-timeout-dialog]"
+    )
 
   /** The sign out link of an HMRC header. */
   def signOutLink: Selection =
@@ -387,13 +446,17 @@ final class Page(
     * entry.
     */
   def errorSummaryLinks: List[(String, String)] =
+    errorSummaryLinkElements.map(e =>
+      (e.attr("href").stripPrefix("#"), Text.normalise(e.text()))
+    )
+
+  private[twirlspec] def errorSummaryLinkElements: List[Element] =
     document
       .select(
         ".govuk-error-summary a[href], .govuk-error-summary__list a[href]"
       )
       .asScala
       .toList
-      .map(e => (e.attr("href").stripPrefix("#"), Text.normalise(e.text())))
 
   /** The error summary entries whose link lands on nothing: a link to
     * `#firstName` when the input is `id="value"` leaves a keyboard user
@@ -415,17 +478,72 @@ final class Page(
       .select(".govuk-error-message")
       .asScala
       .toList
-      .map { e =>
-        val field = e.id().stripSuffix("-error")
-        val hidden = e
-          .select(".govuk-visually-hidden")
-          .asScala
-          .toList
-          .map(_.text())
-          .mkString
-        field -> Text.normalise(e.text().replace(hidden, ""))
-      }
+      .map(e => e.id().stripSuffix("-error") -> errorWords(e))
       .toMap
+
+  /** What an inline error says, with the visually hidden prefix taken off. */
+  private[twirlspec] def errorWords(e: Element): String = {
+    val hidden = e
+      .select(".govuk-visually-hidden")
+      .asScala
+      .toList
+      .map(_.text())
+      .mkString
+    Text.normalise(e.text().replace(hidden, ""))
+  }
+
+  /** A field's inline error: by the GOV.UK id convention, or else the one its
+    * control or that control's fieldset announces, since a component may build
+    * the error's id from something other than the field's name.
+    */
+  private[twirlspec] def errorOf(field: String): Option[Element] = {
+    val controls = document.select("input, select, textarea").asScala.toList
+    document
+      .select(".govuk-error-message")
+      .asScala
+      .find(_.id() == s"$field-error")
+      .orElse(announcedBy(controls.filter(isCalled(_, field))))
+      .orElse(
+        announcedBy(
+          controls.filter(c =>
+            isPartOf(c.attr("name"), field) || isPartOf(c.id(), field)
+          )
+        )
+      )
+  }
+
+  /** The inline error these controls, or their fieldsets, announce. */
+  private def announcedBy(controls: List[Element]): Option[Element] =
+    controls
+      .flatMap(c => c :: Option(c.closest("fieldset")).toList)
+      .flatMap(describedBy)
+      .find(_.hasClass("govuk-error-message"))
+
+  /** The inline error an error summary link leads to: the one that the element
+    * it lands on says it is described by, and only then a field's of that name.
+    */
+  private[twirlspec] def errorAt(target: String): Option[Element] =
+    announcedBy(withRecordingPaused(byId(target)).elements)
+      .orElse(errorOf(target))
+
+  /** Whether a name or id is one of a date's parts, as `dob.day` is of `dob`.
+    * It goes by the parts rather than the prefix, because `a-b` is usually a
+    * field of its own.
+    */
+  private def isPartOf(value: String, field: String): Boolean =
+    Seq("day", "month", "year").exists(part =>
+      value == s"$field.$part" || value == s"$field-$part"
+    )
+
+  /** Whether an error summary link to this target lands on this field: on the
+    * element with its id, or on one of its controls, which is where a GOV.UK
+    * radio group's and date input's links go, to the first radio and the day.
+    */
+  private[twirlspec] def landsOn(target: String, field: String): Boolean =
+    target == field ||
+      withRecordingPaused(byId(target)).elements.exists { e =>
+        e.attr("name") == field || isPartOf(e.attr("name"), field)
+      }
 
   // -------------------------------------------------------------------- forms
 
@@ -440,52 +558,68 @@ final class Page(
 
   /** The inputs with this name or id. */
   def input(nameOrId: String): Selection =
-    named(s"input($nameOrId)", Page.control("input", nameOrId))
+    exactly(s"input($nameOrId)", Page.control("input", nameOrId), "input")(
+      isCalled(_, nameOrId)
+    )
 
   /** Any control by name or id: input, select or textarea. */
   def formControl(nameOrId: String): Selection =
-    named(
+    exactly(
       s"control($nameOrId)",
       Seq("input", "select", "textarea")
         .map(Page.control(_, nameOrId))
-        .mkString(", ")
-    )
+        .mkString(", "),
+      "input, select, textarea"
+    )(isCalled(_, nameOrId))
 
   /** The textareas with this name or id. */
   def textarea(nameOrId: String): Selection =
-    named(s"textarea($nameOrId)", Page.control("textarea", nameOrId))
+    exactly(
+      s"textarea($nameOrId)",
+      Page.control("textarea", nameOrId),
+      "textarea"
+    )(isCalled(_, nameOrId))
 
   /** The selects with this name or id. */
   def selectBox(nameOrId: String): Selection =
-    named(s"select($nameOrId)", Page.control("select", nameOrId))
+    exactly(s"select($nameOrId)", Page.control("select", nameOrId), "select")(
+      isCalled(_, nameOrId)
+    )
 
   /** The radio buttons sharing this name. */
   def radios(fieldName: String): Selection =
-    named(s"radios($fieldName)", s"""input[type=radio][name="$fieldName"]""")
+    exactly(
+      s"radios($fieldName)",
+      s"""input[type=radio][name="$fieldName"]""",
+      "input[type=radio]"
+    )(e => says(e.attr("name"), fieldName))
 
   /** The checkboxes sharing this name. */
   def checkboxes(fieldName: String): Selection =
-    named(
+    exactly(
       s"checkboxes($fieldName)",
-      s"""input[type=checkbox][name="$fieldName"]"""
-    )
+      s"""input[type=checkbox][name="$fieldName"]""",
+      "input[type=checkbox]"
+    )(e => says(e.attr("name"), fieldName))
 
   /** The fields of a date input, under either id convention. */
-  def dateInput(fieldName: String): Selection =
-    named(
+  def dateInput(fieldName: String): Selection = {
+    val ids = Seq("day", "month", "year")
+      .flatMap(part => Seq(s"$fieldName.$part", s"$fieldName-$part"))
+    exactly(
       s"date input($fieldName)",
-      Seq("day", "month", "year")
-        .flatMap(part => Seq(s"$fieldName.$part", s"$fieldName-$part"))
-        .map(Page.idSelector)
-        .mkString(", ")
-    )
+      ids.map(Page.idSelector).mkString(", "),
+      "[id]"
+    )(e => ids.contains(e.id()))
+  }
 
   /** The file inputs with this name or id. */
   def fileUpload(nameOrId: String): Selection =
-    named(
+    exactly(
       s"file upload($nameOrId)",
-      s"""input[type=file][name="$nameOrId"], input[type=file][id="$nameOrId"]"""
-    )
+      s"""input[type=file][name="$nameOrId"], input[type=file][id="$nameOrId"]""",
+      "input[type=file]"
+    )(isCalled(_, nameOrId))
 
   /** Every control on the page that a user can type into or choose from. */
   def formControls: List[Element] =
@@ -498,7 +632,9 @@ final class Page(
 
   /** The labels pointing at this field. */
   def labelFor(fieldId: String): Selection =
-    named(s"label for $fieldId", s"""label[for="$fieldId"]""")
+    exactly(s"label for $fieldId", s"""label[for="$fieldId"]""", "label[for]")(
+      e => says(e.attr("for"), fieldId)
+    )
 
   /** Every legend. */
   def legends: Selection = named("legend", "legend")
@@ -510,9 +646,14 @@ final class Page(
     * wrapper.
     */
   def hint(fieldId: String): Selection =
-    named(
+    exactly(
       s"hint for $fieldId",
-      s"""[id="$fieldId-hint"], [id="$fieldId"] .govuk-hint"""
+      s"""[id="$fieldId-hint"], [id="$fieldId"] .govuk-hint""",
+      "[id], .govuk-hint"
+    )(e =>
+      e.id() == s"$fieldId-hint" ||
+        e.hasClass("govuk-hint") &&
+        e.parents.asScala.exists(parent => says(parent.id(), fieldId))
     )
 
   /** Every GOV.UK hint. */
@@ -614,10 +755,40 @@ final class Page(
 
   // ----------------------------------------------------------------- messages
 
-  /** Resolve a message key in this page's language. */
+  /** Resolve a message key in this page's language. A key the language does not
+    * define resolves to nothing, rather than to the English Play would render
+    * in its place, so a Welsh assertion cannot pass on English words.
+    */
   def message(key: String, args: Seq[Any] = Nil): Option[String] =
-    if (messages.isDefinedAt(key)) Some(Text.normalise(messages(key, args: _*)))
+    if (definedInLanguage(key)) Some(Text.normalise(messages(key, args: _*)))
     else None
+
+  /** Play's `isDefinedAt` also answers from the default files, which are
+    * written in English or in the first language `play.i18n.langs` names. For
+    * any other language only its own file counts, by its code and then, as Play
+    * reads it, by the bare language. A `Messages` other than the one Play hands
+    * out can only be asked `isDefinedAt`, fallback and all.
+    */
+  private def definedInLanguage(key: String): Boolean =
+    messages match {
+      case MessagesImpl(language, api)
+          if language.language != "en" &&
+            language.language != api.preferred(Nil).lang.language =>
+        Seq(language.code, language.language).exists(code =>
+          api.messages.get(code).exists(_.contains(key))
+        )
+      case _ => messages.isDefinedAt(key)
+    }
+
+  /** The first segment of every key this page's messages define, in any
+    * language.
+    */
+  private[twirlspec] def messageKeyFamilies: Set[String] =
+    messages match {
+      case MessagesImpl(_, api) =>
+        api.messages.values.flatMap(_.keys).map(_.takeWhile(_ != '.')).toSet
+      case _ => Set.empty
+    }
 
   /** Resolve a key, falling back to the key itself (Play's default behaviour).
     */
@@ -626,12 +797,14 @@ final class Page(
 
   // ------------------------------------------------------------------ content
 
-  /** The page's visible text, normalised. */
-  def text: String = Text.normalise(document.text())
+  /** The page's visible text, normalised: its body, and not the `<title>`,
+    * which is shown in a browser's tab rather than on the page.
+    */
+  def text: String = Text.normalise(document.body().text())
 
   /** Whether the page's visible text contains this, after normalisation. */
   def contains(needle: String): Boolean =
-    Text.containsText(document.text(), needle)
+    Text.containsText(document.body().text(), needle)
 
   /** The page's structural skeleton, for review and snapshotting. */
   /** Building this touches most of the page, and a failure message is not an
@@ -666,6 +839,36 @@ object Page {
 
   private[twirlspec] def control(tag: String, nameOrId: String): String =
     s"""$tag[name="$nameOrId"], $tag[id="$nameOrId"]"""
+
+  /** What keeps an element and all it holds from assistive technology, or from
+    * being rendered at all: a tag manager's frame in `<noscript>`, say, or what
+    * a `<template>` holds until a script uses it.
+    */
+  private val NotExposed =
+    "[hidden], [inert], [aria-hidden=true], noscript, template"
+
+  /** Comments, strings and brackets in a style attribute. A semicolon in one
+    * ends no declaration, and `display` and `visibility` need none of them.
+    */
+  private val StyleNoise = """(?s)/\*.*?\*/|"[^"]*"|'[^']*'|\([^)]*\)"""
+
+  /** A property's value in an element's own style attribute: the last it
+    * declares, unless an earlier one is `!important`.
+    */
+  private def inlineStyle(e: Element, property: String): Option[String] = {
+    val declared = e
+      .attr("style")
+      .replaceAll(StyleNoise, "")
+      .split(";")
+      .toList
+      .map(_.split(":", 2).map(_.replaceAll("\\s+", "").toLowerCase))
+      .collect { case Array(`property`, value) => value }
+    declared
+      .filter(_.endsWith("!important"))
+      .lastOption
+      .orElse(declared.lastOption)
+      .map(_.stripSuffix("!important"))
+  }
 
   /** Parse rendered HTML into a page in the language of the implicit messages.
     */

@@ -12,22 +12,16 @@ library replaces that scaffolding, and can do so gradually.
 ```scala
 package views
 
-import io.github.frikit.twirlspec.{GovukServiceChecks, TwirlSpec}
-import io.github.frikit.twirlspec.i18n.TranslationConfig
+import io.github.frikit.twirlspec.{HmrcServiceChecks, TwirlSpec}
 import io.github.frikit.twirlspec.messages.MessagesIntegrity
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
-// every rule, less the search-result ones a GOV.UK service has no use for
-trait ViewSpecBase extends AnyWordSpec with Matchers with TwirlSpec with GovukServiceChecks {
+// every rule, less the search-result ones a GOV.UK service has no use for,
+// with what every service on play-frontend-hmrc would otherwise write here
+trait ViewSpecBase extends AnyWordSpec with Matchers with TwirlSpec with HmrcServiceChecks {
 
   // the languages come from play.i18n.langs in conf/application.conf
-
-  // what every page inherits from the layout, so coverage does not ask each spec for it
-  override def coverageIgnored: Set[String] = Set("#report-technical-issue", "#hmrc-timeout")
-
-  // text that is the same in every language by design
-  override def translationConfig = TranslationConfig(sameTextIsFine = Set("GOV.UK", "HMRC"))
 
   // the service is bilingual, so the message files must be too
   override def messagesIntegrityConfig = MessagesIntegrity.Config(requireTranslations = true)
@@ -72,6 +66,40 @@ class WhatIsYourNameViewSpec extends ViewSpecBase {
 }
 ```
 
+`HmrcServiceChecks` leaves play-frontend-hmrc's report-a-problem link out of
+coverage, and lets "HMRC" read the same in every language. A service on another
+layout mixes in `GovukServiceChecks` and lists what that layout gives every page
+in `coverageIgnored`, by id, or `coverageIgnoredSelectors`.
+
+## A table of pages
+
+Much of what an old `ViewBehaviours` does is the same for every page: the
+standards in every language, blank and with errors, and the same thing said in
+each language. `PageCatalogue`, in `twirl-spec-all`, makes that a table, and
+leaves a spec per view for what is particular to it:
+
+```scala
+import io.github.frikit.twirlspec.PageCatalogue
+
+class EveryPageSpec extends ViewSpecBase with PageCatalogue {
+  catalogue(
+    staticPage("Info")(inject[InfoView](draftId, index)),
+    formPage("Name", nameForm)(inject[NameView](_, draftId)),
+    formPage("Date of birth", dobForm, "part of a date" -> Map("value.day" -> "1"))(
+      inject[DateOfBirthView](_, draftId)
+    ),
+    staticPage("Not found")(inject[PageNotFoundView]()).exceptTranslation("i18n-same-links")
+  )
+}
+```
+
+Each page gets two tests. A form page is rendered blank, with the errors of an
+empty submission, and with those of each submission named, and a submission that
+gives no errors fails its test. Every state runs in every language, and a failure
+reports each that went wrong. In a style other than `AnyWordSpec`, mix in
+`PageCases` and call `checkStandards(page)` and `checkTranslation(page)` from tests
+of your own.
+
 ## Keeping an existing application
 
 If the old base already builds an application through `GuiceOneAppPerSuite`
@@ -109,7 +137,7 @@ tree, and a new spec can start loose and tighten:
    and error-summary links. `meetStandardsExcept` and `displayOnly` are there
    for the page that genuinely cannot comply yet.
 3. Add the rest of the traits, or `GovukServiceChecks` (`AllChecks` less the
-   search-result rules).
+   search-result rules), or `HmrcServiceChecks` on play-frontend-hmrc.
 4. Add `assertEverything` as the last test, and delete the assertions the
    coverage report shows to be redundant.
 5. Add the message-file checks once, in one spec, and

@@ -18,6 +18,7 @@ package io.github.frikit.twirlspec.quality
 
 import play.twirl.api.Html
 
+import scala.runtime.FunctionXXL
 import scala.util.control.NonFatal
 
 /** Twirl gives every template three entry points besides `apply`: `render` for
@@ -74,22 +75,47 @@ object EntryPoints {
   /** `f` is curried the same way the template's parameter lists are, so the
     * arguments are fed in a group at a time.
     */
-  private def applyCurried(f: AnyRef, args: Seq[Any]): AnyRef = {
-    var current = f
-    var remaining = args
-    var arity = functionArity(current)
-    while (arity.isDefined) {
-      val wanted = arity.get
-      val (now, later) = remaining.splitAt(wanted)
-      if (now.size < wanted)
-        throw new IllegalStateException(
-          s"f wanted $wanted more arguments, ${now.size} left"
-        )
-      current = invokeFunction(current, now)
-      remaining = later
-      arity = functionArity(current)
+  private def applyCurried(f: AnyRef, args: Seq[Any]): AnyRef =
+    f match {
+      case xxl: FunctionXXL => applyXXL(xxl, args)
+      case _                =>
+        functionArity(f) match {
+          case None         => f
+          case Some(wanted) =>
+            val (now, later) = args.splitAt(wanted)
+            if (now.size < wanted)
+              throw new IllegalStateException(
+                s"f wanted $wanted more arguments, ${now.size} left"
+              )
+            applyCurried(invokeFunction(f, now), later)
+        }
     }
-    current
+
+  /** A function of more than 22 parameters takes them as an array, so it does
+    * not say how many it wants and fails only on reading past the end of too
+    * few. It is given the fewest that work.
+    */
+  private def applyXXL(f: FunctionXXL, args: Seq[Any]): AnyRef = {
+    var lastFailure: Throwable = null
+    (23 to args.size).iterator
+      .flatMap { n =>
+        val now = args.take(n).map(_.asInstanceOf[Object]).toArray
+        try Some((f(IArray.unsafeFromArray(now)), args.drop(n)))
+        catch {
+          case e: ArrayIndexOutOfBoundsException =>
+            lastFailure = e
+            None
+        }
+      }
+      .nextOption()
+      .map { case (next, later) => applyCurried(next, later) }
+      .getOrElse(
+        // A body failing the same way looks like this too, so its cause is kept.
+        throw new IllegalStateException(
+          s"f took none of the numbers of arguments up to ${args.size}",
+          lastFailure
+        )
+      )
   }
 
   private def functionArity(o: AnyRef): Option[Int] =

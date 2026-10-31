@@ -86,6 +86,68 @@ class ExpectationFailureModesSpec
   private def failsOn(page: Page, name: String, e: Expectation): Unit =
     withClue(s"$name should have failed — ")(e.check(page) must not be empty)
 
+  "heading" should {
+    "not read two headings as one" in {
+      val two = Page.fromString(
+        "<!DOCTYPE html><html><head><title>t</title></head><body><h1>A</h1><h1>B</h1></body></html>",
+        english,
+        messages
+      )
+      val found = headingText("A B").check(two)
+      found.map(_.message) mustBe Seq(
+        "2 elements matched, so this assertion is ambiguous"
+      )
+    }
+  }
+
+  "dateInput" should {
+    "say so when asked for no parts, rather than crash" in {
+      dateInput("value").withParts().check(bare).map(_.message) mustBe Seq(
+        "a date input with no parts asserts nothing"
+      )
+    }
+  }
+
+  "textArea" should {
+    def holding(text: String) =
+      Page.fromString(
+        s"""<label for="notes">Notes</label><textarea id="notes" name="notes">$text</textarea>""",
+        english,
+        messages
+      )
+
+    "compare what it holds as a browser reads it" in {
+      val lines = holding("a\nb")
+      textArea("notes").withValue("a\nb").check(lines) mustBe empty
+      textArea("notes").withValue("a b").check(lines) must not be empty
+      lines.formValues mustBe Map("notes" -> "a\nb")
+    }
+
+    "keep the spaces it holds, and drop the line break after its tag" in {
+      textArea("notes").withValue("  a").check(holding("  a")) mustBe empty
+      textArea("notes").withValue("a").check(holding("  a")) must not be empty
+      textArea("notes").withValue("a").check(holding("\na")) mustBe empty
+      holding("\na").formValues mustBe Map("notes" -> "a")
+      textArea("notes").withValue("a\nb").check(holding("a\r\nb")) mustBe empty
+      textArea("notes").withValue("a\nb").check(holding("a\rb")) mustBe empty
+      textArea("notes").withValue("a").check(holding("\r\na")) mustBe empty
+    }
+  }
+
+  "the page's text" should {
+    "not include the title, which is not on the page" in {
+      val page = Page.fromString(
+        "<!DOCTYPE html><html><head><title>In the tab</title></head><body><p>On the page</p></body></html>",
+        english,
+        messages
+      )
+      page.text mustBe "On the page"
+      page.contains("In the tab") mustBe false
+      contentText("In the tab").check(page) must not be empty
+      contentText("On the page").check(page) mustBe empty
+    }
+  }
+
   "expectations looking for something that is not there" should {
     "each report a missing element" in {
       failsOn(bare, "heading", heading("kitchenSink.heading"))

@@ -114,6 +114,140 @@ class AriaStandardsSpec
     }
   }
 
+  "What ARIA allows beyond nesting and attributes" should {
+
+    "accept a child owned from elsewhere in the document, as both rules read it" in {
+      val found = ids(
+        """<div role="listbox" aria-label="Country" tabindex="0" aria-owns="gb"></div>
+          |<div id="gb" role="option" aria-selected="false">United Kingdom</div>""".stripMargin
+      )
+      found must not contain "aria-required-parent"
+      found must not contain "aria-required-children"
+    }
+
+    "read a child inside what is owned, and a parent around the owner" in {
+      val found = ids(
+        """<div role="listbox" aria-label="Country" tabindex="0">
+          |<div role="group" aria-owns="gb"></div></div>
+          |<div id="gb" role="option" aria-selected="false">United Kingdom</div>""".stripMargin
+      )
+      found must not contain "aria-required-parent"
+    }
+
+    "read a child inside an owned wrapper as owned too" in {
+      val found = ids(
+        """<div role="listbox" aria-label="Country" tabindex="0" aria-owns="wrapper"></div>
+          |<div id="wrapper"><div id="gb" role="option" aria-selected="false">GB</div></div>""".stripMargin
+      )
+      found must not contain "aria-required-parent"
+      found must not contain "aria-required-children"
+    }
+
+    "not read an empty aria-owns as owning whatever has no id" in {
+      ids(
+        """<div role="listbox" aria-label="L" tabindex="0" aria-owns=""><div role="option" aria-selected="false">In</div></div>
+          |<div role="option" aria-selected="false">Out</div>""".stripMargin
+      ) must contain("aria-required-parent")
+    }
+
+    "still notice an option nothing owns, and a list owning nothing it needs" in {
+      ids("""<div role="option" aria-selected="false">Alone</div>""") must
+        contain("aria-required-parent")
+      ids(
+        """<div role="listbox" aria-label="L" tabindex="0" aria-owns="x nowhere"></div><p id="x">Not an option</p>"""
+      ) must contain("aria-required-children")
+    }
+
+    "not ask an element for state its HTML already gives it" in {
+      val rule = "aria-required-attr"
+      Seq(
+        """<h2 role="heading">Your details</h2>""",
+        """<input type="checkbox" role="checkbox" aria-label="Subscribe">""",
+        """<input type="checkbox" role="switch" aria-label="Subscribe">""",
+        """<input type="radio" role="radio" aria-label="One" name="r">""",
+        """<input type="range" role="slider" aria-label="Volume">""",
+        """<label for="s">S</label><select id="s" name="s" role="combobox"></select>"""
+      ).foreach(html => withClue(html)(ids(html) must not contain rule))
+    }
+
+    "ask a banner's header only of the page's own, whatever marks the section" in {
+      val rule = "landmarks-are-distinguishable"
+      def inBody(body: String) =
+        AriaStandards.all
+          .flatMap(
+            _.check(
+              Page.fromString(
+                s"""<!DOCTYPE html><html lang="en"><head><title>t</title></head><body>$body</body></html>""",
+                english,
+                messages
+              )
+            )
+          )
+          .map(_.rule)
+      inBody(
+        """<header>One</header><div role="main"><h1>A</h1><header>Two</header></div>"""
+      ) must not contain rule
+      inBody(
+        """<header>One</header><div role="main"><h1>A</h1></div><header>Two</header>"""
+      ) must contain(rule)
+      inBody(
+        """<main><h1>A</h1><article><aside>One</aside><aside>Two</aside></article></main>"""
+      ) must not contain rule
+      inBody(
+        """<main><h1>A</h1><aside>One</aside><aside>Two</aside></main>"""
+      ) must contain(rule)
+      inBody(
+        """<main><h1>A</h1><article><aside aria-label="Same">One</aside><aside aria-label="Same">Two</aside></article></main>"""
+      ) must contain(rule)
+    }
+
+    "ask a meter for its value, and a separator only if it can take focus" in {
+      val rule = "aria-required-attr"
+      ids("""<div role="meter" aria-label="Used">5</div>""") must contain(rule)
+      ids(
+        """<div role="meter" aria-label="Used" aria-valuenow="5">5</div>"""
+      ) must not contain rule
+      ids("""<meter role="meter" value="5">5</meter>""") must not contain rule
+      ids("""<div role="separator"></div>""") must not contain rule
+      ids(
+        """<div role="separator" tabindex="0" aria-label="Resize"></div>"""
+      ) must contain(rule)
+      ids(
+        """<div role="separator" tabindex="0" aria-label="Resize" aria-valuenow="50"></div>"""
+      ) must not contain rule
+      ids(
+        """<div role="separator" tabindex="-1" aria-label="Resize"></div>"""
+      ) must contain(rule)
+      ids(
+        """<button role="separator" disabled aria-label="Divider"></button>"""
+      ) must not contain rule
+      ids(
+        """<fieldset disabled><button role="separator" aria-label="Divider"></button></fieldset>"""
+      ) must not contain rule
+    }
+
+    "not take mixed for a state on a role that has none" in {
+      val rule = "aria-attr-value-is-allowed"
+      Seq("switch", "radio", "menuitemradio").foreach(role =>
+        withClue(role) {
+          ids(s"""<button role="$role" aria-checked="MIXED">x</button>""") must
+            contain(rule)
+        }
+      )
+      ids("""<div role="checkbox" aria-checked="mixed">x</div>""") must
+        not contain rule
+      ids("""<button role="switch" aria-checked="true">x</button>""") must
+        not contain rule
+    }
+
+    "still ask it of an element whose HTML gives it none" in {
+      val rule = "aria-required-attr"
+      ids("""<div role="heading">Your details</div>""") must contain(rule)
+      ids("""<div role="checkbox" aria-label="Subscribe"></div>""") must
+        contain(rule)
+    }
+  }
+
   "aria-required-children" should {
     "notice a tablist with no tabs" in {
       ids("""<div role="tablist"><p>nothing</p></div>""") must contain(
@@ -196,6 +330,57 @@ class AriaStandardsSpec
       ids(
         """<input autocomplete="">"""
       ) must not contain "autocomplete-is-valid"
+    }
+    "accept what the autofill grammar allows, in its order" in {
+      Seq(
+        "on",
+        "off",
+        "section-person1 given-name",
+        "billing postal-code",
+        "section-a shipping street-address",
+        "section-a billing home tel",
+        "work email",
+        "mobile tel-national",
+        "fax impp",
+        "username webauthn",
+        "SECTION-A GIVEN-NAME",
+        "tel-local-prefix",
+        "home tel-local-suffix"
+      ).foreach(value =>
+        withClue(value)(
+          ids(s"""<input autocomplete="$value">""") must
+            not contain "autocomplete-is-valid"
+        )
+      )
+    }
+    "hold webauthn, on and off to the elements they apply to" in {
+      val rule = "autocomplete-is-valid"
+      ids("""<textarea autocomplete="username webauthn"></textarea>""") must
+        not contain rule
+      ids("""<select autocomplete="country webauthn"></select>""") must
+        contain(rule)
+      ids("""<input type="hidden" autocomplete="on">""") must contain(rule)
+      ids("""<input type="hidden" autocomplete="country">""") must
+        not contain rule
+    }
+    "reject what it does not" in {
+      Seq(
+        "given-name family-name",
+        "home given-name",
+        "home",
+        "home tel-unknown",
+        "on off",
+        "shipping on",
+        "section-a",
+        "given-name section-a",
+        "username webauthn extra",
+        "webauthn"
+      ).foreach(value =>
+        withClue(value)(
+          ids(s"""<input autocomplete="$value">""") must
+            contain("autocomplete-is-valid")
+        )
+      )
     }
   }
 
@@ -327,9 +512,51 @@ class AriaStandardsSpec
       )
     }
 
-    "treat two unnamed forms as indistinguishable" in {
+    "leave unnamed forms alone, since a form with no name is no landmark" in {
       ids(
         """<form action="/a"></form><form action="/b"></form>"""
+      ) must not contain "landmarks-are-distinguishable"
+    }
+
+    "treat forms with a name as landmarks, told apart by it" in {
+      ids(
+        """<form aria-label="Same"></form><form aria-label="Same"></form>"""
+      ) must contain("landmarks-are-distinguishable")
+      ids(
+        """<form aria-label="One"></form><form aria-label="Two"></form>"""
+      ) must not contain "landmarks-are-distinguishable"
+    }
+
+    "not take an empty name for a name" in {
+      ids(
+        """<form title=""></form><form title=" "></form>"""
+      ) must not contain "landmarks-are-distinguishable"
+      ids(
+        """<form aria-label="" title="One"></form><form aria-label="" title="One"></form>"""
+      ) must contain("landmarks-are-distinguishable")
+    }
+
+    "take a name from aria-labelledby first, as a browser does" in {
+      ids(
+        """<span id="a">One</span><span id="b">Two</span>
+          |<form aria-labelledby="a" aria-label="Same"></form>
+          |<form aria-labelledby="b" aria-label="Same"></form>""".stripMargin
+      ) must not contain "landmarks-are-distinguishable"
+    }
+
+    "not make a name out of references to nothing but empty elements" in {
+      ids(
+        """<span id="a"></span><span id="b"></span>
+          |<form aria-labelledby="a b"></form><form aria-labelledby="a b"></form>""".stripMargin
+      ) must not contain "landmarks-are-distinguishable"
+    }
+
+    "read a form's name from wherever it has one" in {
+      ids(
+        """<form title="One"></form><form title="Two"></form>"""
+      ) must not contain "landmarks-are-distinguishable"
+      ids(
+        """<span id="a">One</span><form aria-labelledby="a"></form><form title="One"></form>"""
       ) must contain("landmarks-are-distinguishable")
     }
 

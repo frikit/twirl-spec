@@ -342,8 +342,8 @@ class SafetyAndAriaSpec extends AnyWordSpec with Matchers with TwirlSpec {
 
     "be flagged when two controls submit under the same name" in {
       fired(
-        """<h1>A</h1><label for="a">A</label><input id="a" name="dup">
-              |<label for="b">B</label><input id="b" name="dup">""".stripMargin
+        """<h1>A</h1><form><label for="a">A</label><input id="a" name="dup">
+              |<label for="b">B</label><input id="b" name="dup"></form>""".stripMargin
       ) must
         contain("unambiguous-field-names")
     }
@@ -352,11 +352,11 @@ class SafetyAndAriaSpec extends AnyWordSpec with Matchers with TwirlSpec {
       val names = allRules
         .check(
           page(
-            """<h1>A</h1>
+            """<h1>A</h1><form>
                       |<label for="z1">Z</label><input id="z1" name="zebra">
                       |<label for="z2">Z</label><input id="z2" name="zebra">
                       |<label for="a1">A</label><input id="a1" name="apple">
-                      |<label for="a2">A</label><input id="a2" name="apple">""".stripMargin
+                      |<label for="a2">A</label><input id="a2" name="apple"></form>""".stripMargin
           )
         )
         .filter(_.rule == "unambiguous-field-names")

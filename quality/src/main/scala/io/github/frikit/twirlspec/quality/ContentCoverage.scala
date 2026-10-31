@@ -30,6 +30,14 @@ import scala.jdk.CollectionConverters._
 object ContentCoverage {
 
   /** Something a reader can see or act on, so something a spec ought to assert.
+    *
+    * @param kind
+    *   `id`, `link` or `tracking`
+    * @param name
+    *   what it is called: an id, a link's words, a tracked attribute and value
+    * @param path
+    *   what tells it from every other anchor, and how it is reported: the name,
+    *   and for a link where it goes too
     */
   final case class Anchor(kind: String, name: String, path: String)
 
@@ -49,10 +57,14 @@ object ContentCoverage {
       scope: String = defaultScope
   ): List[Anchor] =
     within(page, scope)
-      .flatMap(e =>
-        Anchors.namesOf(e, trackedAttributes).map(n => Anchor(kindOf(n), n, n))
-      )
-      .distinctBy(_.name)
+      .flatMap(anchorsOf(_, trackedAttributes))
+      .distinctBy(_.path)
+
+  private def anchorsOf(e: Element, tracked: Set[String]): List[Anchor] =
+    Anchors.namesOf(e, tracked).map { name =>
+      val kind = kindOf(name)
+      Anchor(kind, name, if (kind == "link") Anchors.linkTo(e) else name)
+    }
 
   /** Everything inside the scope, but not the container itself — a spec does
     * not assert the wrapper it was handed.
@@ -77,18 +89,31 @@ object ContentCoverage {
       ignored: Set[String] = Set.empty,
       trackedAttributes: Set[String] = defaultTrackedAttributes,
       scope: String = defaultScope
+  ): List[Anchor] =
+    unassertedOutside(page, Set.empty, ignored, trackedAttributes, scope)
+
+  /** As [[unasserted]], leaving out whatever sits inside something these CSS
+    * selectors match: a block a page inherits, which may have no id to name it
+    * by and whose words change with the language.
+    */
+  def unassertedOutside(
+      page: Page,
+      selectors: Set[String],
+      ignored: Set[String] = Set.empty,
+      trackedAttributes: Set[String] = defaultTrackedAttributes,
+      scope: String = defaultScope
   ): List[Anchor] = {
     val touched = page.touchedAnchors
     val ignoredIds = ignored.map(_.stripPrefix("#"))
     within(page, scope)
       .filterNot(insideIgnored(_, ignoredIds))
-      .flatMap(e =>
-        Anchors.namesOf(e, trackedAttributes).map(n => Anchor(kindOf(n), n, n))
-      )
-      .distinctBy(_.name)
-      .filterNot(a => touched.contains(a.name))
+      .filterNot(e => selectors.exists(e.closest(_) != null))
+      .flatMap(anchorsOf(_, trackedAttributes))
+      .distinctBy(_.path)
+      .filterNot(a => touched.contains(a.path))
       .filterNot(a =>
-        ignored.contains(a.name) || ignored.contains(a.name.stripPrefix("#"))
+        ignored.contains(a.name) || ignored.contains(a.path) ||
+          ignored.contains(a.name.stripPrefix("#"))
       )
   }
 
@@ -106,7 +131,7 @@ object ContentCoverage {
     val byKind = unasserted.groupBy(_.kind)
     val lines = List("id", "link", "tracking").flatMap { kind =>
       byKind.get(kind).map { as =>
-        s"  $kind (${as.size}): ${as.map(_.name).mkString(", ")}"
+        s"  $kind (${as.size}): ${as.map(_.path).mkString(", ")}"
       }
     }
     (s"${unasserted.size} things on this page were never asserted:" :: lines)

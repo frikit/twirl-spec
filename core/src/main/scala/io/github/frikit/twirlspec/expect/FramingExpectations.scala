@@ -17,7 +17,7 @@
 package io.github.frikit.twirlspec.expect
 
 import io.github.frikit.twirlspec.expect.Matching._
-import io.github.frikit.twirlspec.page.{Page, Text}
+import io.github.frikit.twirlspec.page.Page
 
 /** Expectations about the frame of a GOV.UK page: what it is called, what it is
   * headed, and the furniture the layout is responsible for.
@@ -69,16 +69,22 @@ trait FramingExpectations {
   def heading(expected: Expected): Expectation = Expectation("heading") {
     page =>
       val h1 = page.h1
-      if (h1.isEmpty) Seq(Violation.missing("heading", "h1"))
-      else {
-        // The caption is inside the h1 for GOV.UK "page heading with caption",
-        // so compare against the h1 text with any caption text removed.
-        val captionText = page.caption.texts.headOption.getOrElse("")
-        val headingText =
-          if (captionText.nonEmpty && h1.text.startsWith(captionText))
-            h1.text.drop(captionText.length).trim
-          else h1.text
-        compare("heading", expected, headingText, page, Exact)
+      Matching.exactlyOne("heading", h1) match {
+        case Left(problem) => Seq(problem)
+        case Right(_)      =>
+          // The caption is inside the h1 for GOV.UK "page heading with caption",
+          // so compare against the h1 text with any caption text removed.
+          val captionText =
+            page
+              .withRecordingPaused(page.caption)
+              .texts
+              .headOption
+              .getOrElse("")
+          val headingText =
+            if (captionText.nonEmpty && h1.text.startsWith(captionText))
+              h1.text.drop(captionText.length).trim
+            else h1.text
+          compare("heading", expected, headingText, page, Exact)
       }
   }
 
@@ -95,9 +101,9 @@ trait FramingExpectations {
   /** The caption against any expected value. */
   def caption(expected: Expected): Expectation = Expectation("caption") {
     page =>
-      present("caption", page.caption) match {
-        case Nil =>
-          compare("caption", expected, page.caption.text, page, Contains)
+      val captions = page.withRecordingPaused(page.caption)
+      present("caption", captions) match {
+        case Nil  => oneSays("caption", captions, expected, page, Contains)
         case errs => errs
       }
   }
@@ -129,12 +135,12 @@ trait FramingExpectations {
     present("timeoutDialog", page.timeoutDialog)
   }
 
-  /** A sign out link is present, and points where it should. */
+  /** A sign out link is present. */
   val signOutLink: Expectation = Expectation("signOutLink") { page =>
     present("signOutLink", page.signOutLink)
   }
 
-  /** The alpha or beta phase banner is present, with the phase it names. */
+  /** The alpha or beta phase banner is present. */
   val phaseBanner: Expectation = Expectation("phaseBanner") { page =>
     present("phaseBanner", page.phaseBanner)
   }
@@ -146,20 +152,25 @@ trait FramingExpectations {
   /** A heading at a given level says this. */
   def headingAtLevel(level: Int, expected: Expected): Expectation =
     Expectation(s"h$level") { page =>
+      val rule = s"h$level"
       expected.resolve(page) match {
-        case Left(v)      => Seq(v.copy(rule = s"h$level"))
+        case Left(v)      => Seq(v.copy(rule = rule))
         case Right(value) =>
-          val found = page.headings.collect { case (l, t) if l == level => t }
-          if (found.exists(Text.same(_, value))) Nil
+          val found = page.withRecordingPaused(page.css(rule))
+          val saying = found.elements.filter(e =>
+            compare(rule, expected, e.text(), page, Exact).isEmpty
+          )
+          page.record(saying)
+          if (saying.nonEmpty) Nil
           else
             Seq(
               Violation(
-                rule = s"h$level",
+                rule = rule,
                 message = s"no <h$level> on the page had this text",
                 expected = Some(value),
                 actual = Some(
                   if (found.isEmpty) "(no h" + level + " elements)"
-                  else found.mkString(" | ")
+                  else found.texts.mkString(" | ")
                 )
               )
             )

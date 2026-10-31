@@ -16,8 +16,11 @@
 
 package io.github.frikit.twirlspec.html
 
+import java.nio.file.{FileVisitOption, Files, Path}
 import scala.annotation.tailrec
 import scala.collection.mutable
+import scala.jdk.CollectionConverters._
+import scala.util.Using
 
 /** Whether every element that was opened was closed, read from the source.
   *
@@ -58,7 +61,13 @@ object TagBalance {
 
   final private case class Open(name: String, line: Int)
 
-  private val tag = """<\s*(/?)\s*([a-zA-Z][a-zA-Z0-9:-]*)([^>]*?)(/?)\s*>""".r
+  /** A `>` inside a quoted attribute value does not end the tag, so an
+    * attribute holding markup, as `srcdoc` does, is not read as tags of its
+    * own. Where a quote never closes, the tag ends at the first `>`, so the
+    * element is still seen.
+    */
+  private val tag =
+    """<\s*(/?)\s*([a-zA-Z][a-zA-Z0-9:-]*)((?:[^>"']|"[^"]*"|'[^']*')*?|[^>]*?)(/?)\s*>""".r
 
   /** The same check against a Twirl template rather than a rendered page.
     *
@@ -71,6 +80,19 @@ object TagBalance {
   def checkTemplate(template: String): List[Problem] = check(
     TwirlSource.htmlOnly(template)
   )
+
+  /** Every Twirl template under this directory, in a stable order, or none
+    * where it is not a directory.
+    */
+  def templatesUnder(root: Path): List[Path] =
+    if (!Files.isDirectory(root)) Nil
+    else
+      Using.resource(Files.walk(root, FileVisitOption.FOLLOW_LINKS))(
+        _.iterator.asScala
+          .filter(_.toString.endsWith(".scala.html"))
+          .toList
+          .sortBy(_.toString)
+      )
 
   /** The problems in a piece of rendered markup, in line order, with comments,
     * doctypes and raw-text elements ignored.

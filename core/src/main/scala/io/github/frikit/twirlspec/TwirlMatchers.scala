@@ -141,37 +141,49 @@ trait TwirlMatchers { self: TwirlSpecDsl =>
 
   /** Assert against a page directly, outside a matcher. */
   def checkPage(page: Page, expectations: Seq[Expectation]): CheckReport =
-    CheckReport(page, Expectation.all(expectations).check(page), "page")
+    Trace.checked(
+      CheckReport(page, Expectation.all(expectations).check(page), "page")
+    )
 
   private def matcherFor(
       expectations: Seq[Expectation],
       subject: String
   ): Matcher[Page] =
     new Matcher[Page] {
-      def apply(page: Page): MatchResult = {
-        val report =
-          CheckReport(page, Expectation.all(expectations).check(page), subject)
-        val ok = report.passed && (!failOnWarnings || report.warnings.isEmpty)
-
-        if (ok && reportWarnings && report.warnings.nonEmpty) surface(report)
-
-        // The message walks the whole page to build the outline, so it is only built for a failure.
-        MatchResult(
-          ok,
-          if (ok) "" else report.message,
+      def apply(page: Page): MatchResult =
+        verdict(
+          Trace.checked(
+            CheckReport(
+              page,
+              Expectation.all(expectations).check(page),
+              subject
+            )
+          ),
           s"$subject satisfied every check, but was expected not to"
         )
-      }
     }
+
+  /** What a check comes to under this spec's policy on warnings: they fail it
+    * under `failOnWarnings`, and otherwise are surfaced on the pass.
+    */
+  private[twirlspec] def verdict(
+      report: CheckReport,
+      negated: String
+  ): MatchResult = {
+    val ok = report.passed && (!failOnWarnings || report.warnings.isEmpty)
+
+    if (ok) surfaceWarnings(report.warnings)
+
+    // The message walks the whole page to build the outline, so it is only built for a failure.
+    MatchResult(ok, if (ok) "" else report.message, negated)
+  }
 
   /** Warnings are worth seeing on a green run too — that is how a service finds
     * out it is one fix away from being able to turn `failOnWarnings` on.
     */
-  private def surface(report: CheckReport): Unit =
-    try {
-      val lines =
-        report.warnings.map(w => s"  ${w.rule}: ${w.message}").mkString("\n")
-      alertHook(s"twirl-spec: ${report.warnings.size} warning(s)\n$lines")
-    } catch { case NonFatal(_) => () }
+  private[twirlspec] def surfaceWarnings(warnings: Seq[Violation]): Unit =
+    if (reportWarnings && warnings.nonEmpty)
+      try alertHook(Outcome.surfaced(warnings))
+      catch { case NonFatal(_) => () }
 
 }
