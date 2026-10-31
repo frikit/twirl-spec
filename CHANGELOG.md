@@ -10,7 +10,7 @@ release, and each one has a GitHub Release whose notes are its section here. Eve
 recorded in full; earlier lines are kept to one entry each, so the file stays
 readable.
 
-## [2.4.0] - 2026-10-30
+## [2.4.0] - 2026-10-31
 
 Verdicts change in this release, so it is a minor version. `assertEverything`
 can fail where it passed before, because it no longer counts what an expectation
