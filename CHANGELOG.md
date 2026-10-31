@@ -10,6 +10,17 @@ release, and each one has a GitHub Release whose notes are its section here. Eve
 recorded in full; earlier lines are kept to one entry each, so the file stays
 readable.
 
+## [2.5.0] - 2026-10-31
+
+### Added
+
+- `within(selector)(expectations*)` asks expectations of one part of the page, for a
+  page with two tables or a search form before the form under test. What it names has
+  to be one element. What an element says of another by id still reaches the whole
+  page, and so do the standards. What is asserted inside counts for coverage.
+- `columnHeaders(keys*)` reads the column headers of one table, where `tableHeaders`
+  reads every header cell on the page, row headers included.
+
 ## [2.4.1] - 2026-10-31
 
 ### Fixed
@@ -569,6 +580,7 @@ them in `twirl-spec-all`. The renames a service built against a 0.x snapshot
 would meet are listed in [the adoption guide](docs/adopting.md).
 
 [Unreleased]: https://github.com/frikit/twirl-spec/compare/v2.4.0...HEAD
+[2.5.0]: https://github.com/frikit/twirl-spec/compare/v2.4.1...v2.5.0
 [2.4.1]: https://github.com/frikit/twirl-spec/compare/v2.4.0...v2.4.1
 [2.4.0]: https://github.com/frikit/twirl-spec/compare/v2.3.0...v2.4.0
 [2.3.0]: https://github.com/frikit/twirl-spec/compare/v2.2.0...v2.3.0
