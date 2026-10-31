@@ -125,7 +125,9 @@ lazy val core = Project("twirl-spec-core", file("core"))
     // of Twirl's defaults (Html, Txt, Xml, JavaScript and the helper objects),
     // which these HTML fixtures never touch and which would otherwise fail the
     // unused-import check. A template that needs more imports it itself.
-    Test / TwirlKeys.templateImports := Seq("play.api.i18n.Messages")
+    Test / TwirlKeys.templateImports := Seq("play.api.i18n.Messages"),
+    // As Play's plugin sets it, so a fixture with @this is built as a service's is.
+    Test / TwirlKeys.constructorAnnotations := Seq("@javax.inject.Inject()")
   )
 
 /** Accessibility and Twirl rendering rules that apply to any page. */

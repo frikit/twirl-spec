@@ -18,6 +18,8 @@ package io.github.frikit.twirlspec.quality
 
 import play.twirl.api.Html
 
+import java.lang.reflect.{Method, Modifier}
+import scala.collection.immutable.ArraySeq
 import scala.runtime.FunctionXXL
 import scala.util.control.NonFatal
 
@@ -38,6 +40,40 @@ object EntryPoints {
       checkF(view, expected, args),
       checkRef(view)
     ).flatten
+
+  /** As [[problems]], with what `apply` gives for these arguments as the
+    * baseline.
+    */
+  private[quality] def problemsAgainstApply(
+      view: AnyRef,
+      args: Seq[Any]
+  ): List[String] =
+    method(view, "apply", args.size) match {
+      case None    => List(s"apply/${args.size} not found on ${name(view)}")
+      case Some(m) =>
+        val expected = m.invoke(view, forApply(m, args): _*)
+        problems(view, expected.asInstanceOf[Html], args)
+    }
+
+  /** `render` and `f` take a repeated parameter as an array, and `apply` takes
+    * it as a sequence.
+    */
+  private def forApply(apply: Method, args: Seq[Any]): Seq[AnyRef] =
+    apply.getParameterTypes.toSeq.zip(args).map {
+      case (parameter, array: Array[_]) if parameter == classOf[Seq[_]] =>
+        ArraySeq.unsafeWrapArray(array)
+      case (_, arg) => arg.asInstanceOf[AnyRef]
+    }
+
+  /** What a template's `render` takes, by the types it declares. */
+  private[quality] def parametersOf(view: AnyRef): List[Class[_]] =
+    view.getClass.getMethods
+      .filterNot(_.isBridge)
+      .find(_.getName == "render")
+      .map(_.getParameterTypes.toList)
+      .getOrElse(
+        throw new NoSuchElementException(s"render not found on ${name(view)}")
+      )
 
   private def checkRender(
       view: AnyRef,
@@ -129,9 +165,13 @@ object EntryPoints {
     m.invoke(f, args.map(_.asInstanceOf[AnyRef]): _*)
   }
 
+  /** A template inherits a static `apply`, from the case class behind Twirl's
+    * `BaseScalaTemplate`, and that is not its own.
+    */
   private def method(view: AnyRef, named: String, arity: Int) =
     view.getClass.getMethods.find(m =>
-      m.getName == named && m.getParameterCount == arity
+      m.getName == named && m.getParameterCount == arity &&
+        !Modifier.isStatic(m.getModifiers)
     )
 
   private def attempt(what: String)(f: => AnyRef): Option[AnyRef] =
@@ -147,7 +187,7 @@ object EntryPoints {
     if (got.toString == expected.toString) None
     else Some(s"$what produced different html from apply")
 
-  private def rootCause(e: Throwable): String =
+  private[quality] def rootCause(e: Throwable): String =
     Option(e.getCause)
       .map(rootCause)
       .getOrElse(s"${e.getClass.getSimpleName}: ${e.getMessage}")

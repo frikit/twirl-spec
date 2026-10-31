@@ -121,4 +121,24 @@ trait CoverageChecks extends TwirlSpecDsl {
       }
     }
 
+  /** The same of every template under a directory, with what `apply` gives as
+    * the baseline, and arguments chosen from these stand-ins by type:
+    *
+    * {{{
+    * Path.of("app/views") must haveAgreeingEntryPoints(form, false, "a name", Nil, None, request, messages)
+    * }}}
+    *
+    * The directory is one Twirl compiles from, or the `views` directory inside
+    * it. A template taking a type with no stand-in fails, by name, and so does
+    * a directory that is not there or holds no templates. `forTemplate` gives
+    * one template arguments of its own.
+    */
+  def haveAgreeingEntryPoints(standIns: Any*): TemplateEntryPoints =
+    new TemplateEntryPoints(
+      standIns.toSeq,
+      Map.empty,
+      getClass.getClassLoader,
+      templateInstance(_)
+    )
+
 }
