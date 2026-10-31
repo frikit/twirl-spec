@@ -33,7 +33,7 @@ of all nine modules as one site. These pages are the guide.
 ## The shortest possible start
 
 ```scala
-libraryDependencies += "io.github.frikit" %% "twirl-spec-all" % "2.4.1" % Test
+libraryDependencies += "io.github.frikit" %% "twirl-spec-all" % "2.5.0" % Test
 ```
 
 ```scala

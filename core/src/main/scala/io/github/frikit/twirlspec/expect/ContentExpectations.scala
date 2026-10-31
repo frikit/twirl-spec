@@ -178,10 +178,8 @@ trait ContentExpectations {
         if (actual == expected) {
           // What it read counts as asserted; the rows' actions it did not read.
           page.record(
-            page.document
-              .select(".govuk-summary-list__row")
-              .asScala
-              .toList
+            page
+              .inScope(".govuk-summary-list__row")
               .flatMap(row =>
                 row :: row
                   .select(
@@ -208,26 +206,76 @@ trait ContentExpectations {
 
   /** The table header cells, in order. */
   def tableHeaders(keys: String*): Expectation = Expectation("tableHeaders") {
-    page =>
-      val resolved = keys.toList.map(k => Expected.Key(k).resolve(page))
-      val unresolved = resolved.collect { case Left(v) =>
-        v.copy(rule = "tableHeaders")
-      }
-      if (unresolved.nonEmpty) unresolved
-      else {
-        val expected = resolved.collect { case Right(v) => v }
-        val actual = page.css("table th").texts
-        if (actual == expected) Nil
-        else
-          Seq(
-            Violation.mismatch(
-              "tableHeaders",
-              expected.mkString(" | "),
-              if (actual.isEmpty) "(no table headers)"
-              else actual.mkString(" | ")
-            )
+    page => headersRead("tableHeaders", keys, page)(page.css("table th").texts)
+  }
+
+  /** The column headers of the one table on the page, or in [[within]], in
+    * order: what `tableHeaders` reads, less the header each row has of its own.
+    */
+  def columnHeaders(keys: String*): Expectation =
+    Expectation("columnHeaders") { page =>
+      exactlyOne(
+        "columnHeaders",
+        page.withRecordingPaused(page.css("table"))
+      ) match {
+        case Left(problem) => Seq(problem)
+        case Right(_)      =>
+          headersRead("columnHeaders", keys, page)(
+            page.css("table th:not([scope=row]):not([scope=rowgroup])").texts
           )
       }
+    }
+
+  private def headersRead(rule: String, keys: Seq[String], page: Page)(
+      read: => List[String]
+  ): Seq[Violation] = {
+    val resolved = keys.toList.map(k => Expected.Key(k).resolve(page))
+    val unresolved = resolved.collect { case Left(v) => v.copy(rule = rule) }
+    if (unresolved.nonEmpty) unresolved
+    else {
+      val expected = resolved.collect { case Right(v) => v }
+      val actual = read
+      if (actual == expected) Nil
+      else
+        Seq(
+          Violation.mismatch(
+            rule,
+            expected.mkString(" | "),
+            if (actual.isEmpty) "(no table headers)"
+            else actual.mkString(" | ")
+          )
+        )
+    }
+  }
+
+  /** These expectations, asked of one part of the page: the one element this
+    * selector matches, for a page with two tables, or a search form before the
+    * form under test.
+    *
+    * {{{
+    * within("#results")(columnHeaders("x.name", "x.born"), tableRow("Ada", "1815"))
+    * within("form[action='/save']")(formPostsTo("/save"), submitButton())
+    * }}}
+    *
+    * What it matches has to be one element, or the expectation fails, as it
+    * does for anything naming one element. What an element says of another by
+    * id, such as `for` or `aria-describedby`, still reaches the whole page. So
+    * do the standards, and the page's title and language. What is asserted here
+    * counts for the page's coverage.
+    */
+  def within(selector: String)(expectations: Expectation*): Expectation = {
+    val rule = s"within($selector)"
+    Expectation(rule) { page =>
+      exactlyOne(rule, page.withRecordingPaused(page.css(selector))) match {
+        case Left(problem) => Seq(problem)
+        case Right(root)   =>
+          page.record(List(root))
+          val inside = page.scopedTo(root)
+          expectations
+            .flatMap(_.check(inside))
+            .map(v => v.copy(rule = s"$rule ${v.rule}"))
+      }
+    }
   }
 
   /** A row whose cells read exactly like this. */
@@ -513,10 +561,8 @@ final case class SummaryRowExpectation(
       case Left(v)         => Seq(v.copy(rule = rule))
       case Right(keyValue) =>
         // Locate the row once and read everything off it.
-        val rows = page.document
-          .select(".govuk-summary-list__row")
-          .asScala
-          .toList
+        val rows = page
+          .inScope(".govuk-summary-list__row")
           .filter(r =>
             Text.same(r.select(".govuk-summary-list__key").text(), keyValue)
           )

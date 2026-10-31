@@ -435,6 +435,8 @@ listed again here.
 | `summaryRow` | A row of a `govukSummaryList`, by its key. |
 | `summaryList` | The summary list holds exactly these `key -> value` rows, in order. |
 | `tableHeaders` | The table header cells, in order. |
+| `columnHeaders` | The column headers of the one table on the page, or in `within`, in order: what `tableHeaders` reads, less the header each row has of its own. |
+| `within` | These expectations, asked of one part of the page: the one element this selector matches. |
 | `tableRow` | A row whose cells read exactly like this. |
 | `appearsBefore` | One selector's first match comes before another's in document order. |
 | `element` | An element with this id exists. |

@@ -100,6 +100,7 @@ Tables:
 
 ```scala
 tableHeaders("x.col1", "x.col2")         // the header cells, in order
+columnHeaders("x.col1", "x.col2")        // less the header each row has of its own
 tableRow("Ada", "1815")                  // a row whose cells read exactly like this
 ```
 
@@ -248,6 +249,17 @@ This follows Testing Library's `getBy`: quietly taking the first of several
 is how a test ends up asserting against something other than the thing it
 names. Expectations that are plural by nature, such as `radioGroup`, `bullets`,
 `link` and `tableRow`, are unaffected.
+
+Where a page really has two of something, `within` asks of the one you mean:
+
+```scala
+within("#results")(columnHeaders("x.name", "x.born"), tableRow("Ada", "1815"))
+within("form[action='/save']")(formPostsTo("/save"), submitButton())
+```
+
+What it names has to be one element. What an element says of another by id, such
+as `for` or `aria-describedby`, still reaches the whole page, and so do the
+standards. What is asserted inside counts for the page's coverage.
 
 ## House rules
 

@@ -797,7 +797,7 @@ final case class ErrorSummaryExpectation(
                 case Some((target, _)) =>
                   // What this asserted: the entry, and where it goes.
                   page.record(link.toList.map(page.errorSummaryLinkElements))
-                  page.byId(target)
+                  page.byIdAnywhere(target)
                   Nil
               }
           }
