@@ -951,7 +951,7 @@ check reports that there is nothing to compare against.
 ```
 page failed 2 checks:
 
-  x title — text did not start with the expected value
+  x title — text did not read as the expected value
         expected  "What is your name?"
         actual    "What is you name?"
 

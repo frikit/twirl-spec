@@ -43,7 +43,7 @@ trait FramingExpectations {
       expected,
       stripErrorPrefix(page, page.title),
       page,
-      StartsWith
+      WholeTitle
     )
   }
 

@@ -21,6 +21,19 @@ readable.
 - `columnHeaders(keys*)` reads the column headers of one table, where `tableHeaders`
   reads every header cell on the page, row headers included.
 
+### Fixed
+
+Each of these can fail a page that passed.
+
+- `title` and `titleText` have to be the whole title, up to the suffix a layout puts
+  after it. Starting with the words was enough, so `titleText("Your name")` passed on
+  "Your name and address - Service - GOV.UK". The suffix is set off by a dash, a bar or
+  a middle dot with a space either side; a title with another shape takes
+  `title(matching(...))` or `exactTitle`.
+- `role(...).named(...).occurring(n)` counts what carries the name. It counted every
+  element with the role, so one Save button among two passed `occurring(2)`, and
+  `occurring(1)` failed. `occurring(0)` now says no element carries the name.
+
 ## [2.4.1] - 2026-10-31
 
 ### Fixed
