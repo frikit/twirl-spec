@@ -25,7 +25,14 @@ private[twirlspec] object Matching {
   sealed trait Mode { def verb: String }
   case object Exact extends Mode { val verb = "equal" }
   case object Contains extends Mode { val verb = "contain" }
-  case object StartsWith extends Mode { val verb = "start with" }
+
+  /** The whole of a browser title, up to the " - Service - GOV.UK" a layout
+    * puts after it. Starting with the words is not enough: "Your name" is not
+    * the title of "Your name and address".
+    */
+  case object WholeTitle extends Mode { val verb = "read as" }
+
+  private val LayoutSuffix = "\\s+[-–—|·]\\s.*".r
 
   /** GOV.UK prefixes the browser title of a page in an error state. */
   def errorTitlePrefixes(page: Page): Seq[String] =
@@ -59,7 +66,9 @@ private[twirlspec] object Matching {
             mode match {
               case Exact      => a == value
               case Contains   => a.contains(value)
-              case StartsWith => a.startsWith(value)
+              case WholeTitle =>
+                a == value || (a.startsWith(value) &&
+                  LayoutSuffix.matches(a.drop(value.length)))
             }
         }
         if (ok) Nil else Seq(mismatch(rule, value, a, mode))

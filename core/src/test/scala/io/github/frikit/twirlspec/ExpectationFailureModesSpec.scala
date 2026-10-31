@@ -86,6 +86,46 @@ class ExpectationFailureModesSpec
   private def failsOn(page: Page, name: String, e: Expectation): Unit =
     withClue(s"$name should have failed — ")(e.check(page) must not be empty)
 
+  "title" should {
+    def titled(words: String) = Page.fromString(
+      s"<!DOCTYPE html><html><head><title>$words</title></head><body></body></html>",
+      english,
+      messages
+    )
+
+    "be the whole title, up to what the layout puts after it" in {
+      Seq(
+        "Your name",
+        "Your name - Service - GOV.UK",
+        "Your name – Service",
+        "Your name — Service",
+        "Your name | Service",
+        "Your name · Service"
+      ).foreach(words =>
+        withClue(words)(
+          titleText("Your name").check(titled(words)) mustBe empty
+        )
+      )
+    }
+
+    "not pass on a title that merely starts with the words" in {
+      Seq(
+        "Your name and address - Service - GOV.UK",
+        "Your name-address - Service",
+        "Your names"
+      ).foreach(words =>
+        withClue(words) {
+          titleText("Your name").check(titled(words)).map(_.message) mustBe
+            Seq("text did not read as the expected value")
+        }
+      )
+    }
+
+    "leave a pattern to say what it says" in {
+      title(matching("^Your".r)).check(titled("Your names")) mustBe empty
+    }
+  }
+
   "heading" should {
     "not read two headings as one" in {
       val two = Page.fromString(

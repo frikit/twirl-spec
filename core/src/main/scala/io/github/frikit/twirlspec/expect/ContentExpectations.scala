@@ -681,7 +681,9 @@ final case class RoleExpectation(
   def namedMatching(regex: scala.util.matching.Regex): RoleExpectation =
     copy(name = Some(Expected.Pattern(regex)))
 
-  /** Exactly this many elements carry the role. */
+  /** Exactly this many elements carry the role, and the name where one is
+    * given.
+    */
   def occurring(times: Int): RoleExpectation = copy(count = Some(times))
 
   def description: String =
@@ -693,28 +695,33 @@ final case class RoleExpectation(
     val matches = page.withRecordingPaused(page.byRole(roleName))
     if (name.isEmpty) page.record(matches.elements)
 
-    val countIssues = count.toSeq.flatMap { expected =>
-      if (matches.size == expected) Nil
-      else
-        Seq(
-          Violation
-            .mismatch(s"$rule count", expected.toString, matches.size.toString)
+    def namedAs(expectedName: Expected, value: String) = expectedName match {
+      case Expected.Pattern(regex) =>
+        matches.elements.filter(e =>
+          regex.findFirstIn(page.accessibleName(e)).isDefined
         )
+      case _ => page.byRole(roleName, value).elements
+    }
+
+    // A name that does not resolve is reported below, with nothing to count.
+    val counted = name.fold(Option(matches.elements))(n =>
+      n.resolve(page).toOption.map(namedAs(n, _))
+    )
+
+    val countIssues = count.toSeq.flatMap { expected =>
+      counted.toSeq.filter(_.size != expected).map { found =>
+        Violation
+          .mismatch(s"$rule count", expected.toString, found.size.toString)
+      }
     }
 
     val nameIssues = name.toSeq.flatMap { expectedName =>
       expectedName.resolve(page) match {
         case Left(v)      => Seq(v.copy(rule = rule))
         case Right(value) =>
-          val named = expectedName match {
-            case Expected.Pattern(regex) =>
-              matches.elements.filter(e =>
-                regex.findFirstIn(page.accessibleName(e)).isDefined
-              )
-            case _ => page.byRole(roleName, value).elements
-          }
+          val named = namedAs(expectedName, value)
           page.record(named)
-          if (named.nonEmpty) Nil
+          if (named.nonEmpty || count.contains(0)) Nil
           else
             Seq(
               Violation(
