@@ -12,6 +12,14 @@ readable.
 
 ## [2.5.0] - 2026-10-31
 
+### Rules
+
+- `post-form-has-csrf-token`, new, and in no rule set, so nothing changes until a
+  service asks for it with `SecurityStandards.csrfToken()`: a form posting back to the
+  service carries its CSRF token, which Play's filter otherwise answers with a 403. It
+  blocks, as whoever adds it has asked for it. A form posting to a full address is left
+  alone, and a service with another token name can give it.
+
 ### Added
 
 - `within(selector)(expectations*)` asks expectations of one part of the page, for a
