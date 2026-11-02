@@ -122,7 +122,7 @@ authority for that release; this table is kept for the current line.
 
 | twirl-spec | Play | Twirl | Scala | Java | ScalaTest | jsoup |
 |---|---|---|---|---|---|---|
-| 2.x | 3.0.0 | 2.0.1 | 3.3.8 | 21 | 3.2.20 | 1.23.2 |
+| 2.x | 3.0.0 | 2.0.1 | 3.3.9 | 21 | 3.2.20 | 1.23.2 |
 
 CI also runs a Play service's view specs against the published artifacts, as a
 service gets them: on Scala 3.3.7 compiled with `-release 11` and Play 3.0.10,
@@ -142,11 +142,11 @@ they predate the Pekko move and are not tested.
 ships, so sbt resolves it upward to whatever your Play brings and it never moves
 your Twirl either.
 
-**Scala.** Published for Scala 3 only, built with 3.3.8 on the LTS line, and
+**Scala.** Published for Scala 3 only, built with 3.3.9 on the LTS line, and
 supported from Scala 3.3.0: every later Scala 3 reads what 3.3 compiles, and
 every 3.3 patch reads the same TASTy. Tested on 3.3.0, 3.3.6, 3.3.7 and 3.9.0,
-with 3.3.7 and 3.9.0 kept tested in CI. A project on a 3.3 patch below 3.3.8
-gets scala3-library 3.3.8 on its test classpath, which sbt resolves without a
+with 3.3.7 and 3.9.0 kept tested in CI. A project on a 3.3 patch below 3.3.9
+gets scala3-library 3.3.9 on its test classpath, which sbt resolves without a
 warning. A project on Scala 2.13 cannot use 2.x; see
 [Moving from 1.x to 2.x](docs/adopting.md#moving-from-1x-to-2x).
 
@@ -435,6 +435,8 @@ listed again here.
 | `summaryRow` | A row of a `govukSummaryList`, by its key. |
 | `summaryList` | The summary list holds exactly these `key -> value` rows, in order. |
 | `tableHeaders` | The table header cells, in order. |
+| `columnHeaders` | The column headers of the one table on the page, or in `within`, in order: what `tableHeaders` reads, less the header each row has of its own. |
+| `within` | These expectations, asked of one part of the page: the one element this selector matches. |
 | `tableRow` | A row whose cells read exactly like this. |
 | `appearsBefore` | One selector's first match comes before another's in document order. |
 | `element` | An element with this id exists. |
@@ -489,6 +491,7 @@ listed again here.
 | `assertEverythingExcept` | As `assertEverything`, but these ids, links or tracking values are deliberately not asserted. |
 | `unassertedContent` | What this spec has asserted so far, for a spec that wants to report rather than fail. |
 | `entryPointsAgree` | Twirl's generated `render`, `f` and `ref` all agree with `apply`. |
+| `haveAgreeingEntryPoints` | The same of every template under a directory, called with stand-ins chosen by type. |
 
 **Languages**
 
@@ -585,6 +588,9 @@ Ways a page can leak or be turned against its reader.
 | `no-password-in-get` | a password is never submitted in a URL |
 | `no-javascript-href` | links do not carry javascript: URLs |
 | `target-blank-is-safe` | a link opening a new tab cannot reach back *(warning)* |
+
+`SecurityStandards.csrfToken()` is a rule in no set, for a Play service to add to
+`standardsRules`: a form posting back to the service carries its CSRF token.
 
 ### `GovukStandards`
 
@@ -823,7 +829,15 @@ memberNameView must entryPointsAgree(
 ```
 
 The arguments are the ones `render` takes: every parameter including the
-implicit ones, flattened, in order.
+implicit ones, flattened, in order. One line asks the same of every template
+under a directory, which get the first stand-in of each type their `render`
+declares. A type with no stand-in fails, naming the template and the type, and
+`forTemplate` gives one template arguments of its own:
+
+```scala
+Path.of("app/views") must haveAgreeingEntryPoints(form, false, "a name", Nil, None, request, messages)
+  .forTemplate("views.html.register.dateOfBirthView")(dateForm, request, messages)
+```
 
 ## A catalogue of pages
 
@@ -949,7 +963,7 @@ check reports that there is nothing to compare against.
 ```
 page failed 2 checks:
 
-  x title — text did not start with the expected value
+  x title — text did not read as the expected value
         expected  "What is your name?"
         actual    "What is you name?"
 

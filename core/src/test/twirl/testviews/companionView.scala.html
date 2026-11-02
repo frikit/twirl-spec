@@ -1,0 +1,3 @@
+@this(langs: play.api.i18n.Langs = new play.api.i18n.DefaultLangs())
+@(name: String)(implicit messages: Messages)
+<p lang="@messages.lang.code">@name @langs.availables.size</p>

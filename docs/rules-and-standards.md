@@ -124,7 +124,16 @@ under one name, and a Scala value such as `Some(...)` reaching the page.
 **`SecurityStandards`** is ways a page can leak or be turned against its
 reader: a password in a form that submits by GET — including one that names no
 method, which submits by GET too — a `javascript:` link, and a new-tab link
-carrying neither `rel="noopener"` nor `rel="noreferrer"`.
+carrying neither `rel="noopener"` nor `rel="noreferrer"`. It also has a rule in no
+set, for a Play service to add. It fails a form posting back to the service with no
+CSRF token, which Play's filter would answer with a 403:
+
+```scala
+override def standardsRules = super.standardsRules :+ SecurityStandards.csrfToken()
+```
+
+It is opt-in because it does not hold of every page: a service may send its token
+another way, or exempt a route. A form posting to a full address is left alone.
 
 **`GovukStandards`** is the Design System's conventions: the title prefix, the
 visually hidden "Error:" on inline messages, the summary links landing on their
