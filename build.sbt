@@ -1,5 +1,5 @@
 // Scala 3 only, on the LTS line: a consumer on any later Scala 3 can read what this produces.
-val scala3 = "3.3.8"
+val scala3 = "3.3.9"
 
 ThisBuild / organization := "io.github.frikit"
 ThisBuild / organizationName := "frikit"
@@ -32,7 +32,8 @@ ThisBuild / scalacOptions ++= Seq(
   "-release",
   "21",
   "-Wunused:imports",
-  "-Wconf:msg=unused import:e"
+  "-Wconf:msg=unused import:e",
+  "-Wconf:msg=Skipping coverage instrumentation:e"
 )
 
 // Every source file carries this header: `headerCreateAll` adds it to a new

@@ -60,7 +60,12 @@ object WcagStandards extends RuleSet {
   def criteria: Seq[Criterion] =
     all.flatMap(_.criterion).distinct.sortBy(c => (c.since.order, c.number))
 
-  lazy val all: Seq[Rule] = Seq(
+  // In blocks because from Scala 3.3.9 the compiler measures no coverage in a
+  // block over 3000 tree nodes, and build.sbt fails the build if it skips one.
+  lazy val all: Seq[Rule] =
+    pageStructureRules ++ controlAndTableRules ++ linkAndPurposeRules ++ referenceAndFocusRules
+
+  private def pageStructureRules: Seq[Rule] = Seq(
     Rule("one-h1", "a page has exactly one <h1>", pageLevel = true) { page =>
       page.h1.size match {
         case 1 => Nil
@@ -195,7 +200,10 @@ object WcagStandards extends RuleSet {
               "duplicate ids break label/for, aria-describedby and error summary links"
             )
         }
-    },
+    }
+  )
+
+  private def controlAndTableRules: Seq[Rule] = Seq(
     Rule(
       "labelled-controls",
       "every form control has an accessible name",
@@ -346,7 +354,10 @@ object WcagStandards extends RuleSet {
           ).warn
             .withHint("WCAG 1.3.1 — scope=\"col\" or scope=\"row\"")
         )
-    },
+    }
+  )
+
+  private def linkAndPurposeRules: Seq[Rule] = Seq(
     Rule(
       "link-has-name",
       "every link has an accessible name",
@@ -444,7 +455,10 @@ object WcagStandards extends RuleSet {
             "WCAG 1.3.5 — lets a browser fill the field on the user's behalf"
           )
         }
-    },
+    }
+  )
+
+  private def referenceAndFocusRules: Seq[Rule] = Seq(
     Rule(
       "aria-references-resolve",
       "every aria reference points at an element that exists",
