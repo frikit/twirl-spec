@@ -143,7 +143,7 @@ checks that the pages named in the site's navigation exist.
 
 The same workflow runs `sbt unidoc`, which renders every module's Scaladoc as
 one site, and puts it under `/api`. Run it locally with `sbt unidoc` and open
-`target/scala-3.3.8/unidoc/index.html`. Each module still publishes its own
+`target/scala-*/unidoc/index.html`. Each module still publishes its own
 javadoc jar; this is the copy a reader can browse.
 
 ## Releasing

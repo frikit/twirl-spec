@@ -32,7 +32,8 @@ ThisBuild / scalacOptions ++= Seq(
   "-release",
   "21",
   "-Wunused:imports",
-  "-Wconf:msg=unused import:e"
+  "-Wconf:msg=unused import:e",
+  "-Wconf:msg=Skipping coverage instrumentation:e"
 )
 
 // Every source file carries this header: `headerCreateAll` adds it to a new
