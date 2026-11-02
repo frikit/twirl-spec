@@ -122,7 +122,7 @@ authority for that release; this table is kept for the current line.
 
 | twirl-spec | Play | Twirl | Scala | Java | ScalaTest | jsoup |
 |---|---|---|---|---|---|---|
-| 2.x | 3.0.0 | 2.0.1 | 3.3.8 | 21 | 3.2.20 | 1.23.2 |
+| 2.x | 3.0.0 | 2.0.1 | 3.3.9 | 21 | 3.2.20 | 1.23.2 |
 
 CI also runs a Play service's view specs against the published artifacts, as a
 service gets them: on Scala 3.3.7 compiled with `-release 11` and Play 3.0.10,
@@ -142,11 +142,11 @@ they predate the Pekko move and are not tested.
 ships, so sbt resolves it upward to whatever your Play brings and it never moves
 your Twirl either.
 
-**Scala.** Published for Scala 3 only, built with 3.3.8 on the LTS line, and
+**Scala.** Published for Scala 3 only, built with 3.3.9 on the LTS line, and
 supported from Scala 3.3.0: every later Scala 3 reads what 3.3 compiles, and
 every 3.3 patch reads the same TASTy. Tested on 3.3.0, 3.3.6, 3.3.7 and 3.9.0,
-with 3.3.7 and 3.9.0 kept tested in CI. A project on a 3.3 patch below 3.3.8
-gets scala3-library 3.3.8 on its test classpath, which sbt resolves without a
+with 3.3.7 and 3.9.0 kept tested in CI. A project on a 3.3 patch below 3.3.9
+gets scala3-library 3.3.9 on its test classpath, which sbt resolves without a
 warning. A project on Scala 2.13 cannot use 2.x; see
 [Moving from 1.x to 2.x](docs/adopting.md#moving-from-1x-to-2x).
 

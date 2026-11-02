@@ -34,6 +34,12 @@ readable.
   name, and `forTemplate` gives one template arguments of its own. A spec base with an
   application other than `TwirlSpec`'s overrides the new `templateInstance`.
 
+### Changed
+
+- Built with Scala 3.3.9. A project on a 3.3 patch below it gets scala3-library 3.3.9 on
+  its test classpath, which sbt resolves without a warning. What is supported has not
+  moved: any Scala 3.3.0 or later, tested on 3.3.0, 3.3.6, 3.3.7 and 3.9.0.
+
 ### Fixed
 
 Each of these can fail a page that passed.
