@@ -38,8 +38,8 @@ readable.
   DSL's `errorSummary`. A link in the description above the list, which both components
   allow, was taken for an entry landing on nothing. A summary built with no list still
   takes every link in it.
-- `known-elements` and `known-attributes` know all of MathML Core, its elements and its
-  attributes, and SVG's `xlink:href`, which SVG 2 still supports on `use`. A page with a
+- `known-elements` and `known-attributes` know MathML Core's elements and the attributes
+  it adds, and SVG's `xlink:href`, which SVG 2 still supports on `use`. A page with a
   fraction failed.
 - `haveNoDuplicateKeys` reports a file it cannot read, such as a directory, as
   `messages.unreadable-file`, where it threw.

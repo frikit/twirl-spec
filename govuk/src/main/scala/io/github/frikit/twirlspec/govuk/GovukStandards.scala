@@ -119,7 +119,7 @@ object GovukStandards extends RuleSet {
     },
     Rule(
       "error-summary-targets",
-      "every error summary link lands on an element"
+      "every error summary entry's link lands on an element"
     ) { page =>
       page.errorSummaryDanglingLinks.map { case (target, text) =>
         Violation(

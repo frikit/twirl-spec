@@ -610,7 +610,7 @@ Ways a page can leak or be turned against its reader.
 | `error-title-prefix` | an error state prefixes the browser title |
 | `error-aria-describedby` | an inline error is announced with its field |
 | `error-hidden-prefix` | an inline error carries a visually hidden prefix |
-| `error-summary-targets` | every error summary link lands on an element |
+| `error-summary-targets` | every error summary entry's link lands on an element |
 | `error-summary-focusable` | the error summary can take focus *(warning)* |
 | `error-in-summary` | an inline error has an entry in the error summary *(warning)* |
 | `error-summary-has-inline` | an error summary entry has an inline error beside its field *(warning)* |
@@ -639,7 +639,7 @@ ARIA correctness: whether a name is real, whether its value is allowed, and whet
 | `embedded-content-has-name` | an object, embedded image or svg carries a name *(warning)* |
 | `table-headers-resolve` | every headers attribute points at a header on the same table |
 | `definition-list-structure` | a definition list contains only terms and descriptions |
-| `landmarks-are-distinguishable` | two landmarks of the same kind are told apart by name, unless one is a copy of the other |
+| `landmarks-are-distinguishable` | two landmarks of the same kind are told apart by name, unless they are exact copies, holding no form control, under one name |
 
 ### `HtmlStandards`
 
@@ -948,7 +948,8 @@ override def translationConfig: TranslationConfig =
 `translateConsistentlyExcept("i18n-same-links")` drops a rule, and
 `translationDifferences(pages)` reports without failing.
 
-A single configured language passes: there is nothing to compare it against.
+A single configured language has nothing to be compared with, so only its page's
+own language declaration is checked.
 
 ## Message files
 

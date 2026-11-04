@@ -379,7 +379,7 @@ object AriaStandards extends RuleSet {
     },
     Rule(
       "landmarks-are-distinguishable",
-      "two landmarks of the same kind are told apart by name, unless one is a copy of the other"
+      "two landmarks of the same kind are told apart by name, unless they are exact copies, holding no form control, under one name"
     ) { page =>
       val landmarkRoles =
         Set(
