@@ -43,6 +43,20 @@ readable.
   fraction failed.
 - `haveNoDuplicateKeys` reports a file it cannot read, such as a directory, as
   `messages.unreadable-file`, where it threw.
+- `aria-required-parent` leaves alone the rows and cells of a table, and the items of a
+  list, that `role="presentation"` or `role="none"` has made presentational, which takes
+  their roles with it. Each failed as though it sat outside its table or list. As in a
+  browser, presentation does not hold on what takes focus or carries a global ARIA state
+  or property: such an item keeps its role, and such a list or table stays one.
+- `aria-required-children` leaves alone what is marked `aria-busy="true"`, or sits
+  inside something that is, which ARIA lets go without its rows or items while it loads.
+
+These can fail a page that passed:
+
+- `aria-required-children` asks a `grid` or a `treegrid` for its rows, and a `rowgroup`
+  for its rows; `aria-required-parent` asks a `cell` for its row, and a `rowgroup` for
+  its grid, table or treegrid, as ARIA 1.2 does. An empty grid, and a cell on its own,
+  passed.
 
 ## [2.5.0] - 2026-11-02
 

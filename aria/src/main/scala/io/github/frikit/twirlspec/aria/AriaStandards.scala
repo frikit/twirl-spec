@@ -176,7 +176,11 @@ object AriaStandards extends RuleSet {
           val owned =
             ownedBy(e).flatMap(_.getAllElements.asScala).flatMap(roleOf)
           val found = contained ++ owned
-          if (found.exists(allowed.contains)) Nil
+          // ARIA lets what is still loading, marked busy, go without them for now.
+          val busy = (e +: e.parents.asScala.toSeq).exists(
+            _.attr("aria-busy").trim.equalsIgnoreCase("true")
+          )
+          if (busy || found.exists(allowed.contains)) Nil
           else
             Seq(
               Violation(
@@ -502,7 +506,8 @@ object AriaStandards extends RuleSet {
 
   /** What can take focus, by a script if not by the tab key, unless disabled.
     */
-  private val Focusable = "a[href], button, input, select, textarea, [tabindex]"
+  private val Focusable =
+    "a[href], button, input, select, textarea, [tabindex], [contenteditable~=(?i)^(true|plaintext-only)?$]"
 
   /** What disabling takes the focus from. */
   private val Control = "button, input, select, textarea"
@@ -558,9 +563,28 @@ object AriaStandards extends RuleSet {
     */
   private def roleOf(e: Element): Option[String] = {
     val explicit =
-      e.attr("role").split("\\s+").find(_.nonEmpty).map(_.toLowerCase)
+      e.attr("role")
+        .split("\\s+")
+        .find(_.nonEmpty)
+        .map(_.toLowerCase)
+        // A browser ignores presentation on what it has to expose anyway.
+        .filterNot(role => Presentational(role) && exposed(e))
     explicit.orElse(implicitRole(e))
   }
+
+  private val Presentational = Set("presentation", "none")
+
+  /** What a browser exposes with its own role whatever it is told, as ARIA's
+    * conflict resolution says: what can take focus, and what carries a global
+    * state or property. `aria-hidden` counts unless it is true, which hides the
+    * element altogether.
+    */
+  private def exposed(e: Element): Boolean =
+    e.is(Focusable) || e.attributes.asScala.exists { a =>
+      val key = a.getKey.toLowerCase
+      AriaVocabulary.globalAttributes(key) ||
+      key == "aria-hidden" && !a.getValue.trim.equalsIgnoreCase("true")
+    }
 
   /** A header or footer is the page's own only when nothing sectioning encloses
     * it.
@@ -586,13 +610,22 @@ object AriaStandards extends RuleSet {
     case "header" => Option.when(e.closest(sectioning) == null)("banner")
     case "footer" => Option.when(e.closest(sectioning) == null)("contentinfo")
     case "ul" | "ol" => Some("list")
-    case "li"        => Some("listitem")
+    case "li"        => Option.unless(inPresentational(e, "ul, ol"))("listitem")
     case "table"     => Some("table")
-    case "tr"        => Some("row")
-    case "td"        => Some("gridcell")
-    case "th"        => Some("columnheader")
-    case _           => None
+    case "tr"        => Option.unless(inPresentational(e, "table"))("row")
+    case "td"        => Option.unless(inPresentational(e, "table"))("gridcell")
+    case "th" => Option.unless(inPresentational(e, "table"))("columnheader")
+    case _    => None
   }
+
+  /** Whether the list or table an item, row or cell belongs to was made
+    * presentational, which takes their roles with it, unless the item is one a
+    * browser exposes anyway.
+    */
+  private def inPresentational(e: Element, owner: String): Boolean =
+    !exposed(e) && Option(e.closest(owner))
+      .flatMap(roleOf)
+      .exists(Presentational)
 
   private def ancestorRoles(e: Element): Seq[String] =
     e.parents.asScala.toSeq.flatMap(roleOf)
