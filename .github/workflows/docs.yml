@@ -1,31 +1,63 @@
 # Builds the documentation site and publishes it to GitHub Pages: the README
 # and the `docs` folder through Jekyll, and the Scaladoc of every module,
 # rendered as one site by `sbt unidoc`, under /api.
+#
+# The site describes the newest release, built from its tag, so that what it
+# says, and the version in the Scaladoc header, are what Maven Central has.
+# Built from main instead, any commit after a tag is a snapshot to sbt-dynver
+# (2.5.0+1-<sha>-SNAPSHOT), and a release push would be built before its tag
+# exists. So a change to the README or the guides goes live with the next
+# release, not with its own merge.
 name: Docs
 
 on:
-  push:
+  # Release runs on every push to main, whether it publishes or only verifies,
+  # and pushes its tag before it finishes. The tag cannot start this workflow
+  # itself: it is pushed with GITHUB_TOKEN, which starts no workflow.
+  workflow_run:
+    workflows: [Release]
+    types: [completed]
     branches: [main]
   workflow_dispatch:
 
 permissions:
   contents: read
 
-# A deployment must not overtake the one before it, and a release push that
-# lands while one is running should wait rather than cancel it.
+# A deployment must not overtake the one before it. A run that starts while
+# one is going waits, and if a later one replaces it while it waits, nothing
+# is lost: each builds the newest release. A run for a Release that did not
+# succeed builds nothing, so it gets a group of its own, where it cannot
+# replace a waiting run that would.
 concurrency:
-  group: pages
+  group: ${{ (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success') && 'pages' || format('docs-skipped-{0}', github.run_id) }}
   cancel-in-progress: false
 
 jobs:
   build:
+    # A Release run that failed leaves the site as it is, until a re-run of it
+    # succeeds.
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          # The Scaladoc header carries the version, which sbt-dynver reads
-          # from the tags.
+          # Every tag: the newest release is found among them, and sbt-dynver
+          # reads the version in the Scaladoc header from them.
           fetch-depth: 0
+
+      # The last release as release.yml reads it, so a tag that is not a
+      # release, such as v2.6.0-rc1, or a v9.0.0 on another branch, is not
+      # taken for one.
+      - name: Check out the newest release
+        run: |
+          set -euo pipefail
+          last="$(.github/scripts/release-plan.sh | sed -n 's/^last=//p')"
+          if [ -z "$last" ]; then
+            echo "::error::main has no release tag in its history, so there is no release to document."
+            exit 1
+          fi
+          git checkout --quiet --detach "$last"
+          echo "::notice::Building the site for $last."
 
       - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
 
