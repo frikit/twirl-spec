@@ -57,6 +57,17 @@ These can fail a page that passed:
   for its rows; `aria-required-parent` asks a `cell` for its row, and a `rowgroup` for
   its grid, table or treegrid, as ARIA 1.2 does. An empty grid, and a cell on its own,
   passed.
+- `messages.placeholder-parity` reads a message's arguments as `MessageFormat` does, a
+  choice's branches included, so a translation using `{2}` where the base uses `{1}` in a
+  plural branch is reported, and a brace in quotes or in a date's style is not taken for
+  one. It compares which arguments each language uses rather than how often, since a
+  language with more plural forms repeats one in more branches.
+- `translateConsistently` asks the page the others are measured against whether it
+  declares its own language, as it asks each of the others.
+- On a whole page, `formSubmission` and `formValues` leave out a control no form owns,
+  which a browser would not send, so a field left outside its form shows, and
+  `formValues` says so when that is why it found no value. On a fragment every control
+  still counts, since its form may be in the template that includes it.
 
 ## [2.5.0] - 2026-11-02
 

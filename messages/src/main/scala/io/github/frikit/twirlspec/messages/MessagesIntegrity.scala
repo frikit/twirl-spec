@@ -70,11 +70,48 @@ object MessagesIntegrity {
     val default: Config = Config()
   }
 
-  /** Placeholder indices used by a message, in order: "{0} of {1}" -> 0, 1. */
-  private val Placeholder = "\\{(\\d+)[^}]*\\}".r
+  /** Where an argument may start, for a message `MessageFormat` cannot read. */
+  private val Loose = "\\{(\\d+)".r
 
+  /** The arguments a message uses, each once, in order: "{0} of {1}" -> 0, 1.
+    * Read as `MessageFormat` reads it, so a quoted brace, or one in a date's
+    * style, is not an argument, and the branches of a choice, which it reads
+    * again as messages, count too. How often is left out, since a language with
+    * more plural forms than another repeats an argument in more branches. A
+    * message `MessageFormat` cannot read is scanned for braces instead; another
+    * check reports it.
+    */
   private def placeholders(value: String): List[Int] =
-    Placeholder.findAllMatchIn(value).map(_.group(1).toInt).toList
+    Try(new MessageFormat(value))
+      .fold(
+        // An index too large to be one is no argument either.
+        _ => Loose.findAllMatchIn(value).flatMap(_.group(1).toIntOption).toList,
+        used
+      )
+      .distinct
+      .sorted
+
+  /** Every argument a read message writes out, as `MessageFormat` marks each
+    * where it is written, and those of its choices' branches.
+    */
+  private def used(format: MessageFormat): List[Int] = {
+    val branches = format.getFormats.toList.collect {
+      case choice: ChoiceFormat =>
+        choice.getFormats.toList.collect {
+          case branch: String if branch.contains("{") => placeholders(branch)
+        }.flatten
+    }.flatten
+    val count = format.getFormatsByArgumentIndex.length
+    (0 until count).foreach(format.setFormatByArgumentIndex(_, null))
+    val written =
+      format.formatToCharacterIterator(Array.fill[AnyRef](count)("x"))
+    (written.getBeginIndex until written.getEndIndex).toList
+      .flatMap { at =>
+        written.setIndex(at)
+        Option(written.getAttribute(MessageFormat.Field.ARGUMENT))
+      }
+      .collect { case index: Integer => index.intValue } ++ branches
+  }
 
   /** How a message's single quotes behave under `MessageFormat`, which Play
     * applies to every message whether or not it takes arguments.

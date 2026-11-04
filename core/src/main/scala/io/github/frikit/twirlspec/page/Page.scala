@@ -19,6 +19,7 @@ package io.github.frikit.twirlspec.page
 import org.jsoup.Jsoup
 import org.jsoup.parser.Parser
 import org.jsoup.nodes.{Document, Element}
+import io.github.frikit.twirlspec.standards.Rule
 import play.api.i18n.{Lang, Messages, MessagesImpl}
 import play.twirl.api.Html
 
@@ -257,6 +258,9 @@ final class Page(
     * input an empty file name, since markup cannot choose a file. A disabled
     * control sends nothing, and neither do buttons, reset controls or image
     * inputs. A name can appear more than once, as a group of checkboxes does.
+    * On a whole page, a control no form owns sends nothing, as in a browser, so
+    * a field left outside its form shows; on a fragment every control counts,
+    * since its form may be in the template that includes it.
     */
   def formSubmission: Seq[(String, String)] =
     submittedControls.map { case (_, name, value) => (name, value) }
@@ -273,8 +277,12 @@ final class Page(
       .values
       .map(_.last)
       .toSet
+    val wholePage = Rule.isFullPage(this)
     inScope("input, select, textarea")
-      .filter(e => e.attr("name").nonEmpty && !isDisabled(e))
+      .filter(e =>
+        e.attr("name").nonEmpty && !isDisabled(e) &&
+          (!wholePage || formOwner(e).nonEmpty)
+      )
       .flatMap { e =>
         val values = e.tagName() match {
           case "textarea" => List(textareaValue(e))

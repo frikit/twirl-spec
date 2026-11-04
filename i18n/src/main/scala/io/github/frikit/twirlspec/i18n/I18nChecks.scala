@@ -78,7 +78,11 @@ trait I18nChecks extends TwirlSpecDsl {
             )
           )
       case Some(from) =>
-        val differences = pages
+        // The page measured against has to declare its own language too.
+        val ownLanguage = rules
+          .filter(_.id == "i18n-lang-attribute")
+          .flatMap(_.check(from, from))
+        val differences = ownLanguage ++ pages
           .filterNot(_ eq from)
           .flatMap(to => rules.flatMap(_.check(from, to)))
         io.github.frikit.twirlspec.Trace.debug(

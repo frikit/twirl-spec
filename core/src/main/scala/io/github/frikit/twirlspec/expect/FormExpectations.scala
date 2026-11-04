@@ -19,6 +19,7 @@ package io.github.frikit.twirlspec.expect
 import org.jsoup.nodes.Element
 import io.github.frikit.twirlspec.expect.Matching._
 import io.github.frikit.twirlspec.page.{Page, Text}
+import io.github.frikit.twirlspec.standards.Rule
 
 import scala.jdk.CollectionConverters._
 
@@ -150,16 +151,29 @@ trait FormExpectations {
             })
             Nil
           case Nil =>
-            Seq(
-              Violation(
-                s"formValues($field)",
-                "no control on the page submits under this name",
-                expected = Some(want),
-                actual = Some(
-                  if (submitted.isEmpty) "(no named controls)"
-                  else submitted.map(_._2).distinct.sorted.mkString(", ")
-                )
+            val missing = Violation(
+              s"formValues($field)",
+              "no control on the page submits under this name",
+              expected = Some(want),
+              actual = Some(
+                if (submitted.isEmpty) "(no named controls)"
+                else submitted.map(_._2).distinct.sorted.mkString(", ")
               )
+            )
+            // On a whole page, the control may be there but outside every form.
+            val outside = Rule.isFullPage(page) && page.document
+              .select("input, select, textarea")
+              .asScala
+              .exists(e =>
+                e.attr("name") == field && !page.isDisabled(e) &&
+                  page.formOwner(e).isEmpty
+              )
+            Seq(
+              if (outside)
+                missing.withHint(
+                  "a control with this name is on the page, but outside every form, so a browser would not send it"
+                )
+              else missing
             )
           case values =>
             Seq(

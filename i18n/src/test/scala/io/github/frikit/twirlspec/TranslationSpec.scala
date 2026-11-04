@@ -82,6 +82,22 @@ class TranslationSpec
       )
       rulesFor(other) must not contain "i18n-lang-attribute"
     }
+    "ask the page the others are measured against for its own language too" in {
+      val wrong = pageIn(
+        english,
+        """<p id="intro">Hello there</p><a id="go" href="/next">Continue</a>""",
+        declared = "fr"
+      )
+      val other = pageIn(
+        fr,
+        """<p id="intro">Bonjour</p><a id="go" href="/next">Continuer</a>"""
+      )
+      translationDifferences(Seq(wrong, other)).map(_.rule) must contain(
+        "i18n-lang-attribute"
+      )
+      translationDifferences(Seq(base, other)).map(_.rule) must not contain
+        "i18n-lang-attribute"
+    }
     "notice a page that declares nothing" in {
       val other = Page.fromString(
         """<!DOCTYPE html><html><head><title>t</title></head><body><main><h1 id="h">Le titre</h1></main></body></html>""",

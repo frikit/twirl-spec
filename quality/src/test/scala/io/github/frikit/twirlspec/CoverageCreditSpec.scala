@@ -363,11 +363,13 @@ class CoverageCreditSpec
     }
 
     "count, for a submitted value, the control it comes from and no other" in {
-      leftAfter("""<input id="email" name="email" value="a@b.c">""")(
+      leftAfter(
+        """<form><input id="email" name="email" value="a@b.c"></form>"""
+      )(
         formValues("email" -> "a@b.c")
       ) mustBe empty
       leftAfter(
-        """<input type="radio" id="y" name="c" value="y" checked><input type="radio" id="n" name="c" value="n">"""
+        """<form><input type="radio" id="y" name="c" value="y" checked><input type="radio" id="n" name="c" value="n"></form>"""
       )(formValues("c" -> "y")) mustBe List("#n")
     }
 
