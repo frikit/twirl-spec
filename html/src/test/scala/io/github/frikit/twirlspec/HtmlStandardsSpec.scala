@@ -254,6 +254,14 @@ class HtmlStandardsSpec
           |<path d="M1 1H9" pathLength="100" stroke-linecap="round"/></svg>""".stripMargin
       ) must contain noneOf ("known-elements", "known-attributes")
     }
+
+    "know SVG's xlink:href, and MathML Core's elements and attributes" in {
+      rulesOf(
+        """<svg xmlns:xlink="http://www.w3.org/1999/xlink"><g id="x"></g><use xlink:href="#x"></use></svg>
+          |<math display="block"><mfrac linethickness="1px"><mn>1</mn><msqrt><mi>x</mi></msqrt></mfrac>
+          |<maction actiontype="toggle" selection="2" intent="choice" arg="x"><mi>x</mi><mi>y</mi></maction></math>""".stripMargin
+      ) must contain noneOf ("known-elements", "known-attributes")
+    }
   }
 
 }

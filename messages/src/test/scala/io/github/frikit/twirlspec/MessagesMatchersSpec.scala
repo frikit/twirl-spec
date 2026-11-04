@@ -148,6 +148,12 @@ class MessagesMatchersSpec
       }
     }
 
+    "report a file it cannot read, such as a directory, rather than throw" in {
+      val found = MessagesIntegrity.duplicateKeys(Seq(new File(".")))
+      found.map(_.rule) mustBe Seq("messages.unreadable-file")
+      found.head.message must include("could not be read")
+    }
+
     "report being given no files at all" in {
       MessagesIntegrity.duplicateKeys(Nil).map(_.rule) mustBe
         Seq("messages.no-files")

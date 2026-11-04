@@ -341,7 +341,17 @@ object MessagesIntegrity {
               s"${file.getPath} does not exist, so nothing in it was checked"
             )
           )
-        case file => duplicatesIn(file)
+        case file =>
+          Try(duplicatesIn(file)).fold(
+            e =>
+              Seq(
+                Violation(
+                  "messages.unreadable-file",
+                  s"${file.getPath} could not be read, so nothing in it was checked: ${e.getMessage}"
+                )
+              ),
+            identity
+          )
       }
 
   /** The keys a file defines. A line ending in an unescaped backslash carries

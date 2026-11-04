@@ -122,6 +122,17 @@ class StandardsSpec extends AnyWordSpec with Matchers with TwirlSpec {
       rulesFired(html) must contain("error-summary-targets")
     }
 
+    "not take a link in the error summary's description for an entry" in {
+      val html = page(
+        """<h1>A</h1>
+          |<div class="govuk-error-summary"><div class="govuk-error-summary__body"><p><a href="/help">Get help</a></p>
+          |<ul class="govuk-list govuk-error-summary__list"><li><a href="#name">Enter a name</a></li></ul></div></div>
+          |<input id="name" name="name">""".stripMargin,
+        title = "Error: A page - Service - GOV.UK"
+      )
+      rulesFired(html) must not contain "error-summary-targets"
+    }
+
     "flag an error state with an unprefixed title" in {
       val html = page(
         """<h1>A</h1><div class="govuk-error-summary" data-module="govuk-error-summary">

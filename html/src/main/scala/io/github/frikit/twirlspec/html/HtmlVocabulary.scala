@@ -185,7 +185,7 @@ object HtmlVocabulary {
     "var",
     "video",
     "wbr",
-    // SVG and MathML roots and the handful of children that appear inline in page markup
+    // SVG's root and the handful of children that appear inline in page markup
     "svg",
     "path",
     "circle",
@@ -212,13 +212,37 @@ object HtmlVocabulary {
     "radialgradient",
     "stop",
     "foreignobject",
+    // MathML Core, all of it: an equation can need any of it
     "math",
+    "annotation",
+    "annotation-xml",
+    "maction",
+    "merror",
+    "mfrac",
     "mi",
+    "mmultiscripts",
     "mn",
     "mo",
+    "mover",
+    "mpadded",
+    "mphantom",
+    "mprescripts",
+    "mroot",
     "mrow",
+    "ms",
+    "mspace",
+    "msqrt",
+    "mstyle",
+    "msub",
+    "msubsup",
     "msup",
-    "msub"
+    "mtable",
+    "mtd",
+    "mtext",
+    "mtr",
+    "munder",
+    "munderover",
+    "semantics"
   )
 
   /** Attributes any element may carry. */
@@ -423,6 +447,8 @@ object HtmlVocabulary {
     "focusable",
     "aria-hidden",
     "xmlns",
+    // deprecated, but still supported by SVG 2's use, image and others
+    "xlink:href",
     "preserveaspectratio",
     "pathlength",
     "fill-rule",
@@ -447,7 +473,37 @@ object HtmlVocabulary {
     "text-anchor",
     "font-size",
     "font-family",
-    "font-weight"
+    "font-weight",
+    // MathML Core's attributes
+    "display",
+    "displaystyle",
+    "scriptlevel",
+    "mathbackground",
+    "mathcolor",
+    "mathsize",
+    "mathvariant",
+    "linethickness",
+    "form",
+    "fence",
+    "separator",
+    "lspace",
+    "rspace",
+    "stretchy",
+    "symmetric",
+    "maxsize",
+    "minsize",
+    "largeop",
+    "movablelimits",
+    "accent",
+    "accentunder",
+    "depth",
+    "voffset",
+    "columnspan",
+    "encoding",
+    "actiontype",
+    "selection",
+    "intent",
+    "arg"
   )
 
   /** Whether the HTML specification defines an element with this name. */

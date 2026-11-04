@@ -33,6 +33,16 @@ readable.
   other, rendered the same way, and holds no form control, whose label or form could lie
   outside it; anything else that differs, down to an id, a space or a comment, sets two
   apart. Copies with no name, and landmarks holding a form control, still fail.
+- An error summary's entries are the links in its list, as GOV.UK's and HMRC's
+  components render it, for `error-summary-targets`, the other error rules and the
+  DSL's `errorSummary`. A link in the description above the list, which both components
+  allow, was taken for an entry landing on nothing. A summary built with no list still
+  takes every link in it.
+- `known-elements` and `known-attributes` know all of MathML Core, its elements and its
+  attributes, and SVG's `xlink:href`, which SVG 2 still supports on `use`. A page with a
+  fraction failed.
+- `haveNoDuplicateKeys` reports a file it cannot read, such as a directory, as
+  `messages.unreadable-file`, where it threw.
 
 ## [2.5.0] - 2026-11-02
 

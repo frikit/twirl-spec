@@ -488,8 +488,15 @@ final class Page(
       (e.attr("href").stripPrefix("#"), Text.normalise(e.text()))
     )
 
+  /** The entries of an error summary: the links in its list, as GOV.UK and HMRC
+    * render it, since a description above the list may hold links of its own. A
+    * summary built with no list takes every link in it.
+    */
   private[twirlspec] def errorSummaryLinkElements: List[Element] =
-    inScope(".govuk-error-summary a[href], .govuk-error-summary__list a[href]")
+    inScope(
+      ".govuk-error-summary__list a[href], " +
+        ".govuk-error-summary:not(:has(.govuk-error-summary__list)) a[href]"
+    )
 
   /** The error summary entries whose link lands on nothing: a link to
     * `#firstName` when the input is `id="value"` leaves a keyboard user
