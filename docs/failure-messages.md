@@ -77,12 +77,14 @@ state, the components present, and the errors. It is built only when a check
 fails, because building it walks the whole page.
 
 It is also available on its own, `page.outline`, and is worth printing while
-building a view. It is stable enough to commit as a structural snapshot of a
-page.
+building a view. `matchOutlineSnapshot` holds a page to an outline saved in a
+file, and the outline's format changes only in a minor version; see
+[Snapshotting the outline](writing-view-specs.md#snapshotting-the-outline).
 
 ## Names to assert on
 
-Rule wording, hints and the layout of this output may change in any release.
+Rule wording, hints and the layout of this output may change in any release,
+though the outline's own lines change only in a minor version.
 A spec that inspects findings should assert on rule ids, which are stable
 within a major version:
 

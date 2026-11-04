@@ -12,6 +12,19 @@ readable.
 
 ## [2.6.0] - 2026-11-04
 
+### Added
+
+- `matchOutlineSnapshot(file)` holds a page's outline, as `page.outline` prints it, to
+  the one saved in a file, and fails with the lines that differ. A missing file fails
+  with the page's outline. `TWIRLSPEC_UPDATE_SNAPSHOTS=true`, or overriding
+  `updateOutlineSnapshots`, writes the file instead, to record a page again after
+  changing it on purpose. A snapshot asserts nothing for coverage.
+
+### Changed
+
+- The outline's format now changes only in a minor version, which says so here under an
+  Outline heading, so a snapshot holds through the patches of a minor version.
+
 ### Fixed
 
 - `landmarks-are-distinguishable` accepts exact copies of one landmark under one name,

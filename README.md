@@ -183,6 +183,13 @@ version if a green build matters more to you than the newest checks, and read th
 changelog before moving. Rule wording, hints and failure-message layout may
 change in any release; assert on rule ids, not on message text.
 
+**The outline changes only in a minor version.** What `page.outline` prints,
+which `matchOutlineSnapshot` holds a page to, keeps its format through the
+patches of a minor version. A minor version that changes it says so in the
+changelog under an Outline heading, and the snapshots are then written again
+with `TWIRLSPEC_UPDATE_SNAPSHOTS=true`. Where the outline sits in a failure
+message is failure-message layout, and may change in any release.
+
 ## Two ways in
 
 **You already have a spec base.** Mix in `TwirlSpecDsl`. It declares no
@@ -391,6 +398,8 @@ listed again here.
 | `meetStandardsExcept` | The standards, minus the named rules. |
 | `standardsExpectation` | The active rule set as one expectation, for asserting on the result. |
 | `checkPage` | Assert against a page directly, outside a matcher. |
+| `matchOutlineSnapshot` | The page's outline is the one saved in this file; a missing or different file fails, with the outline or the lines that differ. |
+| `updateOutlineSnapshots` | Whether `matchOutlineSnapshot` writes the file instead, where it is missing or differs: on with `TWIRLSPEC_UPDATE_SNAPSHOTS=true`, to record pages again locally, never in CI. |
 
 **Page framing**
 
@@ -985,7 +994,8 @@ form POST /register/name
 
 Every check runs, so one failing run shows every problem rather than one per
 re-run. The outline underneath is the page's skeleton — worth printing on its
-own while building a view, and stable enough to commit as a structural snapshot.
+own while building a view, and `matchOutlineSnapshot` holds a page to one saved
+in a file.
 
 ## Seeing what the library did
 
