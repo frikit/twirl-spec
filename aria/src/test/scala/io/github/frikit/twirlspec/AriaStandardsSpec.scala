@@ -481,6 +481,51 @@ class AriaStandardsSpec
       ) must
         not contain "landmarks-are-distinguishable"
     }
+    "accept copies of one landmark under one name, as pagination above and below a list" in {
+      val pagination =
+        """<nav class="govuk-pagination" aria-label="Pagination">
+          |  <ul class="govuk-pagination__list"><li><a href="/results?page=2">Next</a></li></ul>
+          |</nav>""".stripMargin
+      ids(s"$pagination<table></table>$pagination") must not contain
+        "landmarks-are-distinguishable"
+    }
+    "notice copies under one name that lead somewhere different, or say something different" in {
+      ids(
+        """<nav aria-label="Pagination"><a href="/results?page=2">Next</a></nav>
+          |<nav aria-label="Pagination"><a href="/results?page=3">Next</a></nav>""".stripMargin
+      ) must contain("landmarks-are-distinguishable")
+      ids(
+        """<nav aria-label="Pagination"><a href="/2">Next</a></nav>
+          |<nav aria-label="Pagination"><a href="/2">Next</a></nav>
+          |<nav aria-label="Pagination"><a href="/2">Next page</a></nav>""".stripMargin
+      ) must contain("landmarks-are-distinguishable")
+    }
+    "notice copies with no name" in {
+      ids(
+        """<nav><a href="/a">a</a></nav><nav><a href="/a">a</a></nav>"""
+      ) must contain("landmarks-are-distinguishable")
+    }
+    "set copies apart by anything a reader could meet differently" in {
+      ids(
+        """<aside aria-label="Chart"><img src="/c.png" alt="Sales"></aside>
+          |<aside aria-label="Chart"><img src="/c.png" alt="Costs"></aside>""".stripMargin
+      ) must contain("landmarks-are-distinguishable")
+      ids(
+        """<nav aria-label="City"><a href="/x">New <span>York</span></a></nav>
+          |<nav aria-label="City"><a href="/x">New<span>York</span></a></nav>""".stripMargin
+      ) must contain("landmarks-are-distinguishable")
+      ids(
+        """<nav aria-label="Pagination"><!-- above --><a href="/2">Next</a></nav>
+          |<nav aria-label="Pagination"><!-- below --><a href="/2">Next</a></nav>""".stripMargin
+      ) must contain("landmarks-are-distinguishable")
+    }
+    "not take landmarks holding a form control for copies, whose label or form can lie outside them" in {
+      val search =
+        """<div role="search" aria-label="Search"><input name="q"><button>Go</button></div>"""
+      ids(
+        s"""<form action="/find">$search</form><form action="/find">$search</form>"""
+      ) must contain("landmarks-are-distinguishable")
+    }
   }
 
   /** Content placed directly in the body, so header and footer are page-level
@@ -520,7 +565,7 @@ class AriaStandardsSpec
 
     "treat forms with a name as landmarks, told apart by it" in {
       ids(
-        """<form aria-label="Same"></form><form aria-label="Same"></form>"""
+        """<form aria-label="Same" action="/a"></form><form aria-label="Same" action="/b"></form>"""
       ) must contain("landmarks-are-distinguishable")
       ids(
         """<form aria-label="One"></form><form aria-label="Two"></form>"""
@@ -532,7 +577,7 @@ class AriaStandardsSpec
         """<form title=""></form><form title=" "></form>"""
       ) must not contain "landmarks-are-distinguishable"
       ids(
-        """<form aria-label="" title="One"></form><form aria-label="" title="One"></form>"""
+        """<form aria-label="" title="One" action="/a"></form><form aria-label="" title="One" action="/b"></form>"""
       ) must contain("landmarks-are-distinguishable")
     }
 
@@ -556,7 +601,7 @@ class AriaStandardsSpec
         """<form title="One"></form><form title="Two"></form>"""
       ) must not contain "landmarks-are-distinguishable"
       ids(
-        """<span id="a">One</span><form aria-labelledby="a"></form><form title="One"></form>"""
+        """<span id="a">One</span><form aria-labelledby="a" action="/a"></form><form title="One" action="/b"></form>"""
       ) must contain("landmarks-are-distinguishable")
     }
 

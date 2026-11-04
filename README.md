@@ -630,7 +630,7 @@ ARIA correctness: whether a name is real, whether its value is allowed, and whet
 | `embedded-content-has-name` | an object, embedded image or svg carries a name *(warning)* |
 | `table-headers-resolve` | every headers attribute points at a header on the same table |
 | `definition-list-structure` | a definition list contains only terms and descriptions |
-| `landmarks-are-distinguishable` | two landmarks of the same kind are told apart by name |
+| `landmarks-are-distinguishable` | two landmarks of the same kind are told apart by name, unless one is a copy of the other |
 
 ### `HtmlStandards`
 

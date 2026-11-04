@@ -20,7 +20,7 @@ import io.github.frikit.twirlspec.expect.Violation
 import io.github.frikit.twirlspec.page.Page
 import io.github.frikit.twirlspec.standards.Rule.Warning
 import io.github.frikit.twirlspec.standards.{Rule, RuleSet}
-import org.jsoup.nodes.Element
+import org.jsoup.nodes.{Element, TextNode}
 
 import scala.jdk.CollectionConverters._
 
@@ -34,7 +34,11 @@ import scala.jdk.CollectionConverters._
   */
 object AriaStandards extends RuleSet {
 
-  lazy val all: Seq[Rule] = Seq(
+  // In blocks because from Scala 3.3.9 the compiler measures no coverage in a
+  // block over 3000 tree nodes, and build.sbt fails the build if it skips one.
+  lazy val all: Seq[Rule] = rolesAndAriaRules ++ attributesAndStructureRules
+
+  private def rolesAndAriaRules: Seq[Rule] = Seq(
     Rule(
       "aria-attr-is-real",
       "every aria- attribute is one the specification defines"
@@ -248,7 +252,10 @@ object AriaStandards extends RuleSet {
                 actual = Some(elements.map(describe).mkString(", "))
               )
           }
-    },
+    }
+  )
+
+  private def attributesAndStructureRules: Seq[Rule] = Seq(
     Rule(
       "autocomplete-is-valid",
       "an autocomplete attribute uses tokens the specification defines"
@@ -368,7 +375,7 @@ object AriaStandards extends RuleSet {
     },
     Rule(
       "landmarks-are-distinguishable",
-      "two landmarks of the same kind are told apart by name"
+      "two landmarks of the same kind are told apart by name, unless one is a copy of the other"
     ) { page =>
       val landmarkRoles =
         Set(
@@ -392,12 +399,22 @@ object AriaStandards extends RuleSet {
         .flatMap { case (role, group) =>
           // A landmark is named by aria-label or aria-labelledby, never by what it contains.
           val names = group.map { case (e, _) => landmarkName(e) }
-          if (group.size > 1 && names.distinct.size < group.size)
+          // Copies of one landmark, such as pagination above and below a list, may share a
+          // name: the W3C's ARIA practices advise one name where each holds the same.
+          val clash = group.map(_._1).zip(names).groupBy(_._2).exists {
+            case (name, same) =>
+              def copies = same.forall(c => holdsNoControl(c._1)) &&
+                same.map(c => shape(c._1)).distinct.size == 1
+              same.size > 1 && (name.isEmpty || !copies)
+          }
+          if (clash)
             Seq(
               Violation(
                 "landmarks-are-distinguishable",
                 s"${group.size} $role landmarks share a name",
-                expected = Some("a distinct aria-label on each"),
+                expected = Some(
+                  "a distinct aria-label on each, or one shared by exact copies"
+                ),
                 actual = Some(
                   names
                     .map(n => if (n.isEmpty) "(unnamed)" else n)
@@ -409,6 +426,33 @@ object AriaStandards extends RuleSet {
         }
     }
   )
+
+  /** Whether a copy of this landmark can be told by its HTML alone. A form
+    * control takes meaning from outside it, from a label around it, a disabled
+    * fieldset or the form it is sent with, so a landmark holding one is never
+    * taken for a copy.
+    */
+  private def holdsNoControl(landmark: Element): Boolean =
+    landmark
+      .select(
+        "button, fieldset, input, meter, object, output, progress, select, textarea"
+      )
+      .isEmpty
+
+  /** An element as a structure, a step at a time, so that no two different ones
+    * can come out the same: each element and where it ends, its attributes, and
+    * every other node as it is. Two landmarks are copies when theirs are equal,
+    * as pagination a component renders twice is; anything else that differs,
+    * down to an id, a space or a comment, sets them apart.
+    */
+  private def shape(e: Element): Seq[(String, String, String)] =
+    (("element", e.tagName, "") +: e.attributes.asList.asScala.toSeq
+      .map(a => ("attribute", a.getKey, a.getValue))
+      .sorted) ++ e.childNodes.asScala.toSeq.flatMap {
+      case child: Element => shape(child)
+      case text: TextNode => Seq(("text", text.getWholeText, ""))
+      case other          => Seq((other.nodeName, other.outerHtml, ""))
+    } :+ ("end", e.tagName, "")
 
   /** The autofill grammar: `on` or `off` alone; or an optional section, an
     * optional `shipping` or `billing`, one field, which a contact kind such as
