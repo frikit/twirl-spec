@@ -33,7 +33,7 @@ of all nine modules as one site. These pages are the guide.
 ## The shortest possible start
 
 ```scala
-libraryDependencies += "io.github.frikit" %% "twirl-spec-all" % "2.6.0" % Test
+libraryDependencies += "io.github.frikit" %% "twirl-spec-all" % "2.6.1" % Test
 ```
 
 ```scala
@@ -44,6 +44,7 @@ import org.scalatest.wordspec.AnyWordSpec
 class SignUpViewSpec extends AnyWordSpec with Matchers with TwirlSpec with AllChecks {
 
   private val view = inject[SignUpView]
+  private val form = inject[SignUpFormProvider].apply()
 
   "SignUpView" should {
     "render the question" in {

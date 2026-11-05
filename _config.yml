@@ -51,6 +51,8 @@ header_pages:
 
 # Everything that is code or build output rather than documentation.
 exclude:
+  - AGENTS.md
+  - docs/development
   - "*/src"
   - "*/target"
   - project

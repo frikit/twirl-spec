@@ -10,6 +10,20 @@ release, and each one has a GitHub Release whose notes are its section here. Eve
 recorded in full; earlier lines are kept to one entry each, so the file stays
 readable.
 
+## [2.6.1] - 2026-11-05
+
+### Fixed
+
+- The README's introduction now counts all 31 accessibility, rendering and safety
+  rules supplied by `WcagChecks`; it still said 29.
+- The documentation's shortest starter spec now creates the form it passes to
+  `SignUpView`, as the README and getting-started guide already do.
+
+### Added
+
+- Repository instructions in `AGENTS.md` for documentation checks, release planning,
+  and verifying a release through Maven Central, GitHub and the documentation site.
+
 ## [2.6.0] - 2026-11-05
 
 ### Added
@@ -670,7 +684,8 @@ the Twirl entry points in `twirl-spec-quality`; language parity in
 them in `twirl-spec-all`. The renames a service built against a 0.x snapshot
 would meet are listed in [the adoption guide](docs/adopting.md).
 
-[Unreleased]: https://github.com/frikit/twirl-spec/compare/v2.4.0...HEAD
+[Unreleased]: https://github.com/frikit/twirl-spec/compare/v2.6.1...HEAD
+[2.6.1]: https://github.com/frikit/twirl-spec/compare/v2.6.0...v2.6.1
 [2.6.0]: https://github.com/frikit/twirl-spec/compare/v2.5.0...v2.6.0
 [2.5.0]: https://github.com/frikit/twirl-spec/compare/v2.4.1...v2.5.0
 [2.4.1]: https://github.com/frikit/twirl-spec/compare/v2.4.0...v2.4.1

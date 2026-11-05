@@ -23,7 +23,7 @@ class SignUpViewSpec extends AnyWordSpec with Matchers with TwirlSpec {
 ```
 
 Mix in `WcagChecks`, from the `twirl-spec-wcag` module, and that block also runs
-29 accessibility, rendering and safety rules over the page — or `GovukServiceChecks`
+31 accessibility, rendering and safety rules over the page — or `GovukServiceChecks`
 for every rule a GOV.UK service wants. You do not list them, switch them on, or
 maintain them.
 
