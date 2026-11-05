@@ -292,11 +292,31 @@ page.errorSummaryLinks                   // (target id, text)
 page.formValues                          // name -> value, the last one for a repeated name
 page.formSubmission                      // every (name, value) a browser would send, in order
 page.accessibleName(page.byId("submit")(0))
-page.outline                             // the skeleton, printable and stable enough to snapshot
+page.outline                             // the skeleton, printable, and snapshotted below
 ```
 
 Assertions made through the page model count towards coverage the same way
 DSL expectations do; see [Coverage and entry points](coverage-and-entry-points.md).
+
+## Snapshotting the outline
+
+`matchOutlineSnapshot` holds a page to the outline saved in a file, so a change
+to the page's structure shows as the lines that changed:
+
+```scala
+render(view(form)) must matchOutlineSnapshot(Path.of("test/resources/outlines/name.txt"))
+```
+
+A missing file fails with the page's outline. Run with
+`TWIRLSPEC_UPDATE_SNAPSHOTS=true` to write it, or to write it again after
+changing the page on purpose, and commit what it writes; a spec base can
+override `updateOutlineSnapshots` instead. Never set it in CI, where it would
+pass whatever a page had become. A relative path is read from where the tests
+run, and a failure names the file in full.
+
+A snapshot asserts nothing for coverage, so `assertEverything` still asks for
+what the page shows to be asserted. The outline's format changes only in a
+minor version, which says so in the changelog.
 
 ## Checking outside a matcher
 

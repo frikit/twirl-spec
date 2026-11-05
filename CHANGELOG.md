@@ -10,6 +10,65 @@ release, and each one has a GitHub Release whose notes are its section here. Eve
 recorded in full; earlier lines are kept to one entry each, so the file stays
 readable.
 
+## [2.6.0] - 2026-11-05
+
+### Added
+
+- `matchOutlineSnapshot(file)` holds a page's outline, as `page.outline` prints it, to
+  the one saved in a file, and fails with the lines that differ. A missing file fails
+  with the page's outline. `TWIRLSPEC_UPDATE_SNAPSHOTS=true`, or overriding
+  `updateOutlineSnapshots`, writes the file instead, to record a page again after
+  changing it on purpose. A snapshot asserts nothing for coverage.
+
+### Changed
+
+- The outline's format now changes only in a minor version, which says so here under an
+  Outline heading, so a snapshot holds through the patches of a minor version.
+
+### Fixed
+
+- `landmarks-are-distinguishable` accepts exact copies of one landmark under one name,
+  as pagination above and below a list may be: the W3C's ARIA practices advise one name
+  where the copies' content and purpose are the same. A copy is the same HTML as the
+  other, rendered the same way, and holds no form control, whose label or form could lie
+  outside it; anything else that differs, down to an id, a space or a comment, sets two
+  apart. Copies with no name, and landmarks holding a form control, still fail.
+- An error summary's entries are the links in its list, as GOV.UK's and HMRC's
+  components render it, for `error-summary-targets`, the other error rules and the
+  DSL's `errorSummary`. A link in the description above the list, which both components
+  allow, was taken for an entry landing on nothing. A summary built with no list still
+  takes every link in it.
+- `known-elements` and `known-attributes` know MathML Core's elements and the attributes
+  it adds, and SVG's `xlink:href`, which SVG 2 still supports on `use`. A page with a
+  fraction failed.
+- `haveNoDuplicateKeys` reports a file it cannot read, such as a directory, as
+  `messages.unreadable-file`, where it threw.
+- `aria-required-parent` leaves alone the rows and cells of a table, and the items of a
+  list, that `role="presentation"` or `role="none"` has made presentational, which takes
+  their roles with it. Each failed as though it sat outside its table or list. As in a
+  browser, presentation does not hold on what takes focus or carries a global ARIA state
+  or property: such an item keeps its role, and such a list or table stays one.
+- `aria-required-children` leaves alone what is marked `aria-busy="true"`, or sits
+  inside something that is, which ARIA lets go without its rows or items while it loads.
+
+These can fail a page that passed:
+
+- `aria-required-children` asks a `grid` or a `treegrid` for its rows, and a `rowgroup`
+  for its rows; `aria-required-parent` asks a `cell` for its row, and a `rowgroup` for
+  its grid, table or treegrid, as ARIA 1.2 does. An empty grid, and a cell on its own,
+  passed.
+- `messages.placeholder-parity` reads a message's arguments as `MessageFormat` does, a
+  choice's branches included, so a translation using `{2}` where the base uses `{1}` in a
+  plural branch is reported, and a brace in quotes or in a date's style is not taken for
+  one. It compares which arguments each language uses rather than how often, since a
+  language with more plural forms repeats one in more branches.
+- `translateConsistently` asks the page the others are measured against whether it
+  declares its own language, as it asks each of the others.
+- On a whole page, `formSubmission` and `formValues` leave out a control no form owns,
+  which a browser would not send, so a field left outside its form shows, and
+  `formValues` says so when that is why it found no value. On a fragment every control
+  still counts, since its form may be in the template that includes it.
+
 ## [2.5.0] - 2026-11-02
 
 ### Rules
@@ -612,6 +671,7 @@ them in `twirl-spec-all`. The renames a service built against a 0.x snapshot
 would meet are listed in [the adoption guide](docs/adopting.md).
 
 [Unreleased]: https://github.com/frikit/twirl-spec/compare/v2.4.0...HEAD
+[2.6.0]: https://github.com/frikit/twirl-spec/compare/v2.5.0...v2.6.0
 [2.5.0]: https://github.com/frikit/twirl-spec/compare/v2.4.1...v2.5.0
 [2.4.1]: https://github.com/frikit/twirl-spec/compare/v2.4.0...v2.4.1
 [2.4.0]: https://github.com/frikit/twirl-spec/compare/v2.3.0...v2.4.0

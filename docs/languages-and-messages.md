@@ -113,7 +113,8 @@ override def translationConfig: TranslationConfig =
 
 `translateConsistentlyExcept("i18n-same-links")` drops a rule, and
 `translationDifferences(pages)` returns the findings without failing. A single
-configured language passes: there is nothing to compare it against.
+configured language has nothing to be compared with, so only its page's own
+language declaration is checked.
 
 ## Checking the message files
 

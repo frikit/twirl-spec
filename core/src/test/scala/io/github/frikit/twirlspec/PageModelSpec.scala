@@ -141,6 +141,22 @@ class PageModelSpec extends AnyWordSpec with Matchers with TwirlSpec {
       )
     }
 
+    "leave out of a whole page's submission what no form owns, as a browser does" in {
+      val whole = render(
+        Html(
+          """<!DOCTYPE html><html lang="en"><head><title>t</title></head><body><main>
+            |<input name="orphan" value="x"><form id="f"><input name="kept" value="y"></form>
+            |<input name="named" form="f" value="z"><input name="lost" form="missing" value="w">
+            |</main></body></html>""".stripMargin
+        )
+      )
+      whole.formSubmission mustBe Seq("kept" -> "y", "named" -> "z")
+      formValues("orphan" -> "x").check(whole).flatMap(_.hint) mustBe Seq(
+        "a control with this name is on the page, but outside every form, so a browser would not send it"
+      )
+      formValues("absent" -> "x").check(whole).flatMap(_.hint) mustBe empty
+    }
+
     "keep the last value per name in formValues" in {
       form.formValues("tick") mustBe "b"
       form.formValues.keySet must not contain "ref"

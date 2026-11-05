@@ -481,6 +481,51 @@ class AriaStandardsSpec
       ) must
         not contain "landmarks-are-distinguishable"
     }
+    "accept copies of one landmark under one name, as pagination above and below a list" in {
+      val pagination =
+        """<nav class="govuk-pagination" aria-label="Pagination">
+          |  <ul class="govuk-pagination__list"><li><a href="/results?page=2">Next</a></li></ul>
+          |</nav>""".stripMargin
+      ids(s"$pagination<table></table>$pagination") must not contain
+        "landmarks-are-distinguishable"
+    }
+    "notice copies under one name that lead somewhere different, or say something different" in {
+      ids(
+        """<nav aria-label="Pagination"><a href="/results?page=2">Next</a></nav>
+          |<nav aria-label="Pagination"><a href="/results?page=3">Next</a></nav>""".stripMargin
+      ) must contain("landmarks-are-distinguishable")
+      ids(
+        """<nav aria-label="Pagination"><a href="/2">Next</a></nav>
+          |<nav aria-label="Pagination"><a href="/2">Next</a></nav>
+          |<nav aria-label="Pagination"><a href="/2">Next page</a></nav>""".stripMargin
+      ) must contain("landmarks-are-distinguishable")
+    }
+    "notice copies with no name" in {
+      ids(
+        """<nav><a href="/a">a</a></nav><nav><a href="/a">a</a></nav>"""
+      ) must contain("landmarks-are-distinguishable")
+    }
+    "set copies apart by anything a reader could meet differently" in {
+      ids(
+        """<aside aria-label="Chart"><img src="/c.png" alt="Sales"></aside>
+          |<aside aria-label="Chart"><img src="/c.png" alt="Costs"></aside>""".stripMargin
+      ) must contain("landmarks-are-distinguishable")
+      ids(
+        """<nav aria-label="City"><a href="/x">New <span>York</span></a></nav>
+          |<nav aria-label="City"><a href="/x">New<span>York</span></a></nav>""".stripMargin
+      ) must contain("landmarks-are-distinguishable")
+      ids(
+        """<nav aria-label="Pagination"><!-- above --><a href="/2">Next</a></nav>
+          |<nav aria-label="Pagination"><!-- below --><a href="/2">Next</a></nav>""".stripMargin
+      ) must contain("landmarks-are-distinguishable")
+    }
+    "not take landmarks holding a form control for copies, whose label or form can lie outside them" in {
+      val search =
+        """<div role="search" aria-label="Search"><input name="q"><button>Go</button></div>"""
+      ids(
+        s"""<form action="/find">$search</form><form action="/find">$search</form>"""
+      ) must contain("landmarks-are-distinguishable")
+    }
   }
 
   /** Content placed directly in the body, so header and footer are page-level
@@ -506,6 +551,71 @@ class AriaStandardsSpec
       ids("""<li>orphan</li>""") must contain("aria-required-parent")
     }
 
+    "take the roles of a presentational table's rows and cells, and a presentational list's items, with it" in {
+      ids(
+        """<table role="presentation"><tbody><tr><th>Day</th><td>Layout</td></tr></tbody></table>
+          |<table role="none"><tr><td>Layout</td></tr></table>
+          |<ul role="presentation"><li>a</li></ul><ol role="none"><li>b</li></ol>
+          |<ul role=" presentation"><li>c</li></ul><ul role=" "><li>d</li></ul>""".stripMargin
+      ) must not contain "aria-required-parent"
+    }
+
+    "keep the roles a browser exposes though they are marked presentational" in {
+      // An item that takes focus is exposed as one, and then lacks its list.
+      ids(
+        """<ul role="presentation"><li tabindex="0">a</li></ul>"""
+      ) must contain("aria-required-parent")
+      Seq("true", "", "PLAINTEXT-ONLY").foreach(value =>
+        ids(
+          s"""<ul role="presentation"><li contenteditable="$value">a</li></ul>"""
+        ) must contain("aria-required-parent")
+      )
+      Seq("false", "maybe").foreach(value =>
+        ids(
+          s"""<ul role="presentation"><li contenteditable="$value">a</li></ul>"""
+        ) must not contain "aria-required-parent"
+      )
+      // aria-hidden is a global state, though true hides the item altogether.
+      ids(
+        """<ul role="presentation"><li aria-hidden="false">a</li></ul>"""
+      ) must contain("aria-required-parent")
+      ids(
+        """<ul role="presentation"><li aria-hidden="true">a</li></ul>"""
+      ) must not contain "aria-required-parent"
+      // A list or table that is named or takes focus stays one, with its items.
+      ids(
+        """<ul role="presentation" aria-label="Steps"><li>a</li></ul>
+          |<table role="presentation" tabindex="0"><tr><td>b</td></tr></table>""".stripMargin
+      ) must not contain "aria-required-parent"
+    }
+
+    "let what is busy loading go without the roles it needs for now" in {
+      ids(
+        """<div role="grid" aria-label="Results" aria-busy="true"></div>
+          |<div aria-busy="TRUE"><div role="listbox" aria-label="Choices"></div></div>""".stripMargin
+      ) must not contain "aria-required-children"
+    }
+
+    "ask a grid or treegrid for its rows, and a cell or rowgroup for where it belongs" in {
+      ids("""<div role="grid" aria-label="Results"></div>""") must contain(
+        "aria-required-children"
+      )
+      ids("""<div role="treegrid" aria-label="Tree"></div>""") must contain(
+        "aria-required-children"
+      )
+      ids("""<div role="cell">Amount</div>""") must contain(
+        "aria-required-parent"
+      )
+      ids("""<div role="rowgroup"></div>""") must contain allOf (
+        "aria-required-parent",
+        "aria-required-children"
+      )
+      ids(
+        """<div role="grid" aria-label="Results"><div role="rowgroup"><div role="row"><div role="gridcell">1</div></div></div></div>
+          |<div role="table" aria-label="Sums"><div role="row"><div role="cell">2</div></div></div>""".stripMargin
+      ) must contain noneOf ("aria-required-parent", "aria-required-children")
+    }
+
     "treat two unnamed asides as indistinguishable" in {
       ids("""<aside>one</aside><aside>two</aside>""") must contain(
         "landmarks-are-distinguishable"
@@ -520,7 +630,7 @@ class AriaStandardsSpec
 
     "treat forms with a name as landmarks, told apart by it" in {
       ids(
-        """<form aria-label="Same"></form><form aria-label="Same"></form>"""
+        """<form aria-label="Same" action="/a"></form><form aria-label="Same" action="/b"></form>"""
       ) must contain("landmarks-are-distinguishable")
       ids(
         """<form aria-label="One"></form><form aria-label="Two"></form>"""
@@ -532,7 +642,7 @@ class AriaStandardsSpec
         """<form title=""></form><form title=" "></form>"""
       ) must not contain "landmarks-are-distinguishable"
       ids(
-        """<form aria-label="" title="One"></form><form aria-label="" title="One"></form>"""
+        """<form aria-label="" title="One" action="/a"></form><form aria-label="" title="One" action="/b"></form>"""
       ) must contain("landmarks-are-distinguishable")
     }
 
@@ -556,7 +666,7 @@ class AriaStandardsSpec
         """<form title="One"></form><form title="Two"></form>"""
       ) must not contain "landmarks-are-distinguishable"
       ids(
-        """<span id="a">One</span><form aria-labelledby="a"></form><form title="One"></form>"""
+        """<span id="a">One</span><form aria-labelledby="a" action="/a"></form><form title="One" action="/b"></form>"""
       ) must contain("landmarks-are-distinguishable")
     }
 

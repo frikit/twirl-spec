@@ -18,8 +18,10 @@ package io.github.frikit.twirlspec
 
 import org.scalatest.matchers.{MatchResult, Matcher}
 import io.github.frikit.twirlspec.expect._
-import io.github.frikit.twirlspec.page.Page
+import io.github.frikit.twirlspec.page.{OutlineSnapshot, Page}
 import io.github.frikit.twirlspec.standards.{ExclusionRegistry, Rule}
+
+import java.nio.file.Path
 
 import scala.util.control.NonFatal
 
@@ -145,6 +147,41 @@ trait TwirlMatchers { self: TwirlSpecDsl =>
       CheckReport(page, Expectation.all(expectations).check(page), "page")
     )
 
+  /** Whether [[matchOutlineSnapshot]] writes the file it is given, where the
+    * file is missing or holds another outline, rather than failing. On where
+    * the environment sets `TWIRLSPEC_UPDATE_SNAPSHOTS=true`, to write snapshots
+    * again locally after a page was changed on purpose. Never in CI, where it
+    * would pass whatever a page had become.
+    */
+  def updateOutlineSnapshots: Boolean = OutlineSnapshot.requested(sys.env.get)
+
+  /** The page's outline, as `page.outline` prints it, is the one saved in this
+    * file:
+    *
+    * {{{
+    * render(view(form)) must matchOutlineSnapshot(Path.of("test/resources/outlines/name.txt"))
+    * }}}
+    *
+    * A file that is missing, or holds another outline, fails, with the page's
+    * outline or the lines that differ, and [[updateOutlineSnapshots]] writes it
+    * instead. Line endings and spaces at the ends of lines do not count. The
+    * outline's format changes only in a minor version, whose changelog says so.
+    * A snapshot asserts nothing for coverage: `assertEverything` still asks for
+    * what the page shows to be asserted.
+    */
+  def matchOutlineSnapshot(file: Path): Matcher[Page] = new Matcher[Page] {
+    def apply(page: Page): MatchResult = {
+      val comparison =
+        OutlineSnapshot.compare(page.outline, file, updateOutlineSnapshots)
+      comparison.wrote.foreach(path => say(s"wrote the outline snapshot $path"))
+      MatchResult(
+        comparison.matches,
+        comparison.message,
+        s"the page's outline was the one at ${file.toAbsolutePath.normalize}, but was expected not to be"
+      )
+    }
+  }
+
   private def matcherFor(
       expectations: Seq[Expectation],
       subject: String
@@ -182,8 +219,13 @@ trait TwirlMatchers { self: TwirlSpecDsl =>
     * out it is one fix away from being able to turn `failOnWarnings` on.
     */
   private[twirlspec] def surfaceWarnings(warnings: Seq[Violation]): Unit =
-    if (reportWarnings && warnings.nonEmpty)
-      try alertHook(Outcome.surfaced(warnings))
-      catch { case NonFatal(_) => () }
+    if (reportWarnings && warnings.nonEmpty) say(Outcome.surfaced(warnings))
+
+  /** Into the test's output, where a reporter that cannot take it is no reason
+    * to fail a test.
+    */
+  private def say(message: String): Unit =
+    try alertHook(message)
+    catch { case NonFatal(_) => () }
 
 }

@@ -20,7 +20,7 @@ import io.github.frikit.twirlspec.expect.Violation
 import io.github.frikit.twirlspec.page.Page
 import io.github.frikit.twirlspec.standards.Rule.Warning
 import io.github.frikit.twirlspec.standards.{Rule, RuleSet}
-import org.jsoup.nodes.Element
+import org.jsoup.nodes.{Element, TextNode}
 
 import scala.jdk.CollectionConverters._
 
@@ -34,7 +34,11 @@ import scala.jdk.CollectionConverters._
   */
 object AriaStandards extends RuleSet {
 
-  lazy val all: Seq[Rule] = Seq(
+  // In blocks because from Scala 3.3.9 the compiler measures no coverage in a
+  // block over 3000 tree nodes, and build.sbt fails the build if it skips one.
+  lazy val all: Seq[Rule] = rolesAndAriaRules ++ attributesAndStructureRules
+
+  private def rolesAndAriaRules: Seq[Rule] = Seq(
     Rule(
       "aria-attr-is-real",
       "every aria- attribute is one the specification defines"
@@ -172,7 +176,11 @@ object AriaStandards extends RuleSet {
           val owned =
             ownedBy(e).flatMap(_.getAllElements.asScala).flatMap(roleOf)
           val found = contained ++ owned
-          if (found.exists(allowed.contains)) Nil
+          // ARIA lets what is still loading, marked busy, go without them for now.
+          val busy = (e +: e.parents.asScala.toSeq).exists(
+            _.attr("aria-busy").trim.equalsIgnoreCase("true")
+          )
+          if (busy || found.exists(allowed.contains)) Nil
           else
             Seq(
               Violation(
@@ -248,7 +256,10 @@ object AriaStandards extends RuleSet {
                 actual = Some(elements.map(describe).mkString(", "))
               )
           }
-    },
+    }
+  )
+
+  private def attributesAndStructureRules: Seq[Rule] = Seq(
     Rule(
       "autocomplete-is-valid",
       "an autocomplete attribute uses tokens the specification defines"
@@ -368,7 +379,7 @@ object AriaStandards extends RuleSet {
     },
     Rule(
       "landmarks-are-distinguishable",
-      "two landmarks of the same kind are told apart by name"
+      "two landmarks of the same kind are told apart by name, unless they are exact copies, holding no form control, under one name"
     ) { page =>
       val landmarkRoles =
         Set(
@@ -392,12 +403,22 @@ object AriaStandards extends RuleSet {
         .flatMap { case (role, group) =>
           // A landmark is named by aria-label or aria-labelledby, never by what it contains.
           val names = group.map { case (e, _) => landmarkName(e) }
-          if (group.size > 1 && names.distinct.size < group.size)
+          // Copies of one landmark, such as pagination above and below a list, may share a
+          // name: the W3C's ARIA practices advise one name where each holds the same.
+          val clash = group.map(_._1).zip(names).groupBy(_._2).exists {
+            case (name, same) =>
+              def copies = same.forall(c => holdsNoControl(c._1)) &&
+                same.map(c => shape(c._1)).distinct.size == 1
+              same.size > 1 && (name.isEmpty || !copies)
+          }
+          if (clash)
             Seq(
               Violation(
                 "landmarks-are-distinguishable",
                 s"${group.size} $role landmarks share a name",
-                expected = Some("a distinct aria-label on each"),
+                expected = Some(
+                  "a distinct aria-label on each, or one shared by exact copies"
+                ),
                 actual = Some(
                   names
                     .map(n => if (n.isEmpty) "(unnamed)" else n)
@@ -409,6 +430,33 @@ object AriaStandards extends RuleSet {
         }
     }
   )
+
+  /** Whether a copy of this landmark can be told by its HTML alone. A form
+    * control takes meaning from outside it, from a label around it, a disabled
+    * fieldset or the form it is sent with, so a landmark holding one is never
+    * taken for a copy.
+    */
+  private def holdsNoControl(landmark: Element): Boolean =
+    landmark
+      .select(
+        "button, fieldset, input, meter, object, output, progress, select, textarea"
+      )
+      .isEmpty
+
+  /** An element as a structure, a step at a time, so that no two different ones
+    * can come out the same: each element and where it ends, its attributes, and
+    * every other node as it is. Two landmarks are copies when theirs are equal,
+    * as pagination a component renders twice is; anything else that differs,
+    * down to an id, a space or a comment, sets them apart.
+    */
+  private def shape(e: Element): Seq[(String, String, String)] =
+    (("element", e.tagName, "") +: e.attributes.asList.asScala.toSeq
+      .map(a => ("attribute", a.getKey, a.getValue))
+      .sorted) ++ e.childNodes.asScala.toSeq.flatMap {
+      case child: Element => shape(child)
+      case text: TextNode => Seq(("text", text.getWholeText, ""))
+      case other          => Seq((other.nodeName, other.outerHtml, ""))
+    } :+ ("end", e.tagName, "")
 
   /** The autofill grammar: `on` or `off` alone; or an optional section, an
     * optional `shipping` or `billing`, one field, which a contact kind such as
@@ -458,7 +506,8 @@ object AriaStandards extends RuleSet {
 
   /** What can take focus, by a script if not by the tab key, unless disabled.
     */
-  private val Focusable = "a[href], button, input, select, textarea, [tabindex]"
+  private val Focusable =
+    "a[href], button, input, select, textarea, [tabindex], [contenteditable~=(?i)^(true|plaintext-only)?$]"
 
   /** What disabling takes the focus from. */
   private val Control = "button, input, select, textarea"
@@ -514,9 +563,28 @@ object AriaStandards extends RuleSet {
     */
   private def roleOf(e: Element): Option[String] = {
     val explicit =
-      e.attr("role").split("\\s+").find(_.nonEmpty).map(_.toLowerCase)
+      e.attr("role")
+        .split("\\s+")
+        .find(_.nonEmpty)
+        .map(_.toLowerCase)
+        // A browser ignores presentation on what it has to expose anyway.
+        .filterNot(role => Presentational(role) && exposed(e))
     explicit.orElse(implicitRole(e))
   }
+
+  private val Presentational = Set("presentation", "none")
+
+  /** What a browser exposes with its own role whatever it is told, as ARIA's
+    * conflict resolution says: what can take focus, and what carries a global
+    * state or property. `aria-hidden` counts unless it is true, which hides the
+    * element altogether.
+    */
+  private def exposed(e: Element): Boolean =
+    e.is(Focusable) || e.attributes.asScala.exists { a =>
+      val key = a.getKey.toLowerCase
+      AriaVocabulary.globalAttributes(key) ||
+      key == "aria-hidden" && !a.getValue.trim.equalsIgnoreCase("true")
+    }
 
   /** A header or footer is the page's own only when nothing sectioning encloses
     * it.
@@ -542,13 +610,22 @@ object AriaStandards extends RuleSet {
     case "header" => Option.when(e.closest(sectioning) == null)("banner")
     case "footer" => Option.when(e.closest(sectioning) == null)("contentinfo")
     case "ul" | "ol" => Some("list")
-    case "li"        => Some("listitem")
+    case "li"        => Option.unless(inPresentational(e, "ul, ol"))("listitem")
     case "table"     => Some("table")
-    case "tr"        => Some("row")
-    case "td"        => Some("gridcell")
-    case "th"        => Some("columnheader")
-    case _           => None
+    case "tr"        => Option.unless(inPresentational(e, "table"))("row")
+    case "td"        => Option.unless(inPresentational(e, "table"))("gridcell")
+    case "th" => Option.unless(inPresentational(e, "table"))("columnheader")
+    case _    => None
   }
+
+  /** Whether the list or table an item, row or cell belongs to was made
+    * presentational, which takes their roles with it, unless the item is one a
+    * browser exposes anyway.
+    */
+  private def inPresentational(e: Element, owner: String): Boolean =
+    !exposed(e) && Option(e.closest(owner))
+      .flatMap(roleOf)
+      .exists(Presentational)
 
   private def ancestorRoles(e: Element): Seq[String] =
     e.parents.asScala.toSeq.flatMap(roleOf)

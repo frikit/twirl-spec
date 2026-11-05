@@ -264,6 +264,49 @@ class MessagesIntegritySpec
       )
     }
 
+    "find the arguments inside a choice's branches, each once" in {
+      rules(
+        Map("n" -> "{0,choice,0#None|1#{1}}"),
+        Map("n" -> "{0,choice,0#Dim|1#{2}}")
+      ) must contain("messages.placeholder-parity")
+      // Welsh has more plural forms than English, so repeats the argument more.
+      rules(
+        Map("n" -> "{0,choice,0#no files|1#one file|1<{0} files}"),
+        Map(
+          "n" -> "{0,choice,0#dim ffeiliau|1#un ffeil|2#{0} ffeil|3#{0} ffeil|6<{0} o ffeiliau}"
+        )
+      ) must not contain "messages.placeholder-parity"
+    }
+
+    "read the arguments as MessageFormat does" in {
+      // A date's style is literal, braces and all.
+      rules(
+        Map("d" -> "{0,date,{1}yyyy}"),
+        Map("d" -> "{0,date,{2}yyyy}")
+      ) must not contain "messages.placeholder-parity"
+      // A choice drops its quotes, so a quoted brace in a branch is an argument.
+      rules(
+        Map("q" -> "{0,choice,0#none|1#'{'1'}'}"),
+        Map("q" -> "{0,choice,0#dim|1#'{'2'}'}")
+      ) must contain("messages.placeholder-parity")
+      // A message MessageFormat cannot read is left to the check that reports it.
+      rules(
+        Map("b" -> "Hello {0"),
+        Map("b" -> "Helo {0")
+      ) must not contain "messages.placeholder-parity"
+      val tooLarge = rules(
+        Map("i" -> "{0,choice,0#none|1#{2147483648}}"),
+        Map("i" -> "{0,choice,0#dim|1#{2147483648}}")
+      )
+      tooLarge must not contain "messages.placeholder-parity"
+      tooLarge must contain("messages.malformed")
+      // Text that merely looks like an argument's mark is none.
+      rules(
+        Map("t" -> "{0}"),
+        Map("t" -> "\u00000\u0000")
+      ) must contain("messages.placeholder-parity")
+    }
+
     "accept placeholders reordered by grammar" in {
       rules(
         Map("a" -> "{0} of {1}"),

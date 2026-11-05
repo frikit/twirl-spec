@@ -236,8 +236,37 @@ object AriaVocabulary {
     */
   val noMixedState: Set[String] = Set("menuitemradio", "radio", "switch")
 
+  /** The states and properties every role takes, ARIA 1.2's global ones, which
+    * make a browser expose an element with its own role though it is marked
+    * presentational. `aria-hidden` is left out, since whether it counts depends
+    * on its value: true hides the element altogether.
+    */
+  val globalAttributes: Set[String] = Set(
+    "aria-atomic",
+    "aria-busy",
+    "aria-controls",
+    "aria-current",
+    "aria-describedby",
+    "aria-details",
+    "aria-disabled",
+    "aria-dropeffect",
+    "aria-errormessage",
+    "aria-flowto",
+    "aria-grabbed",
+    "aria-haspopup",
+    "aria-invalid",
+    "aria-keyshortcuts",
+    "aria-label",
+    "aria-labelledby",
+    "aria-live",
+    "aria-owns",
+    "aria-relevant",
+    "aria-roledescription"
+  )
+
   /** Roles that are only meaningful inside one of these. */
   val requiredParents: Map[String, Set[String]] = Map(
+    "cell" -> Set("row"),
     "columnheader" -> Set("row"),
     "gridcell" -> Set("row"),
     "listitem" -> Set("list", "group"),
@@ -246,6 +275,7 @@ object AriaVocabulary {
     "menuitemradio" -> Set("menu", "menubar", "group"),
     "option" -> Set("listbox", "group"),
     "row" -> Set("grid", "rowgroup", "table", "treegrid"),
+    "rowgroup" -> Set("grid", "table", "treegrid"),
     "rowheader" -> Set("row"),
     "tab" -> Set("tablist"),
     "treeitem" -> Set("tree", "group")
@@ -253,14 +283,17 @@ object AriaVocabulary {
 
   /** Roles that are empty without at least one of these inside. */
   val requiredChildren: Map[String, Set[String]] = Map(
+    "grid" -> Set("row", "rowgroup"),
     "list" -> Set("listitem", "group"),
     "listbox" -> Set("option", "group"),
     "menu" -> Set("menuitem", "menuitemcheckbox", "menuitemradio", "group"),
     "menubar" -> Set("menuitem", "menuitemcheckbox", "menuitemradio", "group"),
     "radiogroup" -> Set("radio"),
+    "rowgroup" -> Set("row"),
     "table" -> Set("row", "rowgroup"),
     "tablist" -> Set("tab"),
-    "tree" -> Set("treeitem", "group")
+    "tree" -> Set("treeitem", "group"),
+    "treegrid" -> Set("row", "rowgroup")
   )
 
   /** The autocomplete tokens the HTML specification defines. */
