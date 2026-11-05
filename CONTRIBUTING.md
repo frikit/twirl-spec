@@ -126,9 +126,13 @@ careful does not cost a full recompile on every push.
 ## The documentation site
 
 [frikit.github.io/twirl-spec](https://frikit.github.io/twirl-spec/) is built by
-`.github/workflows/docs.yml` on every push to `main`, and there is no second
-copy of anything: Jekyll builds the site from the repository itself, so the
-README is the home page and `docs/*.md` are the guides. Three GitHub Pages
+`.github/workflows/docs.yml` from the newest release's tag, each time
+`release.yml` succeeds on `main`, so it describes what Maven Central has. A
+change to the README or the guides goes live with the next release, not with
+its own merge, and `gh workflow run docs.yml` rebuilds the same release by
+hand. There is no second copy of anything: Jekyll builds the site from the
+repository itself, so the README is the home page and `docs/*.md` are the
+guides. Three GitHub Pages
 plugins do the work of a copy — `jekyll-readme-index` makes a README the index
 of its folder, `jekyll-relative-links` turns a link to a `.md` file into a link
 to the built page, and `jekyll-optional-front-matter` means no page needs a
