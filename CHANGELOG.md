@@ -10,6 +10,36 @@ release, and each one has a GitHub Release whose notes are its section here. Eve
 recorded in full; earlier lines are kept to one entry each, so the file stays
 readable.
 
+## [2.7.0] - 2026-11-09
+
+### Changed
+
+- jsoup, which parses every page, moves from 1.23.2 to 1.24.1. Its parser now builds
+  the tree the HTML standard gives for more malformed markup: a `<p>` closes before
+  `<main>`, `<dialog>` or `<search>`, content misplaced in a table moves before it,
+  `<select>` keeps the buttons and other markup it used to drop, and an unclosed
+  `<template>` ends with the document. The rules and `page.outline` read that tree, so
+  on a page with such markup a verdict or an outline snapshot can change, which is why
+  this is a minor version.
+- `well-formed-html` reports the repairs jsoup 1.24.1 records, which differ for a
+  malformed doctype, comment or start tag: a doctype's repairs are no longer reported
+  twice, and an unfinished comment or tag is described more exactly.
+- A CSS selector a spec gives, to `css` or `within` for instance, is read by jsoup
+  1.24.1: `:root` now matches the page's root element rather than the element it is
+  asked of, for which jsoup adds `:scope`, and a selector chaining more than 128 steps,
+  counting combinators and `:has()`, `:is()` and `:not()`, is refused with jsoup's
+  `SelectorParseException`.
+- jsoup 1.24.1 removes APIs it had deprecated. A spec that calls jsoup itself, through
+  `page.doc`, and uses one of them needs jsoup's replacement.
+
+### Fixed
+
+- A tracked attribute counts once asserted whichever case its name is written in, as
+  HTML matches attribute names, and is still reported and ignored as the spec wrote it.
+  jsoup 1.24.1 keeps SVG's own case, as in `viewBox`, which would have left an SVG
+  attribute tracked in lower case unasserted however often a spec asserted it; one
+  tracked in camel case never counted.
+
 ## [2.6.1] - 2026-11-05
 
 ### Fixed
@@ -684,7 +714,8 @@ the Twirl entry points in `twirl-spec-quality`; language parity in
 them in `twirl-spec-all`. The renames a service built against a 0.x snapshot
 would meet are listed in [the adoption guide](docs/adopting.md).
 
-[Unreleased]: https://github.com/frikit/twirl-spec/compare/v2.6.1...HEAD
+[Unreleased]: https://github.com/frikit/twirl-spec/compare/v2.7.0...HEAD
+[2.7.0]: https://github.com/frikit/twirl-spec/compare/v2.6.1...v2.7.0
 [2.6.1]: https://github.com/frikit/twirl-spec/compare/v2.6.0...v2.6.1
 [2.6.0]: https://github.com/frikit/twirl-spec/compare/v2.5.0...v2.6.0
 [2.5.0]: https://github.com/frikit/twirl-spec/compare/v2.4.1...v2.5.0

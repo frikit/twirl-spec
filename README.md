@@ -122,7 +122,7 @@ authority for that release; this table is kept for the current line.
 
 | twirl-spec | Play | Twirl | Scala | Java | ScalaTest | jsoup |
 |---|---|---|---|---|---|---|
-| 2.x | 3.0.0 | 2.0.1 | 3.3.9 | 21 | 3.2.20 | 1.23.2 |
+| 2.x | 3.0.0 | 2.0.1 | 3.3.9 | 21 | 3.2.20 | 1.24.1 |
 
 CI also runs a Play service's view specs against the published artifacts, as a
 service gets them: on Scala 3.3.7 compiled with `-release 11` and Play 3.0.10,
