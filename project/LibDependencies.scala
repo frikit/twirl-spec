@@ -21,7 +21,7 @@ object LibDependencies {
   // Compiled against the oldest supported Play on purpose: `Provided` means the consumer supplies its own, and
   // building against the oldest 3.0.x keeps the artifact usable by every consumer on that line.
   private val playVersion = "3.0.0"
-  private val jsoupVersion = "1.23.2"
+  private val jsoupVersion = "1.24.1"
   private val scalatestVersion = "3.2.20"
 
   /** Provided dependencies are not transitive, so every module that touches
