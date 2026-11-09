@@ -105,16 +105,32 @@ object ContentCoverage {
   ): List[Anchor] = {
     val touched = page.touchedAnchors
     val ignoredIds = ignored.map(_.stripPrefix("#"))
+    val touchedTracking = touched.map(trackingName)
     within(page, scope)
       .filterNot(insideIgnored(_, ignoredIds))
       .filterNot(e => selectors.exists(e.closest(_) != null))
       .flatMap(anchorsOf(_, trackedAttributes))
       .distinctBy(_.path)
-      .filterNot(a => touched.contains(a.path))
+      .filterNot(a =>
+        touched.contains(a.path) ||
+          (a.kind == "tracking" &&
+            touchedTracking.contains(trackingName(a.path)))
+      )
       .filterNot(a =>
         ignored.contains(a.name) || ignored.contains(a.path) ||
           ignored.contains(a.name.stripPrefix("#"))
       )
+  }
+
+  /** A tracked attribute's anchor, `name=value`, with A to Z in its name in
+    * lower case, as HTML compares names: jsoup keeps SVG's own case (viewBox)
+    * and a spec may write a name either way. Only the question of whether it
+    * was asserted reads it; the anchor keeps the spec's spelling.
+    */
+  private def trackingName(anchor: String): String = {
+    val (name, value) = anchor.span(_ != '=')
+    name.map(c => if (c >= 'A' && c <= 'Z') (c + ('a' - 'A')).toChar else c) +
+      value
   }
 
   /** Ignoring a block means ignoring what it holds: a spec that disclaims the

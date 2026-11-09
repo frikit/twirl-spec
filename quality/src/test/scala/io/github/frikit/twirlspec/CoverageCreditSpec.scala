@@ -449,6 +449,28 @@ class CoverageCreditSpec
       ContentCoverage.unasserted(page, trackedAttributes = tracked) mustBe empty
     }
 
+    "be covered whichever case its name is written in" in {
+      // jsoup keeps SVG's pathLength; a spec may write pathlength.
+      val page = pageOf("""<svg><path id="p" pathlength="1"/></svg>""")
+      page.byId("p")
+      Seq("pathlength", "pathLength").foreach { name =>
+        ContentCoverage.unasserted(
+          page,
+          trackedAttributes = Set(name)
+        ) mustBe empty
+      }
+    }
+
+    "be ignored by an entry spelled as it is tracked" in {
+      val page =
+        pageOf("""<button type="button" data-event="save">Save</button>""")
+      ContentCoverage.unasserted(
+        page,
+        ignored = Set("DATA-EVENT=save"),
+        trackedAttributes = Set("DATA-EVENT")
+      ) mustBe empty
+    }
+
     "be covered even when it is the id or the href" in {
       val page = pageOf("""<a id="x" href="/next">Next</a>""")
       page.byId("x")
