@@ -56,6 +56,12 @@ jobs:
           path: '*/target/scala-*/scoverage-report'
           if-no-files-found: warn
 
+      # jsoup's Web query mode reads some selectors differently and becomes its
+      # default in 1.25.1, so the rules have to read a page alike in both modes.
+      # Tests are not forked, so the property reaches them.
+      - name: Test in jsoup's Web query mode
+        run: sbt -Djsoup.queryMode=web test
+
   # The library as a service gets it: the POMs a release would publish, and a
   # Play application's view specs built against the artifacts, on the Scala,
   # -release and Play of a service today and of the newest. The newest Play is

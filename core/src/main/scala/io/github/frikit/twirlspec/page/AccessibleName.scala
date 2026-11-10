@@ -99,13 +99,15 @@ object AccessibleName {
     * it names nothing it sits inside: the arrow in
     * `<a>Next<span aria-hidden="true"> →</span></a>` is not part of the name.
     */
-  private val NotAnnounced = "[aria-hidden=true], [hidden]"
+  private def notAnnounced(e: Element): Boolean =
+    e.hasAttr("hidden") || Attrs.is(e, "aria-hidden", "true")
 
   /** An image whose alt text is announced. A presentational image's alt is
     * ignored, so it names nothing either.
     */
-  private val AnnouncedImage =
-    "img[alt]:not([role=presentation]):not([role=none])"
+  private def announcedImage(e: Element): Boolean =
+    e.is("img[alt]") && !Attrs.is(e, "role", "presentation") &&
+      !Attrs.is(e, "role", "none")
 
   /** The form controls whose own content a wrapping label must not borrow. */
   private val NestedControls = "input, select, textarea, button"
@@ -126,11 +128,11 @@ object AccessibleName {
     * words.
     */
   private def spoken(said: Element): String =
-    if (said.is(AnnouncedImage)) said.attr("alt")
+    if (announcedImage(said)) said.attr("alt")
     else {
-      said
-        .select(AnnouncedImage)
-        .asScala
+      Tree
+        .withDescendants(said)
+        .filter(announcedImage)
         .foreach(img => img.replaceWith(new TextNode(s" ${img.attr("alt")} ")))
       said.text()
     }
@@ -150,8 +152,8 @@ object AccessibleName {
     // `closest`, not `is`: aria-hidden covers the subtree under it, so a root
     // is hidden when an ancestor says so, and the traversal is exempt either
     // way.
-    if (root.closest(NotAnnounced) != null) without(root, alsoDrop: _*)
-    else without(root, alsoDrop :+ NotAnnounced: _*)
+    if (Tree.closest(root)(notAnnounced).nonEmpty) without(root, alsoDrop)
+    else without(root, alsoDrop, notAnnounced)
 
   /** The text of [[announced]]. Every name taken from another element — a
     * label, a legend, the target of an `aria-labelledby` — comes through here,
@@ -165,11 +167,19 @@ object AccessibleName {
     * root is kept even where it matches: this removes content from an element,
     * not the element itself.
     */
-  private def without(e: Element, selectors: String*): Element = {
+  private def without(
+      e: Element,
+      selectors: Seq[String],
+      also: Element => Boolean = _ => false
+  ): Element = {
     val copy = e.clone()
     selectors.foreach(selector =>
       copy.select(selector).asScala.filter(_ ne copy).foreach(_.remove())
     )
+    Tree
+      .withDescendants(copy)
+      .filter(x => (x ne copy) && also(x))
+      .foreach(_.remove())
     copy
   }
 

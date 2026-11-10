@@ -19,7 +19,7 @@ package io.github.frikit.twirlspec.wcag
 import io.github.frikit.twirlspec.standards._
 
 import io.github.frikit.twirlspec.expect.Violation
-import io.github.frikit.twirlspec.page.{Page, Text}
+import io.github.frikit.twirlspec.page.{Attrs, Page, Text}
 import io.github.frikit.twirlspec.standards.Rule.Warning
 import org.jsoup.nodes.Element
 
@@ -59,9 +59,10 @@ object SecurityStandards extends RuleSet {
     },
     Rule("no-javascript-href", "links do not carry javascript: URLs") { page =>
       page.document
-        .select("a[href^=javascript:]")
+        .select("a[href]")
         .asScala
         .toList
+        .filter(Attrs.startsWith(_, "href", "javascript:"))
         .map(e =>
           Violation(
             "no-javascript-href",

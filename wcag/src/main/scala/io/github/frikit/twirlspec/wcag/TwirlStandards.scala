@@ -19,7 +19,7 @@ package io.github.frikit.twirlspec.wcag
 import io.github.frikit.twirlspec.standards._
 
 import io.github.frikit.twirlspec.expect.{Matching, Violation}
-import io.github.frikit.twirlspec.page.Text
+import io.github.frikit.twirlspec.page.{Text, Tree}
 
 import scala.jdk.CollectionConverters._
 
@@ -35,18 +35,19 @@ object TwirlStandards extends RuleSet {
       val families = page.messageKeyFamilies
       // Everything a citizen can be shown, wherever a template put it, but not
       // what is someone's own text or is there to be read literally.
-      val written = scope
-        .select("*")
-        .asScala
-        .toList
+      // The scope and all it holds: jsoup's Web query mode leaves the element a
+      // select starts from out of its own result.
+      val inScope = Tree.withDescendants(scope)
+      val written = inScope
         .filter(_.closest("textarea, pre, code, kbd, samp") == null)
         .map(_.ownText())
       val attributes = Seq("aria-label", "alt", "placeholder").flatMap(a =>
-        scope.select(s"[$a]").asScala.map(_.attr(a))
+        inScope.filter(_.hasAttr(a)).map(_.attr(a))
       )
-      val buttons = scope
-        .select("input[type=submit], input[type=button], input[type=reset]")
-        .asScala
+      val buttons = inScope
+        .filter(
+          _.is("input[type=submit], input[type=button], input[type=reset]")
+        )
         .map(_.attr("value"))
       // A layout appends the service's name, and an error state prefixes one.
       val title = Matching.stripErrorPrefix(page, page.title).split(" - ").head

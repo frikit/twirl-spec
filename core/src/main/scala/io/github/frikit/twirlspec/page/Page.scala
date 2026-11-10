@@ -226,7 +226,7 @@ final class Page(
     */
   private[twirlspec] def isExposed(e: Element): Boolean = {
     val lineage = e :: e.parents.asScala.toList
-    e.closest(Page.NotExposed) == null &&
+    Tree.closest(e)(Page.notExposed).isEmpty &&
     !lineage.exists(Page.inlineStyle(_, "display").contains("none")) &&
     // An element can show itself inside something hidden, so the nearest that
     // says anything of its own decides.
@@ -446,12 +446,19 @@ final class Page(
   def languageToggle: Selection = {
     val selector =
       ".hmrc-language-select, nav[aria-label='Language switcher'], a[hreflang]"
-    val elements = inScope(selector).filter { e =>
-      !e.hasAttr("hreflang") || !e
-        .attr("hreflang")
-        .toLowerCase
-        .startsWith(lang.code.toLowerCase)
-    }
+    // The label compares in any case, as the selector did.
+    val elements =
+      inScope(".hmrc-language-select, nav[aria-label], a[hreflang]")
+        .filter(e =>
+          e.is(".hmrc-language-select, a[hreflang]") ||
+            Attrs.is(e, "aria-label", "Language switcher")
+        )
+        .filter { e =>
+          !e.hasAttr("hreflang") || !e
+            .attr("hreflang")
+            .toLowerCase
+            .startsWith(lang.code.toLowerCase)
+        }
     record(elements)
     Selection("language toggle", selector, elements)
   }
@@ -469,11 +476,17 @@ final class Page(
   def main: Selection = named("main content", "main, #main-content")
 
   /** The HMRC session timeout dialog. */
-  def timeoutDialog: Selection =
-    named(
-      "timeout dialog",
+  def timeoutDialog: Selection = {
+    val selector =
       "meta[name=hmrc-timeout-dialog], [data-module=hmrc-timeout-dialog]"
+    // The values compare in any case, as the selector did.
+    val elements = inScope("meta[name], [data-module]").filter(e =>
+      (e.is("meta") && Attrs.is(e, "name", "hmrc-timeout-dialog")) ||
+        Attrs.is(e, "data-module", "hmrc-timeout-dialog")
     )
+    record(elements)
+    Selection("timeout dialog", selector, elements)
+  }
 
   /** The sign out link of an HMRC header. */
   def signOutLink: Selection =
@@ -528,10 +541,10 @@ final class Page(
 
   /** What an inline error says, with the visually hidden prefix taken off. */
   private[twirlspec] def errorWords(e: Element): String = {
-    val hidden = e
-      .select(".govuk-visually-hidden")
-      .asScala
-      .toList
+    // the element itself too, as a select from it counted it
+    val hidden = Tree
+      .withDescendants(e)
+      .filter(_.hasClass("govuk-visually-hidden"))
       .map(_.text())
       .mkString
     Text.normalise(e.text().replace(hidden, ""))
@@ -718,7 +731,14 @@ final class Page(
     // One candidate at a time: `named` records what it matches as asserted, and trying every
     // selector would record every button on the page rather than the one this resolves to.
     candidates.iterator
-      .map(selector => named("submit button", selector))
+      .map {
+        // An id compares exactly, as every lookup by id on a page does.
+        case "[id=submit]" =>
+          exactly("submit button", "[id=submit]", "[id]")(e =>
+            says(e.id(), "submit")
+          )
+        case selector => named("submit button", selector)
+      }
       .find(_.nonEmpty)
       .getOrElse(Selection.empty("submit button", candidates.mkString(", ")))
   }
@@ -889,8 +909,9 @@ object Page {
     * being rendered at all: a tag manager's frame in `<noscript>`, say, or what
     * a `<template>` holds until a script uses it.
     */
-  private val NotExposed =
-    "[hidden], [inert], [aria-hidden=true], noscript, template"
+  private def notExposed(e: Element): Boolean =
+    e.is("[hidden], [inert], noscript, template") ||
+      Attrs.is(e, "aria-hidden", "true")
 
   /** Comments, strings and brackets in a style attribute. A semicolon in one
     * ends no declaration, and `display` and `visibility` need none of them.

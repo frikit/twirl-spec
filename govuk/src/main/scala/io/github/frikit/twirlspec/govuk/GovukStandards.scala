@@ -19,7 +19,7 @@ package io.github.frikit.twirlspec.govuk
 import io.github.frikit.twirlspec.standards._
 
 import io.github.frikit.twirlspec.expect.{Matching, Violation}
-import io.github.frikit.twirlspec.page.Text
+import io.github.frikit.twirlspec.page.{Text, Tree}
 import io.github.frikit.twirlspec.standards.Rule.Warning
 import org.jsoup.nodes.Element
 
@@ -106,7 +106,10 @@ object GovukStandards extends RuleSet {
         .select(".govuk-error-message")
         .asScala
         .toList
-        .filter(_.select(".govuk-visually-hidden").isEmpty)
+        // the error itself too, as a select from it counted it
+        .filter(e =>
+          !Tree.withDescendants(e).exists(_.hasClass("govuk-visually-hidden"))
+        )
         .map { e =>
           Violation(
             "error-hidden-prefix",
