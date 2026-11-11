@@ -41,6 +41,12 @@ class DslExactnessSpec extends AnyWordSpec with Matchers with TwirlSpec {
       submitButtonText("Continue").check(
         page("""<form><input type="submit" value="Continue"></form>""")
       ) mustBe empty
+      // an image input says its alt
+      submitButtonText("Continue").check(
+        page(
+          """<form><input type="image" id="submit" src="go.png" alt="Continue"></form>"""
+        )
+      ) mustBe empty
     }
 
     "take only a link for a link" in {
@@ -61,6 +67,10 @@ class DslExactnessSpec extends AnyWordSpec with Matchers with TwirlSpec {
       expectation.check(
         page("""<label for="x">Name</label><input id="x" name="x">""")
       ) mustBe empty
+      // one its legend labels asks for no label
+      textInput("x").labelledByLegend.check(
+        page("""<fieldset><legend>Name</legend><input name="x"></fieldset>""")
+      ) mustBe empty
     }
 
     "send a value as HTML's sanitisation leaves it" in {
@@ -75,10 +85,15 @@ class DslExactnessSpec extends AnyWordSpec with Matchers with TwirlSpec {
         """type="number" value="2e308"""" -> "",
         """type="date" value="2023-02-29"""" -> "",
         """type="date" value="2024-02-29"""" -> "2024-02-29",
+        """type="date" value="2024-01-31"""" -> "2024-01-31",
+        """type="date" value="2024-1-31"""" -> "",
         """type="month" value="2024-13"""" -> "",
+        """type="month" value="2024-1"""" -> "",
         """type="week" value="2020-W53"""" -> "2020-W53",
         """type="week" value="2021-W53"""" -> "",
+        """type="week" value="2020-53"""" -> "",
         """type="time" value="24:00"""" -> "",
+        """type="datetime-local" value="2026-11-11"""" -> "",
         """type="datetime-local" value="2026-11-11 09:30:00.000"""" -> "2026-11-11T09:30",
         """type="datetime-local" value="2026-11-11T09:30:05.500"""" -> "2026-11-11T09:30:05.5",
         """type="range" value="abc"""" -> "abc",

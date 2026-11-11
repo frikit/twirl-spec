@@ -91,6 +91,10 @@ class RuleExactnessSpec extends AnyWordSpec with Matchers with TwirlSpec {
       ) must not contain "aria-required-children"
       fired(
         AriaStandards.all,
+        """<select role="listbox" multiple aria-label="Country"><optgroup label="Europe"><option>UK</option></optgroup></select>"""
+      ) must not contain "aria-required-children"
+      fired(
+        AriaStandards.all,
         """<div role="radiogroup" aria-label="C"><input type="radio" name="c" value="a" aria-label="A"></div>"""
       ) must not contain "aria-required-children"
     }
