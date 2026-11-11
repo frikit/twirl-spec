@@ -38,10 +38,16 @@ object SecurityStandards extends RuleSet {
           // A form with no method attribute submits by GET, which is the shape
           // this is most likely to be found in: nobody writes method="get" on
           // a sign-in form, they just leave the method off.
-          .select("form[method=get], form:not([method])")
+          .select("form")
           .asScala
           .toList
-          .filter(_.select("input[type=password]").asScala.nonEmpty)
+          // what the form owns, as a browser decides it, wherever it sits
+          .filter(owned(page, _, "input[type=password]").nonEmpty)
+          // by its own method, or by a button of its own that sends it by another
+          .filter(form =>
+            form.is("form[method=get], form:not([method])") ||
+              submittersOf(page, form).exists(Attrs.is(_, "formmethod", "get"))
+          )
           .map { form =>
             Violation(
               "no-password-in-get",
@@ -148,16 +154,32 @@ object SecurityStandards extends RuleSet {
   /** Where a form posts to. A button can say for itself how and where it
     * submits the form, and with no button there is only what the form says.
     */
+  /** The elements matching the selector that the form owns, by its `form`
+    * attribute or by sitting in it, as a browser decides.
+    */
+  private def owned(
+      page: Page,
+      form: Element,
+      selector: String
+  ): List[Element] =
+    page.document
+      .select(selector)
+      .asScala
+      .toList
+      .filter(page.formOwner(_).contains(form))
+
+  /** What can submit the form: the enabled submit buttons it owns. */
+  private def submittersOf(page: Page, form: Element): List[Element] =
+    owned(
+      page,
+      form,
+      "button[type=submit], button:not([type]), input[type=submit], input[type=image]"
+    ).filterNot(page.isDisabled)
+
   private def postsTo(page: Page, form: Element): List[String] = {
     def own(e: Element, attribute: String, fallback: String) =
       if (e.hasAttr(attribute)) e.attr(attribute) else form.attr(fallback)
-    val submitters = page.document
-      .select(
-        "button[type=submit], button:not([type]), input[type=submit], input[type=image]"
-      )
-      .asScala
-      .toList
-      .filter(s => page.formOwner(s).contains(form) && !page.isDisabled(s))
+    val submitters = submittersOf(page, form)
     val ways =
       if (submitters.isEmpty) List((form.attr("method"), form.attr("action")))
       else

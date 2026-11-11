@@ -524,8 +524,9 @@ final class Page(
     * stranded.
     */
   def errorSummaryDanglingLinks: List[(String, String)] =
+    // A link to # alone lands on nothing either.
     errorSummaryLinks.filter { case (target, _) =>
-      target.nonEmpty && byIdAnywhere(target).isEmpty
+      target.isEmpty || byIdAnywhere(target).isEmpty
     }
 
   /** Every inline error message. */

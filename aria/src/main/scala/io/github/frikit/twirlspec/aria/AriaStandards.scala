@@ -173,9 +173,9 @@ object AriaStandards extends RuleSet {
       rolesOn(page).flatMap { case (e, role) =>
         AriaVocabulary.requiredChildren.get(role).toSeq.flatMap { allowed =>
           val contained =
-            e.getAllElements.asScala.filterNot(_ eq e).flatMap(roleOf)
+            e.getAllElements.asScala.filterNot(_ eq e).flatMap(childRole)
           val owned =
-            ownedBy(e).flatMap(Tree.withDescendants).flatMap(roleOf)
+            ownedBy(e).flatMap(Tree.withDescendants).flatMap(childRole)
           val found = contained ++ owned
           // ARIA lets what is still loading, marked busy, go without them for now.
           val busy = (e +: e.parents.asScala.toSeq).exists(
@@ -585,6 +585,18 @@ object AriaStandards extends RuleSet {
         .filterNot(role => Presentational(role) && exposed(e))
     explicit.orElse(implicitRole(e))
   }
+
+  /** A role as a container counts it among its children: what [[roleOf]] gives,
+    * or the role a native option, option group or radio carries, which `roleOf`
+    * leaves out so that no rule asks them for state their HTML gives.
+    */
+  private def childRole(e: Element): Option[String] =
+    roleOf(e).orElse(e.tagName match {
+      case "option" if e.closest("select, datalist") != null => Some("option")
+      case "optgroup" if e.closest("select") != null         => Some("group")
+      case "input" if Attrs.is(e, "type", "radio")           => Some("radio")
+      case _                                                 => None
+    })
 
   private val Presentational = Set("presentation", "none")
 

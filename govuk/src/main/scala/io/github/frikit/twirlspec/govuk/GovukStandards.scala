@@ -180,7 +180,10 @@ object GovukStandards extends RuleSet {
       page.errorSummaryDanglingLinks.map { case (target, text) =>
         Violation(
           "error-summary-targets",
-          s"error summary links to #$target but nothing on the page has that id",
+          if (target.isEmpty)
+            "an error summary links to # alone, which lands on nothing"
+          else
+            s"error summary links to #$target but nothing on the page has that id",
           actual = Some(text)
         ).withHint("WCAG 2.4.3 — the link must move focus to the field")
       }
