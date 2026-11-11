@@ -105,7 +105,18 @@ trait FormExpectations {
     Expectation(rule) { page =>
       val sel = id.fold(page.submitButton)(page.byId)
       present(rule, sel) match {
-        case Nil  => compare(rule, expected, sel.text, page, Exact)
+        case Nil =>
+          // An input says its value, an image input its alt, a button its text.
+          val words = Text.normalise(
+            sel.elements
+              .map(e =>
+                if (e.is("input[type=image]")) e.attr("alt")
+                else if (e.tagName == "input") e.attr("value")
+                else e.text()
+              )
+              .mkString(" ")
+          )
+          compare(rule, expected, words, page, Exact)
         case errs => errs
       }
     }
@@ -420,8 +431,24 @@ final case class TextInputExpectation(
       case Right(element) =>
         val id = if (element.id().nonEmpty) element.id() else name
 
+        // A label's `for` names an id, never a name, so a field with no id
+        // has no label to find.
         val labelIssues =
-          FormChecks.labelIssues(page, rule, id, label, labelRequired)
+          if (element.id().nonEmpty)
+            FormChecks.labelIssues(page, rule, id, label, labelRequired)
+          else if (labelRequired)
+            Seq(
+              Violation
+                .missing(
+                  s"$rule label",
+                  "label[for]",
+                  "field has no id, so no label[for] can name it"
+                )
+                .withHint(
+                  "WCAG 3.3.2 — every input needs a label whose `for` matches the input id"
+                )
+            )
+          else Nil
         val hintIssues =
           hint.toSeq.flatMap(FormChecks.hintIssues(page, rule, id, _))
 
@@ -533,6 +560,10 @@ final case class ChoiceGroupExpectation(
         val unexpected =
           if (exhaustive) actualValues.filterNot(expectedValues.contains)
           else Nil
+        // Exactly these options means each once.
+        val repeated =
+          if (exhaustive) actualValues.diff(actualValues.distinct).distinct
+          else Nil
 
         val valueIssues =
           (if (missing.nonEmpty)
@@ -554,11 +585,22 @@ final case class ChoiceGroupExpectation(
                    s"unexpected option(s): ${unexpected.mkString(", ")}"
                  )
                )
+             else Nil) ++
+            (if (repeated.nonEmpty)
+               Seq(
+                 Violation.mismatch(
+                   s"$rule options",
+                   expectedValues.mkString(", "),
+                   actualValues.mkString(", "),
+                   s"option(s) offered more than once: ${repeated.mkString(", ")}"
+                 )
+               )
              else Nil)
 
+        // Every option with the value, so a repeat says what the first says.
         val labelIssues = expectedOptions.flatMap {
           case (value, expectedLabel) =>
-            elements.find(_.attr("value") == value).toSeq.flatMap { element =>
+            elements.filter(_.attr("value") == value).flatMap { element =>
               val id = element.id()
               FormChecks.labelIssues(
                 page,
