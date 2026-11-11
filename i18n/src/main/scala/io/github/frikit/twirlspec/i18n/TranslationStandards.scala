@@ -171,8 +171,8 @@ object TranslationStandards {
       missingAndExtra(
         "i18n-same-submissions",
         "choice",
-        choicesOf(base),
-        choicesOf(other),
+        choicesOf(base, langs),
+        choicesOf(other, langs),
         other.lang
       ) ++ missingAndExtra(
         "i18n-same-submissions",
@@ -352,37 +352,47 @@ object TranslationStandards {
   /** What each named choice submits. A label is left out, since it is
     * translated, and the order, since a translated list sorts differently.
     */
-  private def choicesOf(page: Page): Set[String] = {
+  private def choicesOf(page: Page, langs: Set[String]): Set[String] = {
+    // A choice is named by where its form sends it, so that two forms trading
+    // their choices do not read alike, and a form one language adds does not
+    // move the choices of the rest.
+    def sentBy(control: Element): String =
+      page.formOwner(control).fold("")(f => s"${destinationOf(f, langs)}: ")
     val options = page.document
       .select("select[name] option")
       .asScala
       .toList
       .map { o =>
+        val select = o.closest("select")
         val value = if (o.hasAttr("value")) o.attr("value") else o.text()
-        s"${o.closest("select").attr("name")}=$value"
+        s"${sentBy(select)}${select.attr("name")}=$value"
       }
     val boxes = page.document
       .select("input[type=radio][name], input[type=checkbox][name]")
       .asScala
       .toList
-      .map(i => s"${i.attr("name")}=${page.checkedValue(i)}")
+      .map(i => s"${sentBy(i)}${i.attr("name")}=${page.checkedValue(i)}")
     counted(options ++ boxes)
   }
 
-  /** Where each form submits, language-neutral and leaving out the query, which
+  private def destinationsOf(page: Page, langs: Set[String]): Set[String] =
+    counted(
+      page.document.select("form").asScala.toList.map(destinationOf(_, langs))
+    )
+
+  /** Where a form submits, language-neutral and leaving out the query, which
     * can carry a token that differs per render. A form with an id is named, so
     * two that swap destinations differ.
     */
-  private def destinationsOf(page: Page, langs: Set[String]): Set[String] =
-    counted(page.document.select("form").asScala.toList.map { form =>
-      val method =
-        if (form.attr("method").isEmpty) "GET"
-        else form.attr("method").toUpperCase
-      val path =
-        languageNeutral(form.attr("action").takeWhile(_ != '?'), langs)
-      val named = if (form.id().isEmpty) "" else s"#${form.id()} "
-      s"$named$method $path"
-    })
+  private def destinationOf(form: Element, langs: Set[String]): String = {
+    val method =
+      if (form.attr("method").isEmpty) "GET"
+      else form.attr("method").toUpperCase
+    val path =
+      languageNeutral(form.attr("action").takeWhile(_ != '?'), langs)
+    val named = if (form.id().isEmpty) "" else s"#${form.id()} "
+    s"$named$method $path"
+  }
 
   /** Where each link with an id goes: language-neutral, and as the page wrote
     * it.

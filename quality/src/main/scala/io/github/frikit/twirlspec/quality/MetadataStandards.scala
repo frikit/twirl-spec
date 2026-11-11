@@ -19,7 +19,7 @@ package io.github.frikit.twirlspec.quality
 import io.github.frikit.twirlspec.standards._
 
 import io.github.frikit.twirlspec.expect.Violation
-import io.github.frikit.twirlspec.page.Text
+import io.github.frikit.twirlspec.page.{Attrs, Text}
 import io.github.frikit.twirlspec.standards.Rule.Warning
 
 import scala.jdk.CollectionConverters._
@@ -75,9 +75,10 @@ object MetadataStandards extends RuleSet {
       Warning
     ) { page =>
       page.document
-        .select("meta[name=robots]")
+        .select("meta[name]")
         .asScala
         .toList
+        .filter(Attrs.is(_, "name", "robots"))
         .filter(_.attr("content").toLowerCase.contains("noindex"))
         .map(e =>
           Violation(
@@ -97,7 +98,11 @@ object MetadataStandards extends RuleSet {
       Warning
     ) { page =>
       val description =
-        page.document.select("meta[name=description]").asScala.toList
+        page.document
+          .select("meta[name]")
+          .asScala
+          .toList
+          .filter(Attrs.is(_, "name", "description"))
       if (description.exists(_.attr("content").trim.nonEmpty)) Nil
       else
         Seq(

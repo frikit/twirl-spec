@@ -84,6 +84,18 @@ Global / onLoad := {
   installHooks compose (Global / onLoad).value
 }
 
+// The commit checked out in a directory, or main where there is no git to ask.
+def commitOf(dir: File): String = {
+  import scala.sys.process._
+  scala.util
+    .Try(
+      Process(Seq("git", "rev-parse", "HEAD"), dir)
+        .!!(ProcessLogger(_ => ()))
+        .trim
+    )
+    .getOrElse("main")
+}
+
 lazy val root = Project("twirl-spec", file("."))
   .enablePlugins(ScalaUnidocPlugin)
   .settings(
@@ -102,8 +114,11 @@ lazy val root = Project("twirl-spec", file("."))
       version.value,
       "-social-links:github::https://github.com/frikit/twirl-spec",
       "-source-links:github://frikit/twirl-spec",
+      // Source links name the commit the site is built from, which the docs
+      // workflow checks out at the newest release tag, so they show the code
+      // the pages describe rather than whatever main holds later.
       "-revision",
-      "main"
+      commitOf((ThisBuild / baseDirectory).value)
     )
   )
   .aggregate(core, wcag, govuk, quality, messages, i18n, aria, html, all)

@@ -19,6 +19,7 @@ package io.github.frikit.twirlspec.quality
 import io.github.frikit.twirlspec.standards._
 
 import io.github.frikit.twirlspec.expect.Violation
+import io.github.frikit.twirlspec.page.Attrs
 import io.github.frikit.twirlspec.standards.Rule.Warning
 
 import scala.jdk.CollectionConverters._
@@ -89,9 +90,13 @@ object PerformanceStandards extends RuleSet {
       severity = Warning
     ) { page =>
       page.document
-        .select("[src^=data:], [href^=data:]")
+        .select("[src], [href]")
         .asScala
         .toList
+        .filter(e =>
+          Attrs.startsWith(e, "src", "data:") ||
+            Attrs.startsWith(e, "href", "data:")
+        )
         .map(e => (e, Seq(e.attr("src"), e.attr("href")).map(_.length).max))
         .filter(_._2 > InlineBudgetBytes)
         .map { case (e, size) =>

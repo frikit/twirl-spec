@@ -54,6 +54,30 @@ class GovukEdgeCasesSpec extends AnyWordSpec with Matchers with TwirlSpec {
         .find(_.rule == "error-aria-describedby")
         .flatMap(_.actual) mustBe Some("(no aria-describedby)")
     }
+
+    // play-frontend-hmrc lets an error message take an id of its own, which
+    // then names no field by the -error convention.
+    "accept an error message with an id of its own that its field points at" in {
+      val error =
+        """<p id="problem" class="govuk-error-message"><span class="govuk-visually-hidden">Error:</span> Boom</p>"""
+      // a field, a radio group, and a hidden error with its hidden field
+      Seq(
+        s"""<label for="x">X</label>$error<input id="x" name="x" aria-describedby="problem">""",
+        s"""<div role="radiogroup" aria-label="C" aria-describedby="problem">$error<input type="radio" name="c" value="a" aria-label="A"></div>""",
+        s"""<div hidden>$error<input id="x" name="x" aria-describedby="problem"></div>"""
+      ).foreach(body =>
+        violations(body).map(_.rule) must not contain "error-aria-describedby"
+      )
+      // a label pointing at it does not announce it with the field
+      Seq(
+        s"""<label for="x">X</label>$error<input id="x" name="x">""",
+        s"""<label for="x" aria-describedby="problem">X</label>$error<input id="x" name="x">"""
+      ).foreach(body =>
+        violations(body)
+          .find(_.rule == "error-aria-describedby")
+          .flatMap(_.actual) mustBe Some("(no field points at it)")
+      )
+    }
   }
 
 }

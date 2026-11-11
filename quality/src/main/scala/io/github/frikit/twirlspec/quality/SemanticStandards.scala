@@ -19,7 +19,7 @@ package io.github.frikit.twirlspec.quality
 import io.github.frikit.twirlspec.standards._
 
 import io.github.frikit.twirlspec.expect.Violation
-import io.github.frikit.twirlspec.page.Text
+import io.github.frikit.twirlspec.page.{Text, Tree}
 import io.github.frikit.twirlspec.standards.Rule.Warning
 import org.jsoup.nodes.{Comment, Element, TextNode}
 
@@ -38,9 +38,11 @@ object SemanticStandards extends RuleSet {
           .select(Interactive)
           .asScala
           .toList
-          // Jsoup's Element.select matches the element itself as well as its
-          // descendants, so every control would otherwise contain itself.
-          .filter(e => e.select(Interactive).asScala.exists(_ ne e))
+          // What the control holds, without the control itself, which jsoup's
+          // select counts in one query mode and leaves out in the other.
+          .filter(e =>
+            Tree.withDescendants(e).exists(d => (d ne e) && d.is(Interactive))
+          )
           .map(e =>
             Violation(
               "no-nested-interactive",

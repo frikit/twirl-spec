@@ -145,7 +145,10 @@ your Twirl either.
 **Scala.** Published for Scala 3 only, built with 3.3.9 on the LTS line, and
 supported from Scala 3.3.0: every later Scala 3 reads what 3.3 compiles, and
 every 3.3 patch reads the same TASTy. Tested on 3.3.0, 3.3.6, 3.3.7 and 3.9.0,
-with 3.3.7 and 3.9.0 kept tested in CI. A project on a 3.3 patch below 3.3.9
+with 3.3.7 and 3.9.0 kept tested in CI. Scala 3.3.0 came out before Java 21
+and fails to load some of its classes, with twirl-spec or without, so on Java 21
+a project on 3.3.0 compiles only with `-release` set to an older Java, such as
+11 or 17; 3.3.1 and later need no flag. A project on a 3.3 patch below 3.3.9
 gets scala3-library 3.3.9 on its test classpath, which sbt resolves without a
 warning. A project on Scala 2.13 cannot use 2.x; see
 [Moving from 1.x to 2.x](docs/adopting.md#moving-from-1x-to-2x).
@@ -498,7 +501,7 @@ listed again here.
 | `coverageIgnoredSelectors` | CSS selectors for blocks every page inherits, for a block with no id whose words change with the language. |
 | `assertEverything` | Every id, link and tracked element on the page was asserted by some test in this spec. |
 | `assertEverythingExcept` | As `assertEverything`, but these ids, links or tracking values are deliberately not asserted. |
-| `unassertedContent` | What this spec has asserted so far, for a spec that wants to report rather than fail. |
+| `unassertedContent` | What this spec has not asserted yet, for a spec that wants to report rather than fail. |
 | `entryPointsAgree` | Twirl's generated `render`, `f` and `ref` all agree with `apply`. |
 | `haveAgreeingEntryPoints` | The same of every template under a directory, called with stand-ins chosen by type. |
 

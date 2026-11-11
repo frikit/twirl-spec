@@ -19,7 +19,7 @@ package io.github.frikit.twirlspec.govuk
 import io.github.frikit.twirlspec.standards._
 
 import io.github.frikit.twirlspec.expect.{Matching, Violation}
-import io.github.frikit.twirlspec.page.Text
+import io.github.frikit.twirlspec.page.{Attrs, Text, Tree}
 import io.github.frikit.twirlspec.standards.Rule.Warning
 import org.jsoup.nodes.Element
 
@@ -29,6 +29,40 @@ import scala.jdk.CollectionConverters._
   * [[io.github.frikit.twirlspec.wcag.WcagStandards]].
   */
 object GovukStandards extends RuleSet {
+
+  /** What can carry a field's description: a form control or a fieldset, or
+    * what has the role of one or of a group.
+    */
+  private val FieldRoles = Set(
+    "group",
+    "radiogroup",
+    "textbox",
+    "searchbox",
+    "combobox",
+    "listbox",
+    "checkbox",
+    "radio",
+    "switch",
+    "spinbutton",
+    "slider"
+  )
+  private val Fields =
+    "input:not([type=hidden]), select, textarea, button, fieldset"
+
+  /** Whether a field or group a reader reaches names this id among the words of
+    * its `aria-describedby`. A label or a hidden input pointing at an error
+    * does not announce it with the field.
+    */
+  private def describedByAField(
+      page: io.github.frikit.twirlspec.page.Page,
+      id: String
+  ): Boolean =
+    page.document
+      .select(s"$Fields, [role]")
+      .asScala
+      .filter(e => e.is(Fields) || FieldRoles.exists(Attrs.is(e, "role", _)))
+      .filter(page.isExposed)
+      .exists(_.attr("aria-describedby").split("\\s+").contains(id))
 
   lazy val all: Seq[Rule] = Seq(
     Rule(
@@ -70,7 +104,26 @@ object GovukStandards extends RuleSet {
           val errorId = errorElement.id()
           val fieldId = errorId.stripSuffix("-error")
           val field = page.byId(fieldId)
-          if (field.isEmpty) Nil // covered by error-summary-targets
+          // An error message with an id of its own, which play-frontend-hmrc
+          // allows, names no field: it is announced if a field points at it,
+          // and one hidden itself is announced to nobody.
+          if (fieldId == errorId)
+            if (
+              !page.isExposed(errorElement) ||
+              describedByAField(page, errorId)
+            ) Nil
+            else
+              Seq(
+                Violation(
+                  "error-aria-describedby",
+                  s"""no field points at the error message "$errorId"""",
+                  expected = Some(
+                    s"aria-describedby containing `$errorId`, on its field or fieldset"
+                  ),
+                  actual = Some("(no field points at it)")
+                ).withHint("WCAG 3.3.1")
+              )
+          else if (field.isEmpty) Nil // covered by error-summary-targets
           else {
             // A single input references its own error.
             val own = field.attr("aria-describedby").getOrElse("")
@@ -106,7 +159,10 @@ object GovukStandards extends RuleSet {
         .select(".govuk-error-message")
         .asScala
         .toList
-        .filter(_.select(".govuk-visually-hidden").isEmpty)
+        // the error itself too, as a select from it counted it
+        .filter(e =>
+          !Tree.withDescendants(e).exists(_.hasClass("govuk-visually-hidden"))
+        )
         .map { e =>
           Violation(
             "error-hidden-prefix",
@@ -124,7 +180,10 @@ object GovukStandards extends RuleSet {
       page.errorSummaryDanglingLinks.map { case (target, text) =>
         Violation(
           "error-summary-targets",
-          s"error summary links to #$target but nothing on the page has that id",
+          if (target.isEmpty)
+            "an error summary links to # alone, which lands on nothing"
+          else
+            s"error summary links to #$target but nothing on the page has that id",
           actual = Some(text)
         ).withHint("WCAG 2.4.3 — the link must move focus to the field")
       }

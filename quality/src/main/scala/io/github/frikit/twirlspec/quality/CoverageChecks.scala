@@ -85,8 +85,8 @@ trait CoverageChecks extends TwirlSpecDsl {
       }
     }
 
-  /** What this spec has asserted so far, for a spec that wants to report rather
-    * than fail.
+  /** What this spec has not asserted yet, for a spec that wants to report
+    * rather than fail.
     */
   def unassertedContent(page: Page): List[ContentCoverage.Anchor] =
     ContentCoverage.unassertedOutside(

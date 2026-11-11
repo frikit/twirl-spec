@@ -10,6 +10,85 @@ release, and each one has a GitHub Release whose notes are its section here. Eve
 recorded in full; earlier lines are kept to one entry each, so the file stays
 readable.
 
+## [2.8.0] - 2026-11-11
+
+### Changed
+
+- The rules and expectations read a page alike in jsoup's two query modes: the legacy
+  mode, jsoup 1.24.1's default, and the Web mode that `jsoup.queryMode=web` turns on,
+  which jsoup makes the default in 1.25.1 and the only mode in 1.26.1. Web mode reads
+  `[attr~=regex]` as one word among several, compares most attribute values in their
+  case and leaves the element a query starts from out of its results, and four checks
+  depended on the legacy reading. CI runs the whole suite in both modes. One difference
+  stays, as jsoup intends: Web mode, like a browser, keeps a class name's case, so a
+  check that looks for a GOV.UK or HMRC class, such as `govuk-error-summary`, finds it
+  written in capitals only in the legacy mode. A CSS selector a spec gives is read in
+  whichever mode jsoup is in.
+- `Roles.selectorFor` gives a selector for the elements that can carry a role, as a
+  failure message shows it, and leaves to `Roles.matching` which of them do: what a
+  select shows, whether a section or an aside is named, what a header or footer sits
+  in, and a role written in capitals. The selectors it gave relied on readings the two
+  modes do not share. For a listbox or a combobox it now gives every `<select>`, for a
+  region every `<section>`, for complementary every `<aside>`, and for banner or
+  contentinfo every `<header>` or `<footer>`. Code that selected with it should call
+  `Roles.matching`.
+- `formSubmission`, `formValues` and the `formValues` expectation give an input's value
+  as a browser sends it, after HTML's value sanitisation: line breaks come out of a
+  text, search, telephone or password value, a URL or email address loses the spaces
+  around it, each address of a `multiple` field its own, and a number, date, month,
+  week, time or local date and time that is not a valid one is sent empty, a local date
+  and time in its shortest form, such as `2026-11-11T09:30`. A range and a colour are
+  sent as written. A spec that expected a value as the markup wrote it, such as `abc`
+  in a number field, now sees what is sent.
+
+### Fixed
+
+- `error-aria-describedby` accepts an error message with an id of its own, which
+  play-frontend-hmrc allows, when a field, a fieldset or an element with a field or
+  group role names it in `aria-describedby`. A correctly connected field failed. A
+  hidden error message is left alone, and one that no field points at is reported.
+- `submitButton`, `submitButtonText` and `button` read an input's `value`, and an image
+  input's `alt`, where they read its text, so `<input type="submit" value="Continue">`
+  said nothing.
+- `aria-required-children` counts a native `<option>` or `<optgroup>` in a `<select>`,
+  an `<option>` in a `<datalist>` and a radio input as the option, group or radio its
+  role needs, so a `<select role="listbox">` or a `radiogroup` of native radios no
+  longer fails for want of them.
+- An input's type is read alike whatever the default locale, so under a Turkish one
+  `type="FILE"` no longer sends its `value` attribute.
+- The API pages link each source file at the commit they were built from, the newest
+  release, where they linked to `main`, which moves on.
+- The README and the requirements table say that on Java 21, Scala 3.3.0 compiles only
+  with `-release` set to an older Java, such as 11 or 17, with twirl-spec or without;
+  3.3.1 and later need no flag. The README described `unassertedContent` as what a spec
+  has asserted, where it returns what the spec has not, and the troubleshooting guide
+  said an `aria-label` or `aria-labelledby` could answer a missing label, which the
+  label check does not accept.
+
+These can fail a page that passed:
+
+- `submitButton` and `submitButtonText`, finding the submit button by the id `submit`,
+  compare the id exactly, as every lookup by id does; `id="Submit"` was found as well.
+- `linkWithId` takes only a link, an `<a>` or `<area>` with an `href`; any element with
+  the id passed.
+- A text input with no id is no longer labelled through its name: a label's `for` names
+  an id, so no label names such a field, and a label asked of it is reported as "field
+  has no id, so no label[for] can name it".
+- `withOptions` and `withOptionValues` report an option offered more than once, and
+  `withOptions` and `containingOption` check the label of every option with the
+  expected value, not only the first.
+- `no-password-in-get` decides which form a password input or a submit button belongs
+  to as a browser does, by its `form` attribute or by where it sits, and also catches a
+  POST form that an enabled submit button it owns sends by GET with
+  `formmethod="get"`.
+- `error-summary-targets` reports an error summary link to `#` alone, which lands
+  nowhere.
+- Content coverage holds every element its scope matches to account, the outermost of
+  them as containers, where it took only the first, so content in a later match was
+  never reported.
+- `i18n-same-submissions` names each choice by where its form sends it, so two forms
+  that trade their choices between languages are reported.
+
 ## [2.7.0] - 2026-11-09
 
 ### Changed
@@ -714,7 +793,8 @@ the Twirl entry points in `twirl-spec-quality`; language parity in
 them in `twirl-spec-all`. The renames a service built against a 0.x snapshot
 would meet are listed in [the adoption guide](docs/adopting.md).
 
-[Unreleased]: https://github.com/frikit/twirl-spec/compare/v2.7.0...HEAD
+[Unreleased]: https://github.com/frikit/twirl-spec/compare/v2.8.0...HEAD
+[2.8.0]: https://github.com/frikit/twirl-spec/compare/v2.7.0...v2.8.0
 [2.7.0]: https://github.com/frikit/twirl-spec/compare/v2.6.1...v2.7.0
 [2.6.1]: https://github.com/frikit/twirl-spec/compare/v2.6.0...v2.6.1
 [2.6.0]: https://github.com/frikit/twirl-spec/compare/v2.5.0...v2.6.0

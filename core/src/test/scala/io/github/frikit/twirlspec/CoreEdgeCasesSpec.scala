@@ -232,6 +232,15 @@ class CoreEdgeCasesSpec extends AnyWordSpec with Matchers with TwirlSpec {
         """<nav class="hmrc-language-select"><a href="/?lang=cy">Cymraeg</a></nav>"""
       ).languageToggle must not be empty
     }
+
+    "count a navigation named the language switcher, in any case" in {
+      pageOf(
+        """<nav aria-label="language switcher"><a href="/?lang=cy">Cymraeg</a></nav>"""
+      ).languageToggle must not be empty
+      pageOf(
+        """<nav aria-label="Main"><a href="/start">Start</a></nav>"""
+      ).languageToggle mustBe empty
+    }
   }
 
   "the outline" should {

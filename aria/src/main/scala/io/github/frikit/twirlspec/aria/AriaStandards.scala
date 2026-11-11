@@ -17,11 +17,12 @@
 package io.github.frikit.twirlspec.aria
 
 import io.github.frikit.twirlspec.expect.Violation
-import io.github.frikit.twirlspec.page.Page
+import io.github.frikit.twirlspec.page.{Attrs, Page, Tree}
 import io.github.frikit.twirlspec.standards.Rule.Warning
 import io.github.frikit.twirlspec.standards.{Rule, RuleSet}
 import org.jsoup.nodes.{Element, TextNode}
 
+import java.util.regex.Pattern
 import scala.jdk.CollectionConverters._
 
 /** The checks an automated accessibility tool makes that need no browser.
@@ -124,7 +125,7 @@ object AriaStandards extends RuleSet {
       page =>
         rolesOn(page).flatMap { case (e, role) =>
           val whenFocusable =
-            if (e.is(Focusable) && !(e.is(Control) && page.isDisabled(e)))
+            if (focusable(e) && !(e.is(Control) && page.isDisabled(e)))
               AriaVocabulary.requiredWhenFocusable.getOrElse(role, Set.empty)
             else Set.empty[String]
           (AriaVocabulary.requiredAttributes.getOrElse(role, Set.empty)
@@ -172,9 +173,9 @@ object AriaStandards extends RuleSet {
       rolesOn(page).flatMap { case (e, role) =>
         AriaVocabulary.requiredChildren.get(role).toSeq.flatMap { allowed =>
           val contained =
-            e.getAllElements.asScala.filterNot(_ eq e).flatMap(roleOf)
+            e.getAllElements.asScala.filterNot(_ eq e).flatMap(childRole)
           val owned =
-            ownedBy(e).flatMap(_.getAllElements.asScala).flatMap(roleOf)
+            ownedBy(e).flatMap(Tree.withDescendants).flatMap(childRole)
           val found = contained ++ owned
           // ARIA lets what is still loading, marked busy, go without them for now.
           val busy = (e +: e.parents.asScala.toSeq).exists(
@@ -201,9 +202,10 @@ object AriaStandards extends RuleSet {
       "the whole page is not hidden from assistive technology"
     ) { page =>
       page.document
-        .select("body[aria-hidden=true], html[aria-hidden=true]")
+        .select("body[aria-hidden], html[aria-hidden]")
         .asScala
         .toSeq
+        .filter(Attrs.is(_, "aria-hidden", "true"))
         .map { e =>
           Violation(
             "aria-hidden-not-on-body",
@@ -217,9 +219,12 @@ object AriaStandards extends RuleSet {
       "an element made presentational is not also announced"
     ) { page =>
       page.document
-        .select("[role=presentation], [role=none]")
+        .select("[role]")
         .asScala
         .toSeq
+        .filter(e =>
+          Attrs.is(e, "role", "presentation") || Attrs.is(e, "role", "none")
+        )
         .flatMap { e =>
           val labelled = e.hasAttr("aria-label") || e.hasAttr("aria-labelledby")
           val focusable = e.hasAttr("tabindex") && e.attr("tabindex") != "-1"
@@ -311,9 +316,10 @@ object AriaStandards extends RuleSet {
       severity = Warning
     ) { page =>
       page.document
-        .select("object, input[type=image], svg[role=img]")
+        .select("object, input[type=image], svg[role]")
         .asScala
         .toSeq
+        .filter(e => !e.is("svg") || Attrs.is(e, "role", "img"))
         .flatMap { e =>
           val named =
             e.hasAttr("aria-label") || e.hasAttr("aria-labelledby") || e
@@ -437,11 +443,13 @@ object AriaStandards extends RuleSet {
     * taken for a copy.
     */
   private def holdsNoControl(landmark: Element): Boolean =
-    landmark
-      .select(
-        "button, fieldset, input, meter, object, output, progress, select, textarea"
+    !Tree
+      .withDescendants(landmark)
+      .exists(
+        _.is(
+          "button, fieldset, input, meter, object, output, progress, select, textarea"
+        )
       )
-      .isEmpty
 
   /** An element as a structure, a step at a time, so that no two different ones
     * can come out the same: each element and where it ends, its attributes, and
@@ -504,10 +512,16 @@ object AriaStandards extends RuleSet {
     "combobox" -> "select"
   )
 
-  /** What can take focus, by a script if not by the tab key, unless disabled.
+  /** What can take focus, by a script if not by the tab key, unless disabled:
+    * these, and what is editable.
     */
   private val Focusable =
-    "a[href], button, input, select, textarea, [tabindex], [contenteditable~=(?i)^(true|plaintext-only)?$]"
+    "a[href], button, input, select, textarea, [tabindex]"
+
+  private val Editable = Pattern.compile("(?i)^(true|plaintext-only)?$")
+
+  private def focusable(e: Element): Boolean =
+    e.is(Focusable) || Attrs.matches(e, "contenteditable", Editable)
 
   /** What disabling takes the focus from. */
   private val Control = "button, input, select, textarea"
@@ -572,6 +586,18 @@ object AriaStandards extends RuleSet {
     explicit.orElse(implicitRole(e))
   }
 
+  /** A role as a container counts it among its children: what [[roleOf]] gives,
+    * or the role a native option, option group or radio carries, which `roleOf`
+    * leaves out so that no rule asks them for state their HTML gives.
+    */
+  private def childRole(e: Element): Option[String] =
+    roleOf(e).orElse(e.tagName match {
+      case "option" if e.closest("select, datalist") != null => Some("option")
+      case "optgroup" if e.closest("select") != null         => Some("group")
+      case "input" if Attrs.is(e, "type", "radio")           => Some("radio")
+      case _                                                 => None
+    })
+
   private val Presentational = Set("presentation", "none")
 
   /** What a browser exposes with its own role whatever it is told, as ARIA's
@@ -580,7 +606,7 @@ object AriaStandards extends RuleSet {
     * element altogether.
     */
   private def exposed(e: Element): Boolean =
-    e.is(Focusable) || e.attributes.asScala.exists { a =>
+    focusable(e) || e.attributes.asScala.exists { a =>
       val key = a.getKey.toLowerCase
       AriaVocabulary.globalAttributes(key) ||
       key == "aria-hidden" && !a.getValue.trim.equalsIgnoreCase("true")
@@ -589,26 +615,31 @@ object AriaStandards extends RuleSet {
   /** A header or footer is the page's own only when nothing sectioning encloses
     * it.
     */
-  private val sectioning =
-    "article, aside, main, nav, section, [role=article], [role=complementary], [role=main], [role=navigation], [role=region]"
+  private def sectioning(e: Element): Boolean =
+    asideBelongsTo(e) || e.is("main") || Attrs.is(e, "role", "main")
 
   /** An aside is the page's own in `<main>` too, and only a name makes one
     * anywhere else a landmark.
     */
-  private val asideBelongsTo =
-    "article, aside, nav, section, [role=article], [role=complementary], [role=navigation], [role=region]"
+  private def asideBelongsTo(e: Element): Boolean =
+    e.is("article, aside, nav, section") ||
+      Seq("article", "complementary", "navigation", "region").exists(
+        Attrs.is(e, "role", _)
+      )
 
   private def implicitRole(e: Element): Option[String] = e.tagName match {
     case "nav"   => Some("navigation")
     case "aside" =>
       Option.when(
-        landmarkName(e).nonEmpty || e.parent().closest(asideBelongsTo) == null
+        landmarkName(e).nonEmpty ||
+          Tree.closest(e.parent())(asideBelongsTo).isEmpty
       )("complementary")
     case "main" => Some("main")
     // A form is a landmark only once it has a name to be told apart by.
     case "form"   => Option.when(landmarkName(e).nonEmpty)("form")
-    case "header" => Option.when(e.closest(sectioning) == null)("banner")
-    case "footer" => Option.when(e.closest(sectioning) == null)("contentinfo")
+    case "header" => Option.when(Tree.closest(e)(sectioning).isEmpty)("banner")
+    case "footer" =>
+      Option.when(Tree.closest(e)(sectioning).isEmpty)("contentinfo")
     case "ul" | "ol" => Some("list")
     case "li"        => Option.unless(inPresentational(e, "ul, ol"))("listitem")
     case "table"     => Some("table")

@@ -20,9 +20,10 @@ import io.github.frikit.twirlspec.standards._
 
 import org.jsoup.nodes.Element
 import io.github.frikit.twirlspec.expect.Violation
-import io.github.frikit.twirlspec.page.Text
+import io.github.frikit.twirlspec.page.{Attrs, Page, Text, Tree}
 import io.github.frikit.twirlspec.standards.Rule.Warning
 
+import java.util.regex.Pattern
 import scala.jdk.CollectionConverters._
 
 /** Accessibility and document-structure rules that hold for any HTML page,
@@ -130,11 +131,11 @@ object WcagStandards extends RuleSet {
         Criterion("1.3.1", "Info and Relationships", Level.A, WcagVersion.V2_0)
       )
     ) { page =>
-      // The selector `single-main` counts with, so the two rules cannot
-      // disagree about what a main landmark is. `page.main` is deliberately
-      // wider: it also answers to GOV.UK's #main-content, which scopes an
-      // assertion but is not itself a landmark.
-      if (page.document.select(MainLandmark).asScala.nonEmpty) Nil
+      // What `single-main` counts too, so the two rules cannot disagree about
+      // what a main landmark is. `page.main` is deliberately wider: it also
+      // answers to GOV.UK's #main-content, which scopes an assertion but is
+      // not itself a landmark.
+      if (mainLandmarks(page).nonEmpty) Nil
       else
         Seq(
           Violation("main-landmark", "the page has no <main> landmark").warn
@@ -298,11 +299,10 @@ object WcagStandards extends RuleSet {
       // An <input type="reset"> with no value is called "Reset" by the browser,
       // and what submit-has-name and link-has-name report is theirs to report.
       page.document
-        .select(
-          "button[type=button], button[type=reset], input[type=button], input[type=image], [role~=(?i)^\\s*button(\\s|$)]"
-        )
+        .select(s"$ButtonLike, [role]")
         .asScala
         .toList
+        .filter(e => e.is(ButtonLike) || Attrs.matches(e, "role", ButtonRole))
         .filterNot(_.is(s"$SubmitControls, a[href]"))
         .filter(page.isExposed)
         .filter(e => page.accessibleName(e).isEmpty)
@@ -508,15 +508,13 @@ object WcagStandards extends RuleSet {
           !(e.is("button, input, select, textarea") && page.isDisabled(e)) &&
           e.closest("[hidden], [inert]") == null
       page.document
-        .select("[aria-hidden=true]")
+        .select("[aria-hidden]")
         .asScala
         .toList
-        .filter(e =>
-          stillFocusable(e) || e
-            .select(focusable)
-            .asScala
-            .exists(stillFocusable)
-        )
+        .filter(Attrs.is(_, "aria-hidden", "true"))
+        // the element and all it holds, which a select from it would count in
+        // one jsoup query mode and not in the other
+        .filter(Tree.withDescendants(_).exists(stillFocusable))
         .map(e =>
           Violation(
             "no-aria-hidden-focusable",
@@ -556,9 +554,10 @@ object WcagStandards extends RuleSet {
         Some(Criterion("1.4.4", "Resize Text", Level.AA, WcagVersion.V2_0))
     ) { page =>
       page.document
-        .select("meta[name=viewport]")
+        .select("meta[name]")
         .asScala
         .toList
+        .filter(Attrs.is(_, "name", "viewport"))
         .map(_.attr("content"))
         .filter(c => scalingTurnedOff(c) || capsZoomBelow(c, MinimumZoom))
         .map(c =>
@@ -611,7 +610,7 @@ object WcagStandards extends RuleSet {
         Criterion("1.3.1", "Info and Relationships", Level.A, WcagVersion.V2_0)
       )
     ) { page =>
-      val mains = page.document.select(MainLandmark).asScala.toList
+      val mains = mainLandmarks(page)
       if (mains.size <= 1) Nil
       else
         Seq(
@@ -703,11 +702,16 @@ object WcagStandards extends RuleSet {
       "more information"
     )
 
-  /** What both `main-landmark` and `single-main` count. GOV.UK's
-    * `#main-content` is not in here: it identifies the content area, and an id
-    * is not a landmark.
+  /** What both `main-landmark` and `single-main` count: a main element, or a
+    * role of main in any case. GOV.UK's `#main-content` is not in here: it
+    * identifies the content area, and an id is not a landmark.
     */
-  private val MainLandmark = "main, [role=main]"
+  private def mainLandmarks(page: Page): List[Element] =
+    page.document
+      .select("main, [role]")
+      .asScala
+      .toList
+      .filter(e => e.is("main") || Attrs.is(e, "role", "main"))
 
   /** What a `<label for>` can name, per the HTML specification. */
   private val Labelable =
@@ -716,6 +720,13 @@ object WcagStandards extends RuleSet {
   /** What `submit-has-name` reads. */
   private val SubmitControls =
     "button[type=submit], input[type=submit], button:not([type])"
+
+  /** The buttons that submit nothing. */
+  private val ButtonLike =
+    "button[type=button], button[type=reset], input[type=button], input[type=image]"
+
+  /** A role whose first word is button, in any case. */
+  private val ButtonRole = Pattern.compile("(?i)^\\s*button(\\s|$)")
 
   /** WCAG 1.4.4 asks for text at 200%, so a viewport that caps the scale below
     * 2 is the one that takes the zoom away.

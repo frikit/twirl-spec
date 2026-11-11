@@ -470,8 +470,12 @@ final case class LinkExpectation(
     val links = page.withRecordingPaused(page.links)
 
     val candidates = id match {
-      case Some(elementId) => page.withRecordingPaused(page.byId(elementId))
-      case None            =>
+      // Only a link counts, as one found by its words is.
+      case Some(elementId) =>
+        page
+          .withRecordingPaused(page.byId(elementId))
+          .filter(_.is("a[href], area[href]"))
+      case None =>
         text.resolve(page) match {
           case Left(_)      => Selection.empty(rule, "a[href]")
           case Right(value) => links.containing(value)
