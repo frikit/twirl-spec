@@ -19,8 +19,19 @@ readable.
   which jsoup makes the default in 1.25.1 and the only mode in 1.26.1. Web mode reads
   `[attr~=regex]` as one word among several, compares most attribute values in their
   case and leaves the element a query starts from out of its results, and four checks
-  depended on the legacy reading. CI runs the whole suite in both modes. A CSS selector
-  a spec gives is read in whichever mode jsoup is in.
+  depended on the legacy reading. CI runs the whole suite in both modes. One difference
+  stays, as jsoup intends: Web mode, like a browser, keeps a class name's case, so a
+  check that looks for a GOV.UK or HMRC class, such as `govuk-error-summary`, finds it
+  written in capitals only in the legacy mode. A CSS selector a spec gives is read in
+  whichever mode jsoup is in.
+- `Roles.selectorFor` gives a selector for the elements that can carry a role, as a
+  failure message shows it, and leaves to `Roles.matching` which of them do: what a
+  select shows, whether a section or an aside is named, what a header or footer sits
+  in, and a role written in capitals. The selectors it gave relied on readings the two
+  modes do not share. For a listbox or a combobox it now gives every `<select>`, for a
+  region every `<section>`, for complementary every `<aside>`, and for banner or
+  contentinfo every `<header>` or `<footer>`. Code that selected with it should call
+  `Roles.matching`.
 - `formSubmission`, `formValues` and the `formValues` expectation give an input's value
   as a browser sends it, after HTML's value sanitisation: line breaks come out of a
   text, search, telephone or password value, a URL or email address loses the spaces
@@ -780,7 +791,8 @@ the Twirl entry points in `twirl-spec-quality`; language parity in
 them in `twirl-spec-all`. The renames a service built against a 0.x snapshot
 would meet are listed in [the adoption guide](docs/adopting.md).
 
-[Unreleased]: https://github.com/frikit/twirl-spec/compare/v2.7.0...HEAD
+[Unreleased]: https://github.com/frikit/twirl-spec/compare/v2.8.0...HEAD
+[2.8.0]: https://github.com/frikit/twirl-spec/compare/v2.7.0...v2.8.0
 [2.7.0]: https://github.com/frikit/twirl-spec/compare/v2.6.1...v2.7.0
 [2.6.1]: https://github.com/frikit/twirl-spec/compare/v2.6.0...v2.6.1
 [2.6.0]: https://github.com/frikit/twirl-spec/compare/v2.5.0...v2.6.0
