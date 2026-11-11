@@ -28,9 +28,12 @@ An element with an explicit `role` is matched only by that role, so
 
 ## "field has no associated label"
 
-The control has no `<label for="...">` matching its id, no `aria-label` and no
-`aria-labelledby`. The GOV.UK components produce the label; a hand-written
-`<input>` needs one. The one field of a fieldset labelled by its legend can say
+The expectation found no `<label for="...">` matching the field's id. It asks for
+that label itself, so an `aria-label` or `aria-labelledby` on the field does not
+satisfy it, and neither does a `<label>` wrapped around the field without `for`.
+A text input with no id reports "field has no id, so no label[for] can name it"
+instead. The GOV.UK components produce the label; a hand-written `<input>` needs
+one. The one field of a fieldset labelled by its legend can say
 so with `labelledByLegend`.
 
 ## "the hint is not announced with the field"

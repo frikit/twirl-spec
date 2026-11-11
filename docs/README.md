@@ -25,7 +25,7 @@ of all nine modules as one site. These pages are the guide.
 
 | | |
 |---|---|
-| Scala | 3.3.0 or any later Scala 3 |
+| Scala | 3.3.1 or any later Scala 3; on Java 21, 3.3.0 needs `-release` set to an older Java, such as 11 or 17 |
 | Java | 21 or later |
 | Play | any 3.0.x; your project supplies it |
 | ScalaTest | 3.2.20 or later |
