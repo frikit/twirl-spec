@@ -77,8 +77,10 @@ These can fail a page that passed:
 - `withOptions` and `withOptionValues` report an option offered more than once, and
   `withOptions` and `containingOption` check the label of every option with the
   expected value, not only the first.
-- `no-password-in-get` also catches a POST form that an enabled submit button it owns
-  sends by GET with `formmethod="get"`, wherever the button sits.
+- `no-password-in-get` decides which form a password input or a submit button belongs
+  to as a browser does, by its `form` attribute or by where it sits, and also catches a
+  POST form that an enabled submit button it owns sends by GET with
+  `formmethod="get"`.
 - `error-summary-targets` reports an error summary link to `#` alone, which lands
   nowhere.
 - Content coverage holds every element its scope matches to account, the outermost of
