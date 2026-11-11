@@ -16,7 +16,7 @@
 
 package io.github.frikit.twirlspec.quality
 
-import io.github.frikit.twirlspec.page.{Anchors, Page}
+import io.github.frikit.twirlspec.page.{Anchors, Page, Tree}
 import org.jsoup.nodes.Element
 
 import scala.jdk.CollectionConverters._
@@ -70,11 +70,16 @@ object ContentCoverage {
     * not assert the wrapper it was handed.
     */
   private def within(page: Page, scope: String): List[Element] = {
-    val scoped = page.document.select(scope)
+    val scoped = page.document.select(scope).asScala.toList
     if (scoped.isEmpty) page.document.getAllElements.asScala.toList
     else {
-      val root = scoped.first()
-      root.getAllElements.asScala.toList.filterNot(_ eq root)
+      // Every match the scope has, the outermost being the containers: one
+      // nested in another is content of it, as it always was.
+      val roots =
+        scoped.filterNot(m =>
+          m.parents.asScala.exists(p => scoped.exists(_ eq p))
+        )
+      roots.flatMap(root => Tree.withDescendants(root).drop(1))
     }
   }
 

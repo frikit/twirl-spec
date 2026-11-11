@@ -20,6 +20,8 @@ import io.github.frikit.twirlspec.page.Page
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
+import java.util.Locale
+
 /** What an expectation finds and what it asks of it, read as a browser reads
   * the page.
   */
@@ -59,6 +61,47 @@ class DslExactnessSpec extends AnyWordSpec with Matchers with TwirlSpec {
       expectation.check(
         page("""<label for="x">Name</label><input id="x" name="x">""")
       ) mustBe empty
+    }
+
+    "send a value as HTML's sanitisation leaves it" in {
+      Seq(
+        """type="text" value="a&#10;b"""" -> "ab",
+        """type="url" value=" https://x """" -> "https://x",
+        """type="email" value=" a@b """" -> "a@b",
+        """type="email" multiple value=" a@b , c@d"""" -> "a@b,c@d",
+        """type="number" value="abc"""" -> "",
+        """type="number" value="1."""" -> "",
+        """type="number" value="-1.5e3"""" -> "-1.5e3",
+        """type="number" value="2e308"""" -> "",
+        """type="date" value="2023-02-29"""" -> "",
+        """type="date" value="2024-02-29"""" -> "2024-02-29",
+        """type="month" value="2024-13"""" -> "",
+        """type="week" value="2020-W53"""" -> "2020-W53",
+        """type="week" value="2021-W53"""" -> "",
+        """type="time" value="24:00"""" -> "",
+        """type="datetime-local" value="2026-11-11 09:30:00.000"""" -> "2026-11-11T09:30",
+        """type="datetime-local" value="2026-11-11T09:30:05.500"""" -> "2026-11-11T09:30:05.5",
+        """type="range" value="abc"""" -> "abc",
+        """type="hidden" value=" x """" -> " x "
+      ).foreach { case (attributes, sent) =>
+        page(s"""<form><input name="n" $attributes></form>""")
+          .formValues("n") mustBe sent
+      }
+    }
+
+    "write a date and time in ASCII digits whatever the default locale" in {
+      val default = Locale.getDefault
+      try {
+        Locale.setDefault(Locale.forLanguageTag("ar-EG"))
+        page(
+          """<form><input name="n" type="datetime-local" value="2026-11-11 09:30:05"></form>"""
+        ).formValues("n") mustBe "2026-11-11T09:30:05"
+        // nor read a type in another language's case: FILE is not "fıle"
+        Locale.setDefault(Locale.forLanguageTag("tr"))
+        page(
+          """<form><input name="n" type="FILE" value="x"></form>"""
+        ).formValues("n") mustBe ""
+      } finally Locale.setDefault(default)
     }
 
     "count each option, and read the label of every one" in {

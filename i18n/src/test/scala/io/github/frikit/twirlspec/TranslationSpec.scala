@@ -452,6 +452,23 @@ class TranslationSpec
     def select(options: String) =
       s"""<label for="c">C</label><select id="c" name="c">$options</select>"""
 
+    "tell apart the choices two forms offer" in {
+      def forms(first: String, second: String) =
+        s"""<form action="/a"><label for="a">A</label><select id="a" name="x"><option value="$first">One</option></select></form>
+           |<form action="/b"><label for="b">B</label><select id="b" name="x"><option value="$second">Two</option></select></form>""".stripMargin
+      submissions(
+        pageIn(english, forms("1", "2")),
+        pageIn(fr, forms("2", "1"))
+      ) must not be empty
+      // a form one language adds is one difference, not one per choice
+      submissions(
+        pageIn(english, forms("1", "2")),
+        pageIn(fr, """<form action="/c"></form>""" + forms("1", "2"))
+      ).map(_.message) mustBe Seq(
+        "fr has 1 form destination the base language does not"
+      )
+    }
+
     "notice an option the translation offers differently" in {
       val found = submissions(
         pageIn(english, select("""<option value="GB">UK</option>""")),

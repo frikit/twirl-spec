@@ -288,14 +288,14 @@ final class Page(
           case "textarea" => List(textareaValue(e))
           case "select"   => selectedOptions(e).map(optionValue)
           case _          =>
-            e.attr("type").toLowerCase match {
+            e.attr("type").toLowerCase(java.util.Locale.ROOT) match {
               case "checkbox" =>
                 if (e.hasAttr("checked")) List(checkedValue(e)) else Nil
               case "radio" =>
                 if (keptRadios.contains(e)) List(checkedValue(e)) else Nil
               case "file"                                  => List("")
               case "submit" | "button" | "reset" | "image" => Nil
-              case _ => List(e.attr("value"))
+              case _ => List(InputValue.sanitised(e))
             }
         }
         values.map(value => (e, e.attr("name"), value))

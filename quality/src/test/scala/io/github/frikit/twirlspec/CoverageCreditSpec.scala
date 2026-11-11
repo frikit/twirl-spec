@@ -434,6 +434,17 @@ class CoverageCreditSpec
     }
   }
 
+  "A scope that matches more than once" should {
+    "hold every match to account" in {
+      val page = pageOf(
+        """<div class="panel"><p id="one">1</p></div><div class="panel"><p id="two">2</p></div>"""
+      )
+      page.byId("one")
+      ContentCoverage.unasserted(page, scope = ".panel").map(_.path) mustBe
+        List("#two")
+    }
+  }
+
   "A tracked attribute beyond the default" should {
 
     "be covered by asserting the element carrying it" in {
