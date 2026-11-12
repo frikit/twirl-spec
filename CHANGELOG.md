@@ -32,9 +32,9 @@ readable.
   repeat.
 - Case conversions use the root locale, so a page reads alike on every machine.
   Under a Turkish default `role="DIALOG"` was an unknown role, a robots `NOINDEX`
-  went unseen, `type="HIDDEN"` escaped the autocomplete exemption, and an outline
-  wrote a form's method with a dotted İ, so a snapshot recorded on one machine
-  failed on another.
+  went unseen, `type="FILE"` lost its exemption from `input-purpose-autocomplete`,
+  and an outline wrote a form's method with a dotted İ, so a snapshot recorded on
+  one machine failed on another.
 
 ### Fixed
 
@@ -77,13 +77,27 @@ These can fail a page that passed:
   end tag HTML lets you leave out, as `<svg><br>` or `<svg><tr>`, needs its end
   tag.
 - `tags-are-balanced` reads what a browser reads: the text of a `title`, `style`
-  or `script` inside SVG or MathML is markup, so a `<` there can open an element,
-  and a comment ends where the standard ends it, at `<!-->`, `<!--->` or `--!>`,
-  so what follows is read.
+  or `script` inside SVG or MathML is markup, so a `<` there can open an element;
+  a comment ends where the standard ends it, at `<!-->`, `<!--->` or `--!>`, so
+  what follows is read; `< div>`, with a space after the `<`, is text, so its
+  `</div>` closes nothing; and an element whose name only begins like a text
+  element's, such as `<style-guide>`, holds markup that is read.
 - `no-password-in-get` takes an empty `method` or `formmethod`, or one HTML does
   not know, as GET, as a browser does, and counts every button that can submit.
-- `submitButtonText` and `hasSubmitButton` no longer take a `type="button"`, or a
-  button with no type that invokes a command, for the submit button.
+- `submitButton`, `submitButtonText` and `hasSubmitButton` take the control with
+  the id `submit` first, then the controls inside a form, then any other that can
+  submit, where 2.9.0 took a `type="submit"` first: beside a
+  `<button type="submit">Save draft</button>`, a `<button id="submit">Continue</button>`
+  is now the submit button. They no longer take a `type="button"`, or a button
+  with no type that invokes a command.
+- `labelled-controls` reports a control wrapped in a label whose `for` names
+  another element, and each control after the first in a label without `for`: a
+  browser names neither by that label.
+- A textarea's value keeps a second leading newline, so `textArea(...).withValue`
+  and `formValues` no longer match a value written without it.
+- Under a default locale whose case rules differ, such as Turkish, the rules read
+  case as they do everywhere else: `accesskey-unique` takes `I` and `i` for the
+  same key.
 - `dropdown` finds its label by the field's id only, as `textInput` has since
   2.8.0, so a dropdown with no id has none.
 - `aria-required-attr` asks a scrollbar for `aria-controls`, and a combobox for it
@@ -92,6 +106,13 @@ These can fail a page that passed:
   or a grid cell; a native `<tr>` may still be empty.
 - `table-headers-resolve` resolves a cell's `headers` within its own table, not in
   a table nested inside it.
+
+### Outline
+
+- A form's method is written in upper case by the root locale's rules, so under a
+  default such as Turkish a `dialog` method reads `DIALOG` where it read `DİALOG`.
+  A snapshot recorded under such a default is written again with
+  `TWIRLSPEC_UPDATE_SNAPSHOTS=true`; one recorded anywhere else is unchanged.
 
 ## [2.9.0] - 2026-11-12
 
