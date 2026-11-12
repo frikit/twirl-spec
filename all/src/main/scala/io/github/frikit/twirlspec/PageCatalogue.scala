@@ -17,6 +17,8 @@
 package io.github.frikit.twirlspec
 
 import io.github.frikit.twirlspec.i18n.I18nChecks
+import io.github.frikit.twirlspec.page.Page
+import org.jsoup.nodes.Element
 import org.scalatest.exceptions.{TestCanceledException, TestPendingException}
 import org.scalatest.matchers.MatchResult
 import org.scalatest.wordspec.AnyWordSpecLike
@@ -24,6 +26,7 @@ import org.scalatest.{Alerting, Suite}
 import play.api.data.Form
 import play.twirl.api.Html
 
+import scala.jdk.CollectionConverters._
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
 
@@ -75,33 +78,97 @@ trait PageCases extends TwirlSpec with I18nChecks {
     PageCase(label, List(PageState("as it stands", () => view)))
 
   /** A page with a form: blank, with the errors of an empty submission, and
-    * with those of each submission named here. A submission that gives no
-    * errors fails its check, because that state would show nothing the blank
-    * form does not.
+    * with those of each submission named here. The empty submission is the
+    * blank form sent untouched, as a browser sends it, with each of its fields
+    * empty rather than missing, so it meets the form's own messages rather than
+    * Play's generic `error.required`. Where more than one form on the page
+    * could send the fields, which is sent is the user's choice, so it sends
+    * nothing. A submission that gives no errors fails its check, because that
+    * state would show nothing the blank form does not.
     */
   def formPage[A](
       label: String,
       form: => Form[A],
       submissions: (String, Map[String, String])*
   )(view: Form[A] => Html): PageCase = {
-    val submitted = ("with errors" -> Map.empty[String, String]) +: submissions
+    // Read when the state renders, in the language being checked, from a page
+    // of its own, which no coverage record shares; bound as Play binds a
+    // request, so a repeated name gives its first value, or a list for `[]`.
+    val untouched = () => {
+      val blank = form
+      sentUntouched(Page(view(blank), currentLang, messages), blank) match {
+        case Some(sent) =>
+          val query =
+            sent.toList.flatMap { case (k, vs) => vs.map(v => s"$k=$v") }
+          (
+            s"the blank form untouched (${query.mkString("&")})",
+            blank.bindFromRequest(sent)
+          )
+        case None =>
+          (
+            "nothing, as more than one form on the page could send the fields,",
+            blank.bind(Map.empty[String, String])
+          )
+      }
+    }
+    val submitted: Seq[(String, () => (String, Form[A]))] =
+      ("with errors" -> untouched) +: submissions.map { case (state, data) =>
+        state -> (() => (data.toString, form.bind(data)))
+      }
     PageCase(
       label,
       PageState("blank", () => view(form)) :: submitted.toList.map {
-        case (state, data) =>
+        case (state, submit) =>
           PageState(
             state,
             () => {
-              val bound = form.bind(data)
+              val (sent, bound) = submit()
               require(
                 bound.hasErrors,
-                s"submitting $data gave no errors, so `$state` shows nothing the blank form does not"
+                s"submitting $sent gave no errors, so `$state` shows nothing the blank form does not"
               )
               view(bound)
             }
           )
       }
     )
+  }
+
+  /** What a browser sends when the blank form is submitted untouched, each name
+    * with every value it sends, in order: the controls of the page's one form,
+    * or of the one form among several that holds this form's fields. A page
+    * with no form sends all it has. None where more than one form could send
+    * the fields, as which of them is sent is the user's choice.
+    */
+  private def sentUntouched(
+      page: Page,
+      form: Form[_]
+  ): Option[Map[String, Seq[String]]] = {
+    // Sent or not: an unchecked radio sends nothing, but still names its form.
+    val named = page.document
+      .select("input[name], select[name], textarea[name]")
+      .asScala
+      .toList
+    val forms = named.flatMap(page.formOwner).distinct
+    val keys = form.mapping.mappings.map(_.key).filter(_.nonEmpty)
+    def carries(e: Element) = {
+      val name = e.attr("name")
+      keys.exists(k =>
+        name == k || name.startsWith(s"$k.") || name.startsWith(s"$k[")
+      )
+    }
+    val holders =
+      if (forms.size == 1) forms
+      else named.filter(carries).flatMap(page.formOwner).distinct
+    def sentBy(owned: Element => Boolean) =
+      page.submittedControls
+        .filter { case (e, _, _) => owned(e) }
+        .groupMap(_._2)(_._3)
+    holders match {
+      case List(holder) => Some(sentBy(page.formOwner(_).contains(holder)))
+      case _ if forms.isEmpty => Some(sentBy(_ => true))
+      case _                  => None
+    }
   }
 
   /** Each of this page's states meets the standards in every language. */
