@@ -16,18 +16,20 @@ readable.
 
 - `tags-are-balanced`, `TagBalance` and `haveBalancedTemplates` read markup in one
   pass, as the HTML Living Standard's tokenizer reads it, where they used regular
-  expressions in three passes: a script's text could hide a later comment from
-  them, an `encoding` inside another attribute's value counted as an annotation's
-  own, `< div` was read as a tag, and a `<style-guide>` element's content as a
-  style's. A comment ends as the standard ends it, `<!-->`, `<!--->` and `--!>`
-  included; CDATA counts only inside SVG or MathML; a processing instruction or a
-  bogus comment ends at its first `>`; names fold ASCII case alone; and a slash
-  closes only straight before `>`. The elements read as text are `title`,
-  `textarea`, `style`, `xmp`, `iframe`, `noembed`, `noframes`, a `script` through
-  its escapes and `plaintext`, each in the HTML namespace only, and a `noscript` is
-  read as markup. Each element is put in the namespace a parser puts it in, HTML
-  again at the integration points of SVG and MathML, and the void, optional end
-  tag and paragraph rules hold for HTML elements alone. The scaladoc states what is
+  expressions in three passes: a `<!--` inside a script's text or a quoted
+  attribute value hid the markup after it, `< div` was read as a tag, a
+  `<style-guide>` element's content as a style's, and a dotted `İ` earlier in the
+  page moved where a script's text ended. A comment ends as the standard ends it,
+  `<!-->`, `<!--->` and `--!>` included; CDATA counts only inside SVG or MathML; a
+  processing instruction or a bogus comment ends at its first `>`; names fold ASCII
+  case alone; and a slash closes only straight before `>`. The elements read as
+  text are `title`, `textarea`, `style`, `xmp`, `iframe`, `noembed`, `noframes`, a
+  `script` through its escapes and `plaintext`, each in the HTML namespace only,
+  and a `noscript` is read as markup. Each element is put in the namespace a parser
+  puts it in, HTML again at the integration points of SVG and MathML, an
+  `annotation-xml` among them only where its `encoding` is `text/html` or
+  `application/xhtml+xml`, and the void, optional end tag and paragraph rules hold
+  for HTML elements alone. The scaladoc states what is
   read, the two departures from the standard, and the error recovery it does not
   repeat.
 - Case conversions use the root locale, so a page reads alike on every machine.
