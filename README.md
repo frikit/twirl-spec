@@ -654,6 +654,16 @@ Basic HTML validity, read from the source rather than the repaired tree, so an u
 | `known-elements` | every element is one the HTML specification defines |
 | `known-attributes` | every attribute is one the HTML specification defines |
 
+`tags-are-balanced` reads the markup as HTML's tokenizer does: comments, CDATA in
+SVG and MathML, quoted attribute values and the text of a script, a style or a
+textarea open nothing. It knows what HTML lets you leave out (void elements, the
+optional end tags, a paragraph ended by the start of a block) and that a slash
+closes only an SVG or MathML element, so `<div/>` stays open. A `<p>` holding a
+`<ul>` is reported at its `</p>`, which closes nothing: the list ended the
+paragraph, and a browser renders that `</p>` as an empty paragraph of its own.
+It names the mistake in the source rather than rebuilding the tree a browser
+repairs it into.
+
 ### Scanning templates instead of pages
 
 `tags-are-balanced` runs against a rendered page, which is where it belongs: by
