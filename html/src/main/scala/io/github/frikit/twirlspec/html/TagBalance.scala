@@ -83,6 +83,21 @@ object TagBalance {
 
   }
 
+  /** A `</p>` whose paragraph the start of a block had already ended, so it
+    * closes nothing, and a browser renders it as an empty paragraph of its own.
+    */
+  final case class EndedParagraph(
+      line: Int,
+      endedBy: String,
+      endedOn: Int,
+      openedOn: Int
+  ) extends Problem {
+
+    def message =
+      s"</p> on line $line closes nothing that was open: <$endedBy> on line $endedOn ended the <p> from line $openedOn"
+
+  }
+
   /** An element left open, the namespace it was put in (`html`, `svg` or
     * `math`), and whether HTML's rules apply inside it again.
     */
@@ -101,6 +116,16 @@ object TagBalance {
       attributes: Map[String, String],
       selfClosing: Boolean,
       end: Int
+  )
+
+  /** A paragraph the start of a block ended: which block, on which line, and
+    * the element the paragraph was in.
+    */
+  final private case class Ended(
+      paragraph: Open,
+      by: String,
+      on: Int,
+      parent: Option[Open]
   )
 
   /** The same check against a Twirl template rather than a rendered page.
@@ -224,6 +249,7 @@ object TagBalance {
     private val open = mutable.Stack.empty[Open]
     private val found = mutable.ListBuffer.empty[Problem]
     private val opened = mutable.ListBuffer.empty[(String, String)]
+    private val ended = mutable.ListBuffer.empty[Ended]
     private val newlines = source.indices.filter(source.charAt(_) == '\n')
 
     private var at = 0
@@ -270,7 +296,10 @@ object TagBalance {
         if (
           space == "html" && ParagraphClosers(tag.name) &&
           open.headOption.exists(o => o.name == "p" && o.space == "html")
-        ) open.pop()
+        ) {
+          val paragraph = open.pop()
+          ended += Ended(paragraph, tag.name, lineOf(lt), open.headOption)
+        }
         if (space == "html" && HtmlVocabulary.void.contains(tag.name)) tag.end
         // a slash closes only an element of SVG or MathML: <div/> stays open
         else if (space != "html" && tag.selfClosing) tag.end
@@ -407,15 +436,27 @@ object TagBalance {
     }
 
     private def closeTag(name: String, line: Int): Unit =
-      if (open.isEmpty) found += StrayClose(name, line)
+      // Nothing of this name is open anywhere, so the tag itself is the mistake.
+      if (!open.exists(_.name == name)) found += closingNothing(name, line)
       else if (open.top.name == name) open.pop()
-      else if (!open.exists(_.name == name)) {
-        // Nothing of this name is open anywhere, so the tag itself is the mistake.
-        found += StrayClose(name, line)
-      } else {
-        // Something of this name is open further down, so everything above it was left hanging.
-        unwind(name, line)
+      // Something of this name is open further down, so everything above it was left hanging.
+      else unwind(name, line)
+
+    /** An end tag that closes nothing. A `</p>` whose paragraph the start of a
+      * block ended names that block, while the element the paragraph was in is
+      * still open; any other is stray.
+      */
+    private def closingNothing(name: String, line: Int): Problem = {
+      val i =
+        if (name == "p")
+          ended.lastIndexWhere(_.parent.forall(p => open.exists(_ eq p)))
+        else -1
+      if (i < 0) StrayClose(name, line)
+      else {
+        val e = ended.remove(i)
+        EndedParagraph(line, e.by, e.on, e.paragraph.line)
       }
+    }
 
     @tailrec
     private def unwind(name: String, line: Int): Unit = {

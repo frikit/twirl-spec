@@ -93,6 +93,12 @@ trait TwirlSpecDsl
     */
   def literal(exactWords: String): Expected = Expected.Literal(exactWords)
 
+  /** A message key with its arguments, where an expectation takes any expected
+    * value: `summaryList(messageKey("x.dob", name) -> "27 March 1993")`.
+    */
+  def messageKey(key: String, args: Any*): Expected =
+    Expected.Key(key, args.toSeq)
+
   /** For "there is a heading, its wording is asserted elsewhere". */
   val anyText: Expected = Expected.Anything
 

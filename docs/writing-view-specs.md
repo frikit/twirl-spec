@@ -32,8 +32,9 @@ titleText("What is your name?")
 heading(literal("What is your name?"))
 ```
 
-Two more `Expected` values exist for the expectations that take one:
-`anyText`, for "there is a heading, its wording is asserted elsewhere", and
+Three more `Expected` values exist for the expectations that take one:
+`messageKey("x.lives", name)`, for a message key with its arguments, `anyText`,
+for "there is a heading, its wording is asserted elsewhere", and
 `matching("Sign\\s+up".r)`, for a regular expression.
 
 Page text is normalised before comparison: whitespace collapsed, non-breaking
@@ -92,6 +93,7 @@ row:
 
 ```scala
 summaryList("x.name" -> "Ada", "x.dob" -> "27 March 1993")   // exactly these rows, in order
+summaryList("x.name" -> "Ada", messageKey("x.lives", "Ada") -> "Yes")   // a key with arguments
 summaryRow("x.name").withValue("Ada").withChangeLinkTo("/change/name")
 summaryRow("x.name").withActions("site.change")
 ```

@@ -160,22 +160,38 @@ trait ContentExpectations {
   def summaryRow(key: String, args: Any*): SummaryRowExpectation =
     SummaryRowExpectation(Expected.Key(key, args.toSeq))
 
-  /** The summary list holds exactly these `key -> value` rows, in order. */
-  def summaryList(rows: (String, String)*): Expectation =
+  /** The summary list holds exactly these `key -> value` rows, in order. A key
+    * is a message key, or any expected value: `messageKey("x.dob", name)` for
+    * one that takes arguments, `literal`, `matching` or `anyText`.
+    */
+  def summaryList(rows: (String | Expected, String)*): Expectation =
     Expectation("summaryList") { page =>
-      val resolved = rows.toList.map { case (k, v) =>
-        (Expected.Key(k).resolve(page), v)
+      val keys = rows.toList.map {
+        case (key: String, _)   => Expected.Key(key)
+        case (key: Expected, _) => key
       }
-      val unresolved = resolved.collect { case (Left(v), _) =>
+      val values = rows.toList.map { case (_, v) => Text.normalise(v) }
+      val resolved = keys.map(_.resolve(page))
+      val unresolved = resolved.collect { case Left(v) =>
         v.copy(rule = "summaryList")
       }
       if (unresolved.nonEmpty) unresolved
       else {
-        val expected = resolved.collect { case (Right(k), v) =>
-          (k, Text.normalise(v))
-        }
+        // a key as it reads, or as it is described where no one text is meant
+        val expected = keys
+          .zip(resolved.collect { case Right(text) => text })
+          .map {
+            case (key @ (Expected.Pattern(_) | Expected.Anything), _) =>
+              key.describe
+            case (_, text) => text
+          }
+          .zip(values)
         val actual = page.summaryRows.map { case (k, v, _) => (k, v) }
-        if (actual == expected) {
+        val matched = actual.size == keys.size &&
+          actual.zip(keys.zip(values)).forall { case ((k, v), (key, value)) =>
+            v == value && compare("summaryList", key, k, page, Exact).isEmpty
+          }
+        if (matched) {
           // What it read counts as asserted; the rows' actions it did not read.
           page.record(
             page

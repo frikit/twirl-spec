@@ -366,6 +366,7 @@ listed again here.
 | `render` | Parse rendered HTML into a page that can be asked questions. |
 | `renderIn` | Render the same view in a given language. |
 | `literal` | Text expectations take message keys by default; wrap a string in `literal` when you really do mean the exact words. |
+| `messageKey` | A message key with its arguments, where an expectation takes any expected value, as `summaryList` does for a row's key. |
 | `anyText` | For "there is a heading, its wording is asserted elsewhere". |
 | `matching` | Match text against a regular expression rather than an exact string. |
 | `role` | Find an element the way an assistive technology does: by role, then by the name it announces. |
