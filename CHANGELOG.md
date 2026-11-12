@@ -64,12 +64,22 @@ These can fail a page that passed:
 
 - `tags-are-balanced` reports a `<p>` holding a block, a `<ul>` or another `<p>`
   say, at its `</p>`, which closes nothing: the block's start ended the paragraph,
-  and a browser renders that `</p>` as an empty paragraph of its own. Run over
-  9,418 templates of HMRC services, it found nine, in four services. It also
+  and a browser renders that `</p>` as an empty paragraph of its own. Over the
+  templates of real services, these were the only verdicts that changed. It also
   reports a paragraph left open at the end of an `a`, `audio`, `del`, `ins`, `map`,
-  `noscript`, `video`, custom element or SVG or MathML parent; a slash on an HTML
-  element that is not void, as in `<div/>`; and an end tag whose name differs from
-  its start tag's after a dot, as in `<x-a.foo></x-a.bar>`.
+  `noscript`, `video`, custom element or SVG or MathML parent, and an end tag whose
+  name differs from its start tag's after a dot, as in `<x-a.foo></x-a.bar>`.
+- `tags-are-balanced` takes a slash to close an element only where HTML does: on
+  an SVG or MathML element, straight before `>`. A slash on an HTML element that is
+  not void, as in `<div/>`, one that ends an unquoted value, as in
+  `<path d=M0/>`, and one standing apart, as in `<path / >`, leave the element
+  open. An SVG or MathML element named like an HTML void element, or like one whose
+  end tag HTML lets you leave out, as `<svg><br>` or `<svg><tr>`, needs its end
+  tag.
+- `tags-are-balanced` reads what a browser reads: the text of a `title`, `style`
+  or `script` inside SVG or MathML is markup, so a `<` there can open an element,
+  and a comment ends where the standard ends it, at `<!-->`, `<!--->` or `--!>`,
+  so what follows is read.
 - `no-password-in-get` takes an empty `method` or `formmethod`, or one HTML does
   not know, as GET, as a browser does, and counts every button that can submit.
 - `submitButtonText` and `hasSubmitButton` no longer take a `type="button"`, or a

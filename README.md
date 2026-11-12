@@ -655,7 +655,7 @@ Basic HTML validity, read from the source rather than the repaired tree, so an u
 | `known-attributes` | every attribute is one the HTML specification defines |
 
 `tags-are-balanced` reads the markup as HTML's tokenizer does: comments, CDATA in
-SVG and MathML, quoted attribute values and the text of a script, a style or a
+SVG and MathML, quoted attribute values and the text of an HTML script, style or
 textarea open nothing. It knows what HTML lets you leave out (void elements, the
 optional end tags, a paragraph ended by the start of a block) and that a slash
 closes only an SVG or MathML element, so `<div/>` stays open. A `<p>` holding a
