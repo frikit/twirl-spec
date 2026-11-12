@@ -189,6 +189,13 @@ class RuleExactnessSpec extends AnyWordSpec with Matchers with TwirlSpec {
       ) mustBe empty
       // a name is read whole, a custom element's dots and all
       TagBalance.check("<main><x-a.foo></x-a.bar></main>") must not be empty
+      // its encoding read as an attribute is, decoded, and no other's
+      TagBalance.check(
+        """<main><math><annotation-xml encoding="text&#47;html"><div/></annotation-xml></math></main>"""
+      ) must not be empty
+      TagBalance.check(
+        """<main><math><annotation-xml data-encoding="text/html"><mrow/></annotation-xml></math></main>"""
+      ) mustBe empty
       // a MathML annotation is HTML only when its encoding says so
       TagBalance.check(
         """<main><math><semantics><mi>x</mi><annotation-xml encoding="application/mathml+xml"><mrow/></annotation-xml></semantics></math></main>"""

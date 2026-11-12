@@ -753,7 +753,7 @@ final class Page(
       // HTML's Auto state: it submits unless it invokes a command, or is a
       // select's own button
       case _ =>
-        !e.hasAttr("commandfor") &&
+        !e.hasAttr("command") && !e.hasAttr("commandfor") &&
         !Option(e.parent()).exists(_.tagName() == "select")
     }
     else kind == "submit" || kind == "image"

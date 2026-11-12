@@ -17,6 +17,7 @@
 package io.github.frikit.twirlspec.html
 
 import io.github.frikit.twirlspec.render.Templates
+import org.jsoup.parser.Parser
 
 import java.nio.file.Path
 import java.util.Locale
@@ -160,14 +161,18 @@ object TagBalance {
       .getOrElse(false)
   }
 
+  /** The encoding attribute itself, not one whose name only ends in it. */
   private val Encoding =
-    """(?i)\bencoding\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))""".r
+    """(?i)(?:^|\s)encoding\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))""".r
 
-  /** Whether an annotation-xml's encoding hands its content back to HTML. */
+  /** Whether an annotation-xml's encoding, its character references decoded,
+    * hands its content back to HTML.
+    */
   private def htmlEncoded(attributes: String): Boolean =
     Encoding
       .findFirstMatchIn(attributes)
       .flatMap(m => (1 to 3).map(m.group).find(_ != null))
+      .map(Parser.unescapeEntities(_, true))
       .exists(v =>
         Set("text/html", "application/xhtml+xml")(v.toLowerCase(Locale.ROOT))
       )
