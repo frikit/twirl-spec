@@ -150,6 +150,56 @@ class PageCatalogueSpec extends AnyWordSpec with Matchers {
       )
     }
 
+    "submit the blank form as a browser does, with every field empty" in {
+      val named: Form[String] =
+        Form(single("name" -> text.verifying("name.missing", _.nonEmpty)))
+      def errorsShown(
+          body: String,
+          of: Form[_] = named,
+          fragment: Boolean = false
+      ): List[String] = {
+        var errors = List.empty[String]
+        val spec = new Spec {
+          catalogue(formPage("Name", of) { form =>
+            errors = form.errors.map(_.message).toList ++ errors
+            if (fragment) Html(body) else pageOf(body)
+          })
+        }
+        run(spec)
+        errors.distinct
+      }
+      val other =
+        """<form action="/other"><input name="name" value="Ada" aria-label="Other"></form>"""
+      val field = """<input name="name" aria-label="Name">"""
+      // Play answers a field that is missing with its generic error.required;
+      // a browser sends the field empty, which meets the form's own message.
+      errorsShown(
+        s"""<form method="post"><input type="hidden" name="csrfToken" value="t">$field</form>"""
+      ) mustBe List("name.missing")
+      // a name sent twice binds its first value, as Play reads a request
+      errorsShown(
+        s"""<form method="post">$field<input name="name" value="Ada" aria-label="Again"></form>"""
+      ) mustBe List("name.missing")
+      // a page's one form sends its list's one blank item, whatever its key
+      errorsShown(
+        """<form method="post"><input name="names[]" aria-label="Name"></form>""",
+        Form(single("names" -> list(nonEmptyText)))
+      ) mustBe List("error.required")
+      // a fragment, a component with no form of its own, sends all it has
+      errorsShown(field, fragment = true) mustBe List("name.missing")
+      // of several forms, the one that holds the fields, wherever it stands
+      errorsShown(
+        s"""<form action="/search"><input name="q" value="x" aria-label="Search"></form><form method="post">$field</form>"""
+      ) mustBe List("name.missing")
+      // two that could both send them leave it to the user, so none is sent,
+      // an unchecked radio counting, as it still names its form
+      errorsShown(s"""$other<form method="post">$field</form>""") mustBe
+        List("error.required")
+      errorsShown(
+        s"""<form method="post"><input type="radio" name="name" value="a" aria-label="A"></form>$other"""
+      ) mustBe List("error.required")
+    }
+
     "report every state and language that failed, not just the first" in {
       val spec = new Spec {
         catalogue(formPage("Name", nameForm)(_ => pageOf("<p>bad</p>")))

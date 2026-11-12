@@ -10,6 +10,34 @@ release, and each one has a GitHub Release whose notes are its section here. Eve
 recorded in full; earlier lines are kept to one entry each, so the file stays
 readable.
 
+## [2.9.0] - 2026-11-12
+
+### Fixed
+
+- `formPage`'s empty submission is the blank form sent untouched, as a browser sends
+  it: each control of the page's form with the value it renders with, bound as Play
+  binds a request. A field left empty arrives empty rather than missing, a hidden
+  value, a selected option or a checked choice keeps its value, and an unchecked or
+  disabled control is left out. It bound nothing at all, which Play answers with its
+  generic `error.required`, so a form whose fields have messages of their own showed
+  the generic one on each, a state no user meets: on a real service, two fields both
+  reading "Please enter a value" made `link-names-distinct` warn. Of several forms on
+  a page, the one with a control named after one of the form's fields is sent. Where
+  that cannot be told, because two or more could send the fields or none is named
+  after them, as a list field's are not, nothing is sent, as before.
+
+These can fail a page that passed:
+
+- The `with errors` state shows the errors of what a browser sends, which can differ
+  from those of sending nothing: the form's own messages rather than Play's, and none
+  for a field whose rendered value is valid. The rules and the language comparison
+  read that page.
+- A form whose untouched submission is valid fails `formPage`'s check, naming the
+  `with errors` state, as a form whose empty submission gave no errors always did: one
+  of fields Play's `text` takes empty, say, which only the missing fields of an empty
+  submission made fail. Such a page can be a `staticPage`, or a `PageCase` of states
+  of its own.
+
 ## [2.8.0] - 2026-11-11
 
 ### Changed
@@ -793,7 +821,8 @@ the Twirl entry points in `twirl-spec-quality`; language parity in
 them in `twirl-spec-all`. The renames a service built against a 0.x snapshot
 would meet are listed in [the adoption guide](docs/adopting.md).
 
-[Unreleased]: https://github.com/frikit/twirl-spec/compare/v2.8.0...HEAD
+[Unreleased]: https://github.com/frikit/twirl-spec/compare/v2.9.0...HEAD
+[2.9.0]: https://github.com/frikit/twirl-spec/compare/v2.8.0...v2.9.0
 [2.8.0]: https://github.com/frikit/twirl-spec/compare/v2.7.0...v2.8.0
 [2.7.0]: https://github.com/frikit/twirl-spec/compare/v2.6.1...v2.7.0
 [2.6.1]: https://github.com/frikit/twirl-spec/compare/v2.6.0...v2.6.1
