@@ -944,6 +944,11 @@ carries the page's own language carries a different one on each.
 `i18n-same-links` reads a whole path segment or query value naming either
 language as the same, and reports a real difference as the page wrote it.
 
+`i18n-nothing-lost` pairs the paragraphs, items and cells that have no id only
+where both languages have as many of a kind, because a page may say something
+in one language alone, so a paragraph dropped whole from a translation goes
+unremarked unless it has an id, which `i18n-same-ids` holds it to.
+
 Text that is meant to read the same everywhere — a product name, a unit — would
 otherwise be reported by `i18n-actually-translated`. Say so once:
 
