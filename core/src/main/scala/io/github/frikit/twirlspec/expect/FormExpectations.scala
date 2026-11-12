@@ -21,6 +21,7 @@ import io.github.frikit.twirlspec.expect.Matching._
 import io.github.frikit.twirlspec.page.{Page, Text}
 import io.github.frikit.twirlspec.standards.Rule
 
+import java.util.Locale
 import scala.jdk.CollectionConverters._
 
 /** Expectations about form controls and the error states they can be in. */
@@ -134,7 +135,8 @@ trait FormExpectations {
       if (forms.isEmpty) Seq(Violation.missing("form", "form"))
       else {
         val actualUrl = forms.attr("action").getOrElse("")
-        val actualMethod = forms.attr("method").fold("GET")(_.toUpperCase)
+        val actualMethod =
+          forms.attr("method").fold("GET")(_.toUpperCase(Locale.ROOT))
         val urlIssue =
           if (actualUrl == url) Nil
           else Seq(Violation.mismatch("form action", url, actualUrl))
@@ -674,12 +676,32 @@ final case class DropdownExpectation(
     Matching.exactlyOne(rule, sel) match {
       case Left(v)        => Seq(v)
       case Right(element) =>
-        val id = if (element.id().nonEmpty) element.id() else name
         val actual =
           element.select("option").asScala.toList.map(_.attr("value"))
 
+        // A label's `for` names an id, never a name, so a select with no id
+        // has no label to find.
         val labelIssues =
-          FormChecks.labelIssues(page, rule, id, label, labelRequired = true)
+          if (element.id().nonEmpty)
+            FormChecks.labelIssues(
+              page,
+              rule,
+              element.id(),
+              label,
+              labelRequired = true
+            )
+          else
+            Seq(
+              Violation
+                .missing(
+                  s"$rule label",
+                  "label[for]",
+                  "field has no id, so no label[for] can name it"
+                )
+                .withHint(
+                  "WCAG 3.3.2 — every input needs a label whose `for` matches the input id"
+                )
+            )
         val valueIssues = optionValues.toSeq.flatMap { expected =>
           if (expected.forall(actual.contains)) Nil
           else

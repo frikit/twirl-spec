@@ -18,11 +18,20 @@ package io.github.frikit.twirlspec
 
 import io.github.frikit.twirlspec.aria.AriaStandards
 import io.github.frikit.twirlspec.govuk.GovukStandards
+import io.github.frikit.twirlspec.html.{
+  HtmlStandards,
+  HtmlVocabulary,
+  TagBalance
+}
 import io.github.frikit.twirlspec.page.Page
 import io.github.frikit.twirlspec.standards.Rule
-import io.github.frikit.twirlspec.wcag.SecurityStandards
+import io.github.frikit.twirlspec.wcag.{SecurityStandards, WcagStandards}
+import org.jsoup.Jsoup
+import org.jsoup.parser.Parser
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
+
+import scala.jdk.CollectionConverters._
 
 /** Rules reading what a browser does with the markup. */
 class RuleExactnessSpec extends AnyWordSpec with Matchers with TwirlSpec {
@@ -54,6 +63,19 @@ class RuleExactnessSpec extends AnyWordSpec with Matchers with TwirlSpec {
         contain("no-password-in-get")
       fired(SecurityStandards.all, form("<button>Go</button>")) must
         not contain "no-password-in-get"
+      // a method HTML does not know is GET, the form's or a button's
+      fired(
+        SecurityStandards.all,
+        form("<button>Go</button>").replace("method=\"post\"", "method=\"\"")
+      ) must contain("no-password-in-get")
+      fired(
+        SecurityStandards.all,
+        form("""<button formmethod="">Go</button>""")
+      ) must contain("no-password-in-get")
+      fired(
+        SecurityStandards.all,
+        form("""<button type="" formmethod="">Go</button>""")
+      ) must contain("no-password-in-get")
       // a disabled button sends nothing
       fired(
         SecurityStandards.all,
@@ -82,6 +104,208 @@ class RuleExactnessSpec extends AnyWordSpec with Matchers with TwirlSpec {
         """<div class="govuk-error-summary"><ul class="govuk-error-summary__list">
           |<li><a href="#">Enter a name</a></li></ul></div>""".stripMargin
       ) must contain("error-summary-targets")
+    }
+
+    "name a submit or reset input as a browser does, and a label only its own control" in {
+      // with no value a browser calls them Submit and Reset; an empty one says nothing
+      val unvalued = fired(
+        WcagStandards.all,
+        """<form action="/a" method="post"><input type="reset"><input type="submit"></form>"""
+      )
+      unvalued must not contain "labelled-controls"
+      unvalued must not contain "submit-has-name"
+      fired(
+        WcagStandards.all,
+        """<form action="/a" method="post"><input type="submit" value=""></form>"""
+      ) must contain("submit-has-name")
+      // a label with a for names that control, not the one it wraps
+      fired(
+        WcagStandards.all,
+        """<label for="other">Wrong<input id="x" name="x"></label><input id="other" name="other">"""
+      ) must contain("labelled-controls")
+    }
+
+    "ask an open combobox and a scrollbar what they control, and a cell for its own table's headers" in {
+      fired(
+        AriaStandards.all,
+        """<input role="combobox" aria-expanded="true" aria-label="Country">"""
+      ) must contain("aria-required-attr")
+      // a closed one's popup need not exist yet
+      fired(
+        AriaStandards.all,
+        """<input role="combobox" aria-expanded="false" aria-label="Country">"""
+      ) must not contain "aria-required-attr"
+      fired(
+        AriaStandards.all,
+        """<div role="scrollbar" aria-valuenow="50" aria-label="Scroll"></div>"""
+      ) must contain("aria-required-attr")
+      // an empty reference controls nothing
+      fired(
+        AriaStandards.all,
+        """<input role="combobox" aria-expanded="true" aria-label="Country" aria-controls=" ">"""
+      ) must contain("aria-required-attr")
+      // only a combobox is asked, whatever else is expanded
+      fired(
+        AriaStandards.all,
+        """<div role="button" tabindex="0" aria-expanded="true">Menu</div>"""
+      ) must not contain "aria-required-attr"
+      fired(
+        AriaStandards.all,
+        """<table><tr><td headers="inner">Outer<table><tr><th id="inner">Inner</th></tr></table></td></tr></table>"""
+      ) must contain("table-headers-resolve")
+    }
+
+    "know HTML's own attributes and custom elements, and read tags as HTML does" in {
+      fired(
+        HtmlStandards.all,
+        """<button type="button" popovertarget="help" onclick="go()">Help</button><div id="help" popover>Help text</div>"""
+      ) must not contain "known-attributes"
+      fired(
+        HtmlStandards.all,
+        """<div onpointerenter="void 0">Text</div>"""
+      ) must
+        not contain "known-attributes"
+      val custom =
+        fired(HtmlStandards.all, """<flag-icon country="nl"></flag-icon>""")
+      custom must not contain "known-elements"
+      custom must not contain "known-attributes"
+      HtmlVocabulary.isCustomElementName("x-!") mustBe false
+      HtmlVocabulary.isCustomElementName("font-face") mustBe false
+      // a slash closes only a void or a foreign element
+      TagBalance.check("<main><div/></main>") must not be empty
+      TagBalance.check("<main><svg><path/></svg></main>") mustBe empty
+      TagBalance.check(
+        "<main><svg><foreignObject><div/></foreignObject></svg></main>"
+      ) must not be empty
+      TagBalance.check("<main><math><mspace/></math></main>") mustBe empty
+      TagBalance.check(
+        "<main><math><mtext><div/></mtext></math></main>"
+      ) must not be empty
+      // a doctype that never closes takes the rest with it, as a comment does
+      TagBalance.check("<main></main><!DOCTYPE") mustBe empty
+      // a paragraph's end tag is not left off inside a link
+      TagBalance.check("""<main><a href="/x"><p>Link</a></main>""") must
+        not be empty
+      TagBalance.check("<main><div><p>Text</div></main>") mustBe empty
+      // nor at the end of a custom element, or of an SVG or MathML parent
+      TagBalance.check("<main><my-card><p>Text</my-card></main>") must
+        not be empty
+      TagBalance.check(
+        "<main><svg><foreignObject><p>Text</foreignObject></svg></main>"
+      ) must not be empty
+      // though the next paragraph ends one there
+      TagBalance.check(
+        """<main><a href="/x"><p>First<p>Second</p></a></main>"""
+      ) mustBe empty
+      // a name is read whole, a custom element's dots and all
+      TagBalance.check("<main><x-a.foo></x-a.bar></main>") must not be empty
+      // its encoding read as an attribute is, decoded, and no other's
+      TagBalance.check(
+        """<main><math><annotation-xml encoding="text&#47;html"><div/></annotation-xml></math></main>"""
+      ) must not be empty
+      TagBalance.check(
+        """<main><math><annotation-xml data-encoding="text/html"><mrow/></annotation-xml></math></main>"""
+      ) mustBe empty
+      // a MathML annotation is HTML only when its encoding says so
+      TagBalance.check(
+        """<main><math><semantics><mi>x</mi><annotation-xml encoding="application/mathml+xml"><mrow/></annotation-xml></semantics></math></main>"""
+      ) mustBe empty
+      TagBalance.check(
+        """<main><math><annotation-xml encoding="text/html"><div/></annotation-xml></math></main>"""
+      ) must not be empty
+      // a comment marker inside an attribute is no comment
+      TagBalance.check(
+        """<main><div title="<!--">x</div></main>"""
+      ) mustBe empty
+      // a text-only element left open takes the rest, as a cut-off tag does
+      TagBalance.check("<main><textarea>x</main>") must not be empty
+      TagBalance.check("<main></main><div class=x") mustBe empty
+      TagBalance.check("<main></main></div") mustBe empty
+      TagBalance.elementsOf("<main><plaintext></main><div>") mustBe
+        List("main" -> "html", "plaintext" -> "html")
+    }
+
+    "read markup as HTML's tokenizer does, opening what jsoup opens" in {
+      val space = Map(
+        Parser.NamespaceHtml -> "html",
+        Parser.NamespaceSvg -> "svg",
+        Parser.NamespaceMathml -> "math"
+      )
+      // what jsoup opens from the source itself, not what its parser adds
+      def jsoupOpens(html: String) =
+        Jsoup
+          .parse(html, "", Parser.htmlParser().setTrackPosition(true))
+          .getAllElements
+          .asScala
+          .toList
+          .filter(e => e.sourceRange.isTracked && !e.sourceRange.isImplicit)
+          .map(e => e.normalName -> space(e.tag.namespace))
+      // each source with whether it is clean, decided before either reads it
+      Seq(
+        // an encoding inside another attribute's value is no encoding, nor is
+        // the second of a name
+        """<main><math><semantics><mi>x</mi><annotation-xml data-note=" encoding='text/html'" encoding="application/mathml+xml" ENCODING="text/html"><mrow/><mn>1</mn></annotation-xml></semantics></math></main>""" -> true,
+        """<main><math><annotation-xml><svg><path/></svg></annotation-xml></math></main>""" -> true,
+        // straight inside a MathML token a glyph or an align mark stays MathML,
+        // and other elements are HTML's, a void one included
+        """<main><math><mi><mglyph src="g.png" alt="x"/><mi>y</mi></mi><mtext><malignmark/>a<br>b</mtext></math></main>""" -> true,
+        // under an HTML element a glyph is HTML, so its slash closes nothing
+        "<main><math><mi><span><mglyph/></span></mi></math></main>" -> false,
+        """<main><svg><title><b>x</b></title><desc><i>d</i></desc></svg></main>""" -> true,
+        // nor does a slash that ends an unquoted value, or one that stands apart
+        "<main><svg><path d=M0/><circle/></svg></main>" -> false,
+        "<main><svg><path / ><circle/></svg></main>" -> false,
+        // an SVG element named tr is no table row, and needs its end tag
+        "<main><svg><tr></svg></main>" -> false,
+        """<main><svg><![CDATA[ a > b <div> ]]><g/></svg><![CDATA[<em>]]><s>t</s></main>""" -> true,
+        // a script's content is text, through its escapes, however like a tag
+        """<main><script>const x = "<tag attr='";</script><!-- '><div> --></main>""" -> true,
+        """<main><script>var s = "<!--";</script><p>after</p></main>""" -> true,
+        """<main><script><!--<script></script><b>in</b>--></script><i>out</i></main>""" -> true,
+        """<main><TEXTAREA><!-- </em></textarea><p>x</p><p>İ</p><script>a<b</script></main>""" -> true,
+        """<main><iframe><div></iframe><xmp><b></xmp><noembed><i></noembed><noframes><u></noframes></main>""" -> true,
+        """<main><noscript><p>x</p></noscript><style-guide><div></div></style-guide></main>""" -> true,
+        """<main><!--><b>1</b><!---><i>2</i><!-- x --!><u>3</u><!---->< div>4<?x><![CDATA[x]]></ x></main>""" -> true
+      ).foreach { case (html, clean) =>
+        withClue(html) {
+          TagBalance.check(html).isEmpty mustBe clean
+          TagBalance.elementsOf(html) mustBe jsoupOpens(html)
+        }
+      }
+      // HTML's tokenizer reads an SVG script as markup, where jsoup reads text
+      TagBalance.elementsOf(
+        "<main><svg><script>a<g/>b</script></svg></main>"
+      ) mustBe
+        List("main" -> "html", "svg" -> "svg", "script" -> "svg", "g" -> "svg")
+      // an SVG element named br is no void element, wherever a parser puts it
+      TagBalance.check("<main><svg><br></svg></main>") must not be empty
+    }
+
+    "ask a row for its cells, and a hidden control for no name" in {
+      fired(
+        AriaStandards.all,
+        """<div role="table" aria-label="Results"><div role="row"></div></div>"""
+      ) must contain("aria-required-children")
+      fired(
+        AriaStandards.all,
+        """<div role="table" aria-label="Results"><div role="row"><div role="cell">1</div></div></div>"""
+      ) must not contain "aria-required-children"
+      // HTML lets a native row be empty
+      fired(
+        AriaStandards.all,
+        """<table aria-label="R"><tr></tr></table>"""
+      ) must
+        not contain "aria-required-children"
+      // native rows and cells count, with or without a role written on them
+      fired(
+        AriaStandards.all,
+        """<table role="table" aria-label="R"><tr role="row"><td>1</td></tr></table>"""
+      ) must not contain "aria-required-children"
+      fired(
+        WcagStandards.all,
+        """<div hidden><input name="website"></div>"""
+      ) must
+        not contain "labelled-controls"
     }
 
     "count native options and radios as the children their roles need" in {

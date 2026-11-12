@@ -16,6 +16,8 @@
 
 package io.github.frikit.twirlspec.html
 
+import java.util.Locale
+
 /** The parts of the HTML vocabulary a checker needs to know to tell a mistake
   * from a shorthand.
   */
@@ -274,6 +276,7 @@ object HtmlVocabulary {
     "tabindex",
     "title",
     "translate",
+    "writingsuggestions",
     "role",
     "part",
     "exportparts"
@@ -290,6 +293,7 @@ object HtmlVocabulary {
     "action",
     "allow",
     "allowfullscreen",
+    "alpha",
     "alt",
     "as",
     "async",
@@ -302,8 +306,12 @@ object HtmlVocabulary {
     "charset",
     "checked",
     "cite",
+    "closedby",
+    "colorspace",
     "cols",
     "colspan",
+    "command",
+    "commandfor",
     "content",
     "controls",
     "coords",
@@ -356,6 +364,8 @@ object HtmlVocabulary {
     "ping",
     "placeholder",
     "playsinline",
+    "popovertarget",
+    "popovertargetaction",
     "poster",
     "preload",
     "readonly",
@@ -368,6 +378,10 @@ object HtmlVocabulary {
     "sandbox",
     "scope",
     "selected",
+    "shadowrootclonable",
+    "shadowrootdelegatesfocus",
+    "shadowrootmode",
+    "shadowrootserializable",
     "shape",
     "size",
     "sizes",
@@ -507,18 +521,173 @@ object HtmlVocabulary {
   )
 
   /** Whether the HTML specification defines an element with this name. */
-  def isKnownElement(name: String): Boolean =
-    elements.contains(name.toLowerCase)
+  /** The event handler content attributes: those any element may carry, and
+    * those a body carries for its window.
+    */
+  val eventHandlerAttributes: Set[String] = Set(
+    "onabort",
+    "onafterprint",
+    "onauxclick",
+    "onbeforeinput",
+    "onbeforematch",
+    "onbeforeprint",
+    "onbeforetoggle",
+    "onbeforeunload",
+    "onblur",
+    "oncancel",
+    "oncanplay",
+    "oncanplaythrough",
+    "onchange",
+    "onclick",
+    "onclose",
+    "oncommand",
+    "oncontextlost",
+    "oncontextmenu",
+    "oncontextrestored",
+    "oncopy",
+    "oncuechange",
+    "oncut",
+    "ondblclick",
+    "ondrag",
+    "ondragend",
+    "ondragenter",
+    "ondragleave",
+    "ondragover",
+    "ondragstart",
+    "ondrop",
+    "ondurationchange",
+    "onemptied",
+    "onended",
+    "onerror",
+    "onfocus",
+    "onformdata",
+    "onhashchange",
+    "oninput",
+    "oninvalid",
+    "onkeydown",
+    "onkeypress",
+    "onkeyup",
+    "onlanguagechange",
+    "onload",
+    "onloadeddata",
+    "onloadedmetadata",
+    "onloadstart",
+    "onmessage",
+    "onmessageerror",
+    "onmousedown",
+    "onmouseenter",
+    "onmouseleave",
+    "onmousemove",
+    "onmouseout",
+    "onmouseover",
+    "onmouseup",
+    "onoffline",
+    "ononline",
+    "onpagehide",
+    "onpagereveal",
+    "onpageshow",
+    "onpageswap",
+    "onpaste",
+    "onpause",
+    "onplay",
+    "onplaying",
+    "onpopstate",
+    "onprogress",
+    "onratechange",
+    "onrejectionhandled",
+    "onreset",
+    "onresize",
+    "onscroll",
+    "onscrollend",
+    "onsecuritypolicyviolation",
+    "onseeked",
+    "onseeking",
+    "onselect",
+    "onslotchange",
+    "onstalled",
+    "onstorage",
+    "onsubmit",
+    "onsuspend",
+    "ontimeupdate",
+    "ontoggle",
+    "onunhandledrejection",
+    "onunload",
+    "onvolumechange",
+    "onwaiting",
+    "onwheel"
+  )
+
+  /** The handlers other specifications add to every element: pointer events,
+    * CSS animations and transitions, selection and touch.
+    */
+  val eventHandlerExtensions: Set[String] = Set(
+    "ongotpointercapture",
+    "onlostpointercapture",
+    "onpointercancel",
+    "onpointerdown",
+    "onpointerenter",
+    "onpointerleave",
+    "onpointermove",
+    "onpointerout",
+    "onpointerover",
+    "onpointerrawupdate",
+    "onpointerup",
+    "onanimationcancel",
+    "onanimationend",
+    "onanimationiteration",
+    "onanimationstart",
+    "ontransitioncancel",
+    "ontransitionend",
+    "ontransitionrun",
+    "ontransitionstart",
+    "onselectionchange",
+    "onselectstart",
+    "ontouchcancel",
+    "ontouchend",
+    "ontouchmove",
+    "ontouchstart"
+  )
+
+  /** A character a custom element's name may hold after its first letter. */
+  private val PCENChar =
+    "[-._0-9a-z\\u00B7\\u00C0-\\u00D6\\u00D8-\\u00F6\\u00F8-\\u037D\\u037F-\\u1FFF\\u200C-\\u200D\\u203F-\\u2040\\u2070-\\u218F\\u2C00-\\u2FEF\\u3001-\\uD7FF\\uF900-\\uFDCF\\uFDF0-\\uFFFD\\x{10000}-\\x{EFFFF}]"
+
+  private val CustomElementName = s"[a-z]$PCENChar*-$PCENChar*".r
+
+  /** The names that look like a custom element's but belong to SVG and MathML.
+    */
+  private val ReservedNames = Set(
+    "annotation-xml",
+    "color-profile",
+    "font-face",
+    "font-face-src",
+    "font-face-uri",
+    "font-face-format",
+    "font-face-name",
+    "missing-glyph"
+  )
+
+  /** Whether a name is a valid custom element name, by HTML's grammar: a
+    * lowercase letter first, a hyphen somewhere, and none of the reserved.
+    */
+  def isCustomElementName(name: String): Boolean =
+    CustomElementName.matches(name) && !ReservedNames(name)
+
+  def isKnownElement(name: String): Boolean = {
+    val n = name.toLowerCase(Locale.ROOT)
+    elements.contains(n) || isCustomElementName(n)
+  }
 
   /** `data-*` and `aria-*` are open sets by design, and a framework may add its
     * own prefix.
     */
   def isKnownAttribute(name: String, extraPrefixes: Set[String]): Boolean = {
-    val n = name.toLowerCase
+    val n = name.toLowerCase(Locale.ROOT)
     n.startsWith("data-") || n.startsWith("aria-") || extraPrefixes.exists(
       n.startsWith
     ) ||
-    globalAttributes.contains(n) || elementAttributes.contains(n)
+    globalAttributes.contains(n) || elementAttributes.contains(n) ||
+    eventHandlerAttributes.contains(n) || eventHandlerExtensions.contains(n)
   }
 
 }

@@ -23,6 +23,7 @@ import io.github.frikit.twirlspec.standards.{Rule, RuleSet}
 import org.jsoup.nodes.{Element, TextNode}
 
 import java.util.regex.Pattern
+import java.util.Locale
 import scala.jdk.CollectionConverters._
 
 /** The checks an automated accessibility tool makes that need no browser.
@@ -75,7 +76,10 @@ object AriaStandards extends RuleSet {
         AriaVocabulary.tokenValues.toSeq.sortBy(_._1).flatMap {
           case (attr, allowed) =>
             val value = e.attr(attr)
-            if (e.hasAttr(attr) && !allowed.contains(value.toLowerCase.trim))
+            if (
+              e.hasAttr(attr) && !allowed
+                .contains(value.toLowerCase(Locale.ROOT).trim)
+            )
               Seq(
                 Violation(
                   "aria-attr-value-is-allowed",
@@ -105,7 +109,7 @@ object AriaStandards extends RuleSet {
     ) { page =>
       elementsWith(page, _.hasAttr("role")).flatMap { e =>
         e.attr("role").split("\\s+").filter(_.nonEmpty).toSeq.flatMap { role =>
-          if (AriaVocabulary.roles.contains(role.toLowerCase)) Nil
+          if (AriaVocabulary.roles.contains(role.toLowerCase(Locale.ROOT))) Nil
           else
             Seq(
               Violation(
@@ -128,11 +132,16 @@ object AriaStandards extends RuleSet {
             if (focusable(e) && !(e.is(Control) && page.isDisabled(e)))
               AriaVocabulary.requiredWhenFocusable.getOrElse(role, Set.empty)
             else Set.empty[String]
+          val whenExpanded =
+            if (Attrs.is(e, "aria-expanded", "true"))
+              AriaVocabulary.requiredWhenExpanded.getOrElse(role, Set.empty)
+            else Set.empty[String]
           (AriaVocabulary.requiredAttributes.getOrElse(role, Set.empty)
-            ++ whenFocusable).toList.sorted
+            ++ whenFocusable ++ whenExpanded).toList.sorted
             .collect {
+              // a value of nothing but spaces says nothing, nor names anything
               case attr
-                  if !e.hasAttr(attr) &&
+                  if e.attr(attr).trim.isEmpty &&
                     !NativeState.get(role).exists(e.is) =>
                 Violation(
                   "aria-required-attr",
@@ -171,30 +180,35 @@ object AriaStandards extends RuleSet {
       "a role that must contain something is not empty"
     ) { page =>
       rolesOn(page).flatMap { case (e, role) =>
-        AriaVocabulary.requiredChildren.get(role).toSeq.flatMap { allowed =>
-          val contained =
-            e.getAllElements.asScala.filterNot(_ eq e).flatMap(childRole)
-          val owned =
-            ownedBy(e).flatMap(Tree.withDescendants).flatMap(childRole)
-          val found = contained ++ owned
-          // ARIA lets what is still loading, marked busy, go without them for now.
-          val busy = (e +: e.parents.asScala.toSeq).exists(
-            _.attr("aria-busy").trim.equalsIgnoreCase("true")
-          )
-          if (busy || found.exists(allowed.contains)) Nil
-          else
-            Seq(
-              Violation(
-                "aria-required-children",
-                s"""role="$role" contains none of the roles it is defined by""",
-                expected = Some(allowed.toList.sorted.mkString(", ")),
-                actual = Some(
-                  if (found.isEmpty) "nothing with a role"
-                  else found.toList.distinct.mkString(", ")
-                )
-              ).at(describe(e))
+        AriaVocabulary.requiredChildren
+          .get(role)
+          // HTML lets a native row be empty; one given role="row" is asked
+          .filterNot(_ => role == "row" && !e.hasAttr("role"))
+          .toSeq
+          .flatMap { allowed =>
+            val contained =
+              e.getAllElements.asScala.filterNot(_ eq e).flatMap(childRole)
+            val owned =
+              ownedBy(e).flatMap(Tree.withDescendants).flatMap(childRole)
+            val found = contained ++ owned
+            // ARIA lets what is still loading, marked busy, go without them for now.
+            val busy = (e +: e.parents.asScala.toSeq).exists(
+              _.attr("aria-busy").trim.equalsIgnoreCase("true")
             )
-        }
+            if (busy || found.exists(allowed.contains)) Nil
+            else
+              Seq(
+                Violation(
+                  "aria-required-children",
+                  s"""role="$role" contains none of the roles it is defined by""",
+                  expected = Some(allowed.toList.sorted.mkString(", ")),
+                  actual = Some(
+                    if (found.isEmpty) "nothing with a role"
+                    else found.toList.distinct.mkString(", ")
+                  )
+                ).at(describe(e))
+              )
+          }
       }
     },
     Rule(
@@ -250,7 +264,7 @@ object AriaStandards extends RuleSet {
           .select("[accesskey]")
           .asScala
           .toSeq
-          .groupBy(_.attr("accesskey").toLowerCase)
+          .groupBy(_.attr("accesskey").toLowerCase(Locale.ROOT))
           .toSeq
           .sortBy(_._1)
           .collect {
@@ -270,7 +284,7 @@ object AriaStandards extends RuleSet {
       "an autocomplete attribute uses tokens the specification defines"
     ) { page =>
       page.document.select("[autocomplete]").asScala.toSeq.flatMap { e =>
-        val raw = e.attr("autocomplete").toLowerCase.trim
+        val raw = e.attr("autocomplete").toLowerCase(Locale.ROOT).trim
         if (raw.isEmpty || autocompleteIsValid(e, raw)) Nil
         else
           Seq(
@@ -347,8 +361,15 @@ object AriaStandards extends RuleSet {
       "every headers attribute points at a header on the same table"
     ) { page =>
       page.document.select("table").asScala.toSeq.flatMap { table =>
-        val ids = table.select("th[id]").asScala.map(_.id()).toSet
-        table.select("td[headers], th[headers]").asScala.toSeq.flatMap { cell =>
+        // the table's own headers and cells, not those of a table inside it
+        def own(selector: String) =
+          table
+            .select(selector)
+            .asScala
+            .toSeq
+            .filter(_.closest("table") eq table)
+        val ids = own("th[id]").map(_.id()).toSet
+        own("td[headers], th[headers]").flatMap { cell =>
           cell.attr("headers").split("\\s+").filter(_.nonEmpty).toSeq.collect {
             case target if !ids.contains(target) =>
               Violation(
@@ -580,7 +601,7 @@ object AriaStandards extends RuleSet {
       e.attr("role")
         .split("\\s+")
         .find(_.nonEmpty)
-        .map(_.toLowerCase)
+        .map(_.toLowerCase(Locale.ROOT))
         // A browser ignores presentation on what it has to expose anyway.
         .filterNot(role => Presentational(role) && exposed(e))
     explicit.orElse(implicitRole(e))
@@ -595,7 +616,9 @@ object AriaStandards extends RuleSet {
       case "option" if e.closest("select, datalist") != null => Some("option")
       case "optgroup" if e.closest("select") != null         => Some("group")
       case "input" if Attrs.is(e, "type", "radio")           => Some("radio")
-      case _                                                 => None
+      // a native table's row groups; its rows and cells have their roles already
+      case "thead" | "tbody" | "tfoot" => Some("rowgroup")
+      case _                           => None
     })
 
   private val Presentational = Set("presentation", "none")
@@ -607,7 +630,7 @@ object AriaStandards extends RuleSet {
     */
   private def exposed(e: Element): Boolean =
     focusable(e) || e.attributes.asScala.exists { a =>
-      val key = a.getKey.toLowerCase
+      val key = a.getKey.toLowerCase(Locale.ROOT)
       AriaVocabulary.globalAttributes(key) ||
       key == "aria-hidden" && !a.getValue.trim.equalsIgnoreCase("true")
     }

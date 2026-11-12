@@ -654,6 +654,16 @@ Basic HTML validity, read from the source rather than the repaired tree, so an u
 | `known-elements` | every element is one the HTML specification defines |
 | `known-attributes` | every attribute is one the HTML specification defines |
 
+`tags-are-balanced` reads the markup as HTML's tokenizer does: comments, CDATA in
+SVG and MathML, quoted attribute values and the text of an HTML script, style or
+textarea open nothing. It knows what HTML lets you leave out (void elements, the
+optional end tags, a paragraph ended by the start of a block) and that a slash
+closes only an SVG or MathML element, so `<div/>` stays open. A `<p>` holding a
+`<ul>` is reported at its `</p>`, which closes nothing: the list ended the
+paragraph, and a browser renders that `</p>` as an empty paragraph of its own.
+It names the mistake in the source rather than rebuilding the tree a browser
+repairs it into.
+
 ### Scanning templates instead of pages
 
 `tags-are-balanced` runs against a rendered page, which is where it belongs: by
@@ -943,6 +953,11 @@ language switch points at the other language on each page, and a link that
 carries the page's own language carries a different one on each.
 `i18n-same-links` reads a whole path segment or query value naming either
 language as the same, and reports a real difference as the page wrote it.
+
+`i18n-nothing-lost` pairs the paragraphs, items and cells that have no id only
+where both languages have as many of a kind, because a page may say something
+in one language alone, so a paragraph dropped whole from a translation goes
+unremarked unless it has an id, which `i18n-same-ids` holds it to.
 
 Text that is meant to read the same everywhere — a product name, a unit — would
 otherwise be reported by `i18n-actually-translated`. Say so once:

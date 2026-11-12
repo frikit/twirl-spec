@@ -24,6 +24,7 @@ import io.github.frikit.twirlspec.page.{Attrs, Page, Text, Tree}
 import io.github.frikit.twirlspec.standards.Rule.Warning
 
 import java.util.regex.Pattern
+import java.util.Locale
 import scala.jdk.CollectionConverters._
 
 /** Accessibility and document-structure rules that hold for any HTML page,
@@ -212,15 +213,20 @@ object WcagStandards extends RuleSet {
         Criterion("3.3.2", "Labels or Instructions", Level.A, WcagVersion.V2_0)
       )
     ) { page =>
-      page.formControls.filter(page.accessibleName(_).isEmpty).map { e =>
-        Violation(
-          "labelled-controls",
-          s"<${e.tagName()}${describeControl(e)}> has no label",
-          expected =
-            Some(s"""label[for="${e.id()}"], aria-label or aria-labelledby"""),
-          actual = Some(Text.preview(e.outerHtml(), 120))
-        ).withHint("WCAG 3.3.2 / 4.1.2")
-      }
+      // one nobody can see or reach, as a hidden honeypot, needs no name
+      page.formControls
+        .filter(page.isExposed)
+        .filter(page.accessibleName(_).isEmpty)
+        .map { e =>
+          Violation(
+            "labelled-controls",
+            s"<${e.tagName()}${describeControl(e)}> has no label",
+            expected = Some(
+              s"""label[for="${e.id()}"], aria-label or aria-labelledby"""
+            ),
+            actual = Some(Text.preview(e.outerHtml(), 120))
+          ).withHint("WCAG 3.3.2 / 4.1.2")
+        }
     },
     Rule(
       "grouped-choices",
@@ -395,7 +401,7 @@ object WcagStandards extends RuleSet {
       )
     ) { page =>
       page.links.texts
-        .map(_.toLowerCase.replaceAll("[^a-z ]", "").trim)
+        .map(_.toLowerCase(Locale.ROOT).replaceAll("[^a-z ]", "").trim)
         .filter(VagueLinkText.contains)
         .distinct
         .map(t =>
@@ -418,7 +424,7 @@ object WcagStandards extends RuleSet {
         .filter(_.attr("target") == "_blank")
         .filterNot { e =>
           val said = s"${Text.normalise(e.text())} ${e.attr("aria-label")}"
-          NewTabWords.exists(said.toLowerCase.contains)
+          NewTabWords.exists(said.toLowerCase(Locale.ROOT).contains)
         }
         .map(e =>
           Violation(
@@ -440,7 +446,9 @@ object WcagStandards extends RuleSet {
       // 1.3.5 applies to fields collecting information *about the user*, which cannot be detected in general.
       page.formControls
         .filter(e => e.attr("autocomplete").isEmpty)
-        .filterNot(e => AutocompleteDoesNotApply(e.attr("type").toLowerCase))
+        .filterNot(e =>
+          AutocompleteDoesNotApply(e.attr("type").toLowerCase(Locale.ROOT))
+        )
         .filter(e => collectsAboutTheUser(e.attr("name") + " " + e.id()))
         .map { e =>
           Violation(
@@ -663,9 +671,9 @@ object WcagStandards extends RuleSet {
   private def collectsAboutTheUser(name: String): Boolean =
     name
       .split("[^A-Za-z]+|(?<=[a-z])(?=[A-Z])")
-      .map(_.toLowerCase)
+      .map(_.toLowerCase(Locale.ROOT))
       .exists(PersonalFieldWords) ||
-      PersonalFieldNames.exists(name.toLowerCase.contains)
+      PersonalFieldNames.exists(name.toLowerCase(Locale.ROOT).contains)
 
   /** Autofill tokens short enough to turn up inside other words. */
   private val PersonalFieldWords = Set("tel", "phone", "telephone")
@@ -753,7 +761,7 @@ object WcagStandards extends RuleSet {
     * cap of 1 and not of 10.
     */
   private def viewportDirectives(content: String): Seq[(String, String)] = {
-    val text = content.toLowerCase
+    val text = content.toLowerCase(Locale.ROOT)
     val directives = Seq.newBuilder[(String, String)]
     var at = 0
 

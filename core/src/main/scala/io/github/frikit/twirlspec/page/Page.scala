@@ -23,6 +23,7 @@ import io.github.frikit.twirlspec.standards.Rule
 import play.api.i18n.{Lang, Messages, MessagesImpl}
 import play.twirl.api.Html
 
+import java.util.Locale
 import scala.collection.mutable
 import scala.jdk.CollectionConverters._
 
@@ -288,7 +289,7 @@ final class Page(
           case "textarea" => List(textareaValue(e))
           case "select"   => selectedOptions(e).map(optionValue)
           case _          =>
-            e.attr("type").toLowerCase(java.util.Locale.ROOT) match {
+            e.attr("type").toLowerCase(Locale.ROOT) match {
               case "checkbox" =>
                 if (e.hasAttr("checked")) List(checkedValue(e)) else Nil
               case "radio" =>
@@ -303,11 +304,11 @@ final class Page(
   }
 
   /** What a textarea holds, as a browser reads it: its text as written, with
-    * its line breaks and spaces, less the one line break HTML drops right after
-    * the opening tag.
+    * its line breaks and spaces. The parser has already dropped the one line
+    * break HTML drops right after the opening tag, so a second stays.
     */
   private[twirlspec] def textareaValue(e: Element): String =
-    e.wholeText().replaceAll("\r\n?", "\n").stripPrefix("\n")
+    e.wholeText().replaceAll("\r\n?", "\n")
 
   /** The form a control belongs to. A `form` attribute names it by id, and then
     * it is that form or, where the id names no form, none at all; without one
@@ -412,7 +413,8 @@ final class Page(
     * case, as a language tag is read.
     */
   private[twirlspec] def declaresItsLanguage(declared: String): Boolean =
-    declared.toLowerCase.takeWhile(_ != '-') == lang.language.toLowerCase
+    declared.toLowerCase(Locale.ROOT).takeWhile(_ != '-') == lang.language
+      .toLowerCase(Locale.ROOT)
 
   /** The `<h1>` elements; a page should have exactly one. */
   def h1: Selection = named("h1", "h1")
@@ -456,8 +458,8 @@ final class Page(
         .filter { e =>
           !e.hasAttr("hreflang") || !e
             .attr("hreflang")
-            .toLowerCase
-            .startsWith(lang.code.toLowerCase)
+            .toLowerCase(Locale.ROOT)
+            .startsWith(lang.code.toLowerCase(Locale.ROOT))
         }
     record(elements)
     Selection("language toggle", selector, elements)
@@ -611,7 +613,8 @@ final class Page(
   def formAction: Option[String] = forms.attr("action")
 
   /** The method of the first form, upper-cased, if there is one. */
-  def formMethod: Option[String] = forms.attr("method").map(_.toUpperCase)
+  def formMethod: Option[String] =
+    forms.attr("method").map(_.toUpperCase(Locale.ROOT))
 
   /** The inputs with this name or id. */
   def input(nameOrId: String): Selection =
@@ -721,27 +724,39 @@ final class Page(
   def buttons: Selection =
     named("button", ".govuk-button, button, input[type=submit]")
 
-  /** The control that submits the form. */
+  /** The control that submits the form, chosen among those that can submit one:
+    * a button whose type is submit, missing or one HTML does not know, a submit
+    * input or an image input. The one with the id `submit` comes first, then
+    * those inside a form, then any.
+    */
   def submitButton: Selection = {
-    val candidates = Seq(
-      "button[type=submit], input[type=submit]",
-      "[id=submit]",
-      "form .govuk-button:not(a)",
-      ".govuk-button:not(a)"
-    )
-    // One candidate at a time: `named` records what it matches as asserted, and trying every
-    // selector would record every button on the page rather than the one this resolves to.
-    candidates.iterator
-      .map {
-        // An id compares exactly, as every lookup by id on a page does.
-        case "[id=submit]" =>
-          exactly("submit button", "[id=submit]", "[id]")(e =>
-            says(e.id(), "submit")
-          )
-        case selector => named("submit button", selector)
-      }
-      .find(_.nonEmpty)
-      .getOrElse(Selection.empty("submit button", candidates.mkString(", ")))
+    val submitters = inScope("button, input").filter(canSubmit)
+    val chosen = Iterator(
+      submitters.filter(e => says(e.id(), "submit")),
+      submitters.filter(formOwner(_).nonEmpty),
+      submitters
+    ).find(_.nonEmpty).getOrElse(Nil)
+    // Only the chosen are recorded as asserted, not every button weighed.
+    exactly(
+      "submit button",
+      "button:not([type=button]):not([type=reset]), input[type=submit], input[type=image]",
+      "button, input"
+    )(e => chosen.exists(_ eq e))
+  }
+
+  /** Whether a button or an input can submit its form. */
+  private[twirlspec] def canSubmit(e: Element): Boolean = {
+    val kind = e.attr("type").toLowerCase(Locale.ROOT)
+    if (e.tagName() == "button") kind match {
+      case "submit"           => true
+      case "button" | "reset" => false
+      // HTML's Auto state: it submits unless it invokes a command, or is a
+      // select's own button
+      case _ =>
+        !e.hasAttr("command") && !e.hasAttr("commandfor") &&
+        !Option(e.parent()).exists(_.tagName() == "select")
+    }
+    else kind == "submit" || kind == "image"
   }
 
   // --------------------------------------------------------------- components
@@ -928,7 +943,9 @@ object Page {
       .replaceAll(StyleNoise, "")
       .split(";")
       .toList
-      .map(_.split(":", 2).map(_.replaceAll("\\s+", "").toLowerCase))
+      .map(
+        _.split(":", 2).map(_.replaceAll("\\s+", "").toLowerCase(Locale.ROOT))
+      )
       .collect { case Array(`property`, value) => value }
     declared
       .filter(_.endsWith("!important"))

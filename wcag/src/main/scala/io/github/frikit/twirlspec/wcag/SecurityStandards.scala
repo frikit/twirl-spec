@@ -26,6 +26,7 @@ import org.jsoup.nodes.Element
 import java.net.URLDecoder
 import java.nio.charset.StandardCharsets
 import scala.jdk.CollectionConverters._
+import java.util.Locale
 import scala.util.Try
 
 /** Markup that is a safety problem rather than an accessibility one. */
@@ -45,8 +46,12 @@ object SecurityStandards extends RuleSet {
           .filter(owned(page, _, "input[type=password]").nonEmpty)
           // by its own method, or by a button of its own that sends it by another
           .filter(form =>
-            form.is("form[method=get], form:not([method])") ||
-              submittersOf(page, form).exists(Attrs.is(_, "formmethod", "get"))
+            methodOf(form.attr("method")) == "get" ||
+              submittersOf(page, form).exists(s =>
+                s.hasAttr("formmethod") && methodOf(
+                  s.attr("formmethod")
+                ) == "get"
+              )
           )
           .map { form =>
             Violation(
@@ -90,7 +95,10 @@ object SecurityStandards extends RuleSet {
       page.links.elements
         .filter(_.attr("target") == "_blank")
         .filterNot(
-          _.attr("rel").toLowerCase.split("\\s+").exists(seversTheOpener)
+          _.attr("rel")
+            .toLowerCase(Locale.ROOT)
+            .split("\\s+")
+            .exists(seversTheOpener)
         )
         .map(e =>
           Violation(
@@ -168,13 +176,22 @@ object SecurityStandards extends RuleSet {
       .toList
       .filter(page.formOwner(_).contains(form))
 
-  /** What can submit the form: the enabled submit buttons it owns. */
+  /** The method a method or formmethod value names, in any case: GET where it
+    * names none HTML knows, as where a form has none at all.
+    */
+  private def methodOf(value: String): String =
+    value.toLowerCase(Locale.ROOT) match {
+      case m @ ("post" | "dialog") => m
+      case _                       => "get"
+    }
+
+  /** What can submit the form: the enabled controls it owns that can, as the
+    * page decides which can.
+    */
   private def submittersOf(page: Page, form: Element): List[Element] =
-    owned(
-      page,
-      form,
-      "button[type=submit], button:not([type]), input[type=submit], input[type=image]"
-    ).filterNot(page.isDisabled)
+    owned(page, form, "button, input")
+      .filter(page.canSubmit)
+      .filterNot(page.isDisabled)
 
   private def postsTo(page: Page, form: Element): List[String] = {
     def own(e: Element, attribute: String, fallback: String) =

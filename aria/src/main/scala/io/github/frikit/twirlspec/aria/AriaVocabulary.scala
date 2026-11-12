@@ -210,6 +210,13 @@ object AriaVocabulary {
   )
 
   /** Roles that mean nothing without these attributes. */
+  /** What a role needs only while it is expanded: an open combobox names the
+    * popup it controls, which a closed one may not have rendered yet.
+    */
+  val requiredWhenExpanded: Map[String, Set[String]] = Map(
+    "combobox" -> Set("aria-controls")
+  )
+
   val requiredAttributes: Map[String, Set[String]] = Map(
     "checkbox" -> Set("aria-checked"),
     "combobox" -> Set("aria-expanded"),
@@ -219,7 +226,7 @@ object AriaVocabulary {
     "meter" -> Set("aria-valuenow"),
     "option" -> Set("aria-selected"),
     "radio" -> Set("aria-checked"),
-    "scrollbar" -> Set("aria-valuenow"),
+    "scrollbar" -> Set("aria-controls", "aria-valuenow"),
     "slider" -> Set("aria-valuenow"),
     "switch" -> Set("aria-checked")
   )
@@ -289,6 +296,7 @@ object AriaVocabulary {
     "menu" -> Set("menuitem", "menuitemcheckbox", "menuitemradio", "group"),
     "menubar" -> Set("menuitem", "menuitemcheckbox", "menuitemradio", "group"),
     "radiogroup" -> Set("radio"),
+    "row" -> Set("cell", "columnheader", "gridcell", "rowheader"),
     "rowgroup" -> Set("row"),
     "table" -> Set("row", "rowgroup"),
     "tablist" -> Set("tab"),

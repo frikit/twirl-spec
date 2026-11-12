@@ -41,6 +41,24 @@ class DslExactnessSpec extends AnyWordSpec with Matchers with TwirlSpec {
       submitButtonText("Continue").check(
         page("""<form><input type="submit" value="Continue"></form>""")
       ) mustBe empty
+      // only what can submit is the submit button, a button with no type included
+      submitButtonText("Continue").check(
+        page(
+          """<form><button type="button" class="govuk-button">Continue</button></form>"""
+        )
+      ) must not be empty
+      submitButtonText("Continue").check(
+        page("""<form><button>Continue</button></form>""")
+      ) mustBe empty
+      // with no type, one that invokes a command submits nothing
+      hasSubmitButton.check(
+        page("""<form><button command="--save">Save</button></form>""")
+      ) must not be empty
+      hasSubmitButton.check(
+        page(
+          """<form><button commandfor="help" command="show-modal">Help</button></form><dialog id="help">Help</dialog>"""
+        )
+      ) must not be empty
       // an image input says its alt
       submitButtonText("Continue").check(
         page(
@@ -66,6 +84,17 @@ class DslExactnessSpec extends AnyWordSpec with Matchers with TwirlSpec {
       ) must not be empty
       expectation.check(
         page("""<label for="x">Name</label><input id="x" name="x">""")
+      ) mustBe empty
+      // a dropdown's label names its id too
+      dropdown("x").check(
+        page(
+          """<label for="x">Name</label><select name="x"><option>A</option></select>"""
+        )
+      ) must not be empty
+      dropdown("x").check(
+        page(
+          """<label for="x">Name</label><select id="x" name="x"><option>A</option></select>"""
+        )
       ) mustBe empty
       // one its legend labels asks for no label
       textInput("x").labelledByLegend.check(
@@ -102,6 +131,11 @@ class DslExactnessSpec extends AnyWordSpec with Matchers with TwirlSpec {
         page(s"""<form><input name="n" $attributes></form>""")
           .formValues("n") mustBe sent
       }
+    }
+
+    "keep a textarea's second leading newline, as the parser drops only one" in {
+      page("<form><textarea name=\"n\">\n\nx</textarea></form>")
+        .formValues("n") mustBe "\nx"
     }
 
     "write a date and time in ASCII digits whatever the default locale" in {

@@ -18,6 +18,7 @@ package io.github.frikit.twirlspec.page
 
 import java.nio.file.{Files, Path, StandardCopyOption}
 
+import java.util.Locale
 import scala.util.control.NonFatal
 
 /** A page's outline held to the one saved in a file. */
@@ -29,7 +30,7 @@ private[twirlspec] object OutlineSnapshot {
   /** Whether an environment asks for snapshots to be written: `true` or `1`. */
   def requested(env: String => Option[String]): Boolean =
     env(UpdateVariable)
-      .map(_.trim.toLowerCase)
+      .map(_.trim.toLowerCase(Locale.ROOT))
       .exists(v => v == "true" || v == "1")
 
   /** What came of a comparison: whether it holds, what to say if it does not,

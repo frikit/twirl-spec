@@ -93,7 +93,9 @@ The first page given is the base; nominate another with
 
 The last two read the blocks of text a page's own content is made of, with or
 without ids. `i18n-nothing-lost` pairs them only where both languages have as
-many of a kind, because a page may say something in one language alone.
+many of a kind, because a page may say something in one language alone, so a
+paragraph dropped whole from a translation goes unremarked unless it has an id,
+which `i18n-same-ids` holds it to.
 `i18n-actually-translated` leaves answers, names and table data out, since those
 read the same in any language.
 

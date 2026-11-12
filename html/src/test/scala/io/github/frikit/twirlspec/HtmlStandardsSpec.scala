@@ -109,8 +109,9 @@ class HtmlStandardsSpec
       TagBalance.check("""<div><img src="/x"><br>text</div>""") mustBe empty
     }
 
-    "accept a self-closing element" in {
-      TagBalance.check("""<div><path d="M0"/></div>""") mustBe empty
+    "accept a self-closing element of SVG, and of nothing else" in {
+      TagBalance.check("""<div><svg><path d="M0"/></svg></div>""") mustBe empty
+      TagBalance.check("""<div><div/></div>""") must not be empty
     }
 
     "ignore what is inside a comment" in {

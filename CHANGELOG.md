@@ -10,6 +10,117 @@ release, and each one has a GitHub Release whose notes are its section here. Eve
 recorded in full; earlier lines are kept to one entry each, so the file stays
 readable.
 
+## [2.10.0] - 2026-11-12
+
+### Changed
+
+- `tags-are-balanced`, `TagBalance` and `haveBalancedTemplates` read markup in one
+  pass, as the HTML Living Standard's tokenizer reads it, where they used regular
+  expressions in three passes: a `<!--` inside a script's text or a quoted
+  attribute value hid the markup after it, `< div` was read as a tag, a
+  `<style-guide>` element's content as a style's, and a dotted `İ` earlier in the
+  page moved where a script's text ended. A comment ends as the standard ends it,
+  `<!-->`, `<!--->` and `--!>` included; CDATA counts only inside SVG or MathML; a
+  processing instruction or a bogus comment ends at its first `>`; names fold ASCII
+  case alone; and a slash closes only straight before `>`. The elements read as
+  text are `title`, `textarea`, `style`, `xmp`, `iframe`, `noembed`, `noframes`, a
+  `script` through its escapes and `plaintext`, each in the HTML namespace only,
+  and a `noscript` is read as markup. Each element is put in the namespace a parser
+  puts it in, HTML again at the integration points of SVG and MathML, an
+  `annotation-xml` among them only where its `encoding` is `text/html` or
+  `application/xhtml+xml`, and the void, optional end tag and paragraph rules hold
+  for HTML elements alone. The scaladoc states what is
+  read, the two departures from the standard, and the error recovery it does not
+  repeat.
+- Case conversions use the root locale, so a page reads alike on every machine.
+  Under a Turkish default `role="DIALOG"` was an unknown role, a robots `NOINDEX`
+  went unseen, `type="FILE"` lost its exemption from `input-purpose-autocomplete`,
+  and an outline wrote a form's method with a dotted İ, so a snapshot recorded on
+  one machine failed on another.
+
+### Fixed
+
+- `submitButton`, `submitButtonText` and `hasSubmitButton` choose only among
+  controls that can submit a form: a button whose type is `submit`, or is missing
+  or one HTML does not know while the button invokes no command and is not a
+  select's own; a submit input; an image input. A `type="button"` styled as a
+  GOV.UK button counted, and a plain `<button>` did not.
+- A submit or reset input with no value takes a browser's default name, Submit or
+  Reset, so `labelled-controls` and `submit-has-name` no longer report it; one with
+  an empty value still says nothing. A label with `for` names that element alone,
+  and one without names only the first control it holds. `labelled-controls`
+  leaves unnamed a control nobody can see or reach, as a hidden honeypot.
+- `aria-required-children` counts a native table's rows, row groups and cells as
+  the roles they carry.
+- A textarea keeps a second leading newline, as the parser drops only the first.
+- `known-attributes` knows `popovertarget`, `popovertargetaction`, `closedby`,
+  `command`, `commandfor`, `alpha`, `colorspace`, the `shadowroot` attributes,
+  `writingsuggestions` and the event handlers, those of Pointer Events, CSS
+  animations and transitions, Selection and Touch Events among them.
+  `known-elements` takes a valid custom element name, and any attribute on one.
+- The README and the languages guide say which dropped paragraph
+  `i18n-nothing-lost` cannot see: one with no id, where the two languages hold
+  different numbers of its kind.
+
+These can fail a page that passed:
+
+- `tags-are-balanced` reports a `<p>` holding a block, a `<ul>` or another `<p>`
+  say, at its `</p>`, which closes nothing: the block's start ended the paragraph,
+  and a browser renders that `</p>` as an empty paragraph of its own. Over the
+  templates of real services, these were the only verdicts that changed. It also
+  reports a paragraph left open at the end of an `a`, `audio`, `del`, `ins`, `map`,
+  `noscript`, `video`, custom element or SVG or MathML parent, and an end tag whose
+  name differs from its start tag's after a dot, as in `<x-a.foo></x-a.bar>`.
+- `tags-are-balanced` takes a slash to close an element only where HTML does: on
+  an SVG or MathML element, straight before `>`. A slash on an HTML element that is
+  not void, as in `<div/>`, one that ends an unquoted value, as in
+  `<path d=M0/>`, and one standing apart, as in `<path / >`, leave the element
+  open. An SVG or MathML element named like an HTML void element, or like one whose
+  end tag HTML lets you leave out, as `<svg><br>` or `<svg><tr>`, needs its end
+  tag.
+- `tags-are-balanced` reads what a browser reads: the text of a `title`, `style`
+  or `script` inside SVG or MathML is markup, so a `<` there can open an element;
+  a comment ends where the standard ends it, at `<!-->`, `<!--->` or `--!>`, so
+  what follows is read; `< div>`, with a space after the `<`, is text, so its
+  `</div>` closes nothing; and an element whose name only begins like a text
+  element's, such as `<style-guide>`, holds markup that is read.
+- `no-password-in-get` takes an empty `method` or `formmethod`, or one HTML does
+  not know, as GET, as a browser does, and counts every button that can submit.
+- `submitButton`, `submitButtonText` and `hasSubmitButton` take the control with
+  the id `submit` first, then the controls a form owns, inside it or naming it with
+  `form`, then any other that can submit, where 2.9.0 took a `type="submit"`
+  first: beside a `<button type="submit">Save draft</button>`, a
+  `<button id="submit">Continue</button>` is now the submit button, and a button
+  with no type that names the form from outside it is one more. They no longer
+  take a `type="button"`, or a button with no type that invokes a command.
+- `labelled-controls` reports a control wrapped in a label whose `for` names
+  another element, and each control after the first in a label without `for`: a
+  browser names neither by that label.
+- A textarea's value keeps a second leading newline: `page.formValues` and
+  `formSubmission` give it, and `textArea(...).withValue` no longer matches a value
+  written without it. The `formValues` expectation compares text loosely, and is
+  unaffected.
+- Under a default locale whose case rules differ, such as Turkish, the rules read
+  case as they do everywhere else: `accesskey-unique` takes `I` and `i` for the
+  same key.
+- `dropdown` finds its label by the field's id only, as `textInput` has since
+  2.8.0, so a dropdown with no id has none.
+- `aria-required-attr` asks a scrollbar for `aria-controls`, and a combobox for it
+  while `aria-expanded="true"`, and takes a value of nothing but spaces as missing.
+- `aria-required-children` asks an element with `role="row"` for a cell, a header
+  or a grid cell; a native `<tr>` may still be empty.
+- `table-headers-resolve` resolves a cell's `headers` within its own table, not in
+  a table nested inside it.
+
+### Outline
+
+- Case is read by the root locale's rules. Under a default such as Turkish, a
+  form's `dialog` method now reads `DIALOG` where it read `DİALOG`. A link whose
+  `hreflang` names the page's own language in capitals, as `IT` on an Italian
+  page, is no longer taken for a language toggle, so its `lang toggle` row goes. A
+  snapshot recorded under such a default is written again with
+  `TWIRLSPEC_UPDATE_SNAPSHOTS=true`; one recorded anywhere else is unchanged.
+
 ## [2.9.0] - 2026-11-12
 
 ### Fixed
@@ -822,6 +933,7 @@ them in `twirl-spec-all`. The renames a service built against a 0.x snapshot
 would meet are listed in [the adoption guide](docs/adopting.md).
 
 [Unreleased]: https://github.com/frikit/twirl-spec/compare/v2.9.0...HEAD
+[2.10.0]: https://github.com/frikit/twirl-spec/compare/v2.9.0...v2.10.0
 [2.9.0]: https://github.com/frikit/twirl-spec/compare/v2.8.0...v2.9.0
 [2.8.0]: https://github.com/frikit/twirl-spec/compare/v2.7.0...v2.8.0
 [2.7.0]: https://github.com/frikit/twirl-spec/compare/v2.6.1...v2.7.0

@@ -21,6 +21,7 @@ import io.github.frikit.twirlspec.page.{Page, Text}
 import org.jsoup.nodes.Element
 import play.api.i18n.Lang
 
+import java.util.Locale
 import scala.jdk.CollectionConverters._
 
 /** One check comparing a translated page against the language it was translated
@@ -387,7 +388,7 @@ object TranslationStandards {
   private def destinationOf(form: Element, langs: Set[String]): String = {
     val method =
       if (form.attr("method").isEmpty) "GET"
-      else form.attr("method").toUpperCase
+      else form.attr("method").toUpperCase(Locale.ROOT)
     val path =
       languageNeutral(form.attr("action").takeWhile(_ != '?'), langs)
     val named = if (form.id().isEmpty) "" else s"#${form.id()} "
@@ -430,7 +431,7 @@ object TranslationStandards {
   private def languageNamesOf(base: Page, other: Page): Set[String] =
     Set(base.lang, other.lang)
       .flatMap(l => Set(l.code, l.language))
-      .map(_.toLowerCase)
+      .map(_.toLowerCase(Locale.ROOT))
 
   /** Every link target on the page, keyed by its language-neutral form, so that
     * two targets differing only in the language they name are one.
@@ -451,7 +452,7 @@ object TranslationStandards {
     */
   private def languageNeutral(href: String, langs: Set[String]): String = {
     def neutral(part: String): String =
-      if (langs.contains(part.toLowerCase)) "{lang}" else part
+      if (langs.contains(part.toLowerCase(Locale.ROOT))) "{lang}" else part
     val (beforeFragment, fragment) = href.span(_ != '#')
     val (path, query) = beforeFragment.span(_ != '?')
     val neutralPath = path.split("/", -1).map(neutral).mkString("/")

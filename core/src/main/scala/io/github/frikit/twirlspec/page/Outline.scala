@@ -18,6 +18,7 @@ package io.github.frikit.twirlspec.page
 
 import org.jsoup.nodes.Element
 
+import java.util.Locale
 import scala.jdk.CollectionConverters._
 
 /** A readable skeleton of a rendered page. */
@@ -77,7 +78,7 @@ object Outline {
       formElements.flatMap { form =>
         val method = Option(form.attr("method"))
           .filter(_.nonEmpty)
-          .map(_.toUpperCase)
+          .map(_.toUpperCase(Locale.ROOT))
           .getOrElse("GET")
         val action =
           Option(form.attr("action"))

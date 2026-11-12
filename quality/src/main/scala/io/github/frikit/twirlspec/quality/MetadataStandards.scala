@@ -22,6 +22,7 @@ import io.github.frikit.twirlspec.expect.Violation
 import io.github.frikit.twirlspec.page.{Attrs, Text}
 import io.github.frikit.twirlspec.standards.Rule.Warning
 
+import java.util.Locale
 import scala.jdk.CollectionConverters._
 
 /** What a page says about itself in its head.
@@ -79,7 +80,7 @@ object MetadataStandards extends RuleSet {
         .asScala
         .toList
         .filter(Attrs.is(_, "name", "robots"))
-        .filter(_.attr("content").toLowerCase.contains("noindex"))
+        .filter(_.attr("content").toLowerCase(Locale.ROOT).contains("noindex"))
         .map(e =>
           Violation(
             "not-noindex",
