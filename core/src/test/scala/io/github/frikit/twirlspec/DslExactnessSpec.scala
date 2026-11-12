@@ -50,6 +50,12 @@ class DslExactnessSpec extends AnyWordSpec with Matchers with TwirlSpec {
       submitButtonText("Continue").check(
         page("""<form><button>Continue</button></form>""")
       ) mustBe empty
+      // with no type, one that invokes a command submits nothing
+      hasSubmitButton.check(
+        page(
+          """<form><button commandfor="help" command="show-modal">Help</button></form><dialog id="help">Help</dialog>"""
+        )
+      ) must not be empty
       // an image input says its alt
       submitButtonText("Continue").check(
         page(

@@ -139,8 +139,9 @@ object AriaStandards extends RuleSet {
           (AriaVocabulary.requiredAttributes.getOrElse(role, Set.empty)
             ++ whenFocusable ++ whenExpanded).toList.sorted
             .collect {
+              // a value of nothing but spaces says nothing, nor names anything
               case attr
-                  if !e.hasAttr(attr) &&
+                  if e.attr(attr).trim.isEmpty &&
                     !NativeState.get(role).exists(e.is) =>
                 Violation(
                   "aria-required-attr",

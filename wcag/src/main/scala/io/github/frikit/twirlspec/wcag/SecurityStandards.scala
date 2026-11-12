@@ -185,13 +185,13 @@ object SecurityStandards extends RuleSet {
       case _                       => "get"
     }
 
-  /** What can submit the form: the enabled submit buttons it owns. */
+  /** What can submit the form: the enabled controls it owns that can, as the
+    * page decides which can.
+    */
   private def submittersOf(page: Page, form: Element): List[Element] =
-    owned(
-      page,
-      form,
-      "button[type=submit], button:not([type]), input[type=submit], input[type=image]"
-    ).filterNot(page.isDisabled)
+    owned(page, form, "button, input")
+      .filter(page.canSubmit)
+      .filterNot(page.isDisabled)
 
   private def postsTo(page: Page, form: Element): List[String] = {
     def own(e: Element, attribute: String, fallback: String) =

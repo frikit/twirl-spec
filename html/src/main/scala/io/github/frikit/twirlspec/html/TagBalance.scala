@@ -60,7 +60,14 @@ object TagBalance {
 
   }
 
-  final private case class Open(name: String, line: Int)
+  /** An element left open, and, for a MathML annotation, whether its encoding
+    * hands its content back to HTML.
+    */
+  final private case class Open(
+      name: String,
+      line: Int,
+      handsBackToHtml: Boolean
+  )
 
   /** A `>` inside a quoted attribute value does not end the tag, so an
     * attribute holding markup, as `srcdoc` does, is not read as tags of its
@@ -68,7 +75,7 @@ object TagBalance {
     * element is still seen.
     */
   private val tag =
-    """<\s*(/?)\s*([a-zA-Z][a-zA-Z0-9:-]*)((?:[^>"']|"[^"]*"|'[^']*')*?|[^>]*?)(/?)\s*>""".r
+    """<\s*(/?)\s*([a-zA-Z][^\s/>]*)((?:[^>"']|"[^"]*"|'[^']*')*?|[^>]*?)(/?)\s*>""".r
 
   /** The same check against a Twirl template rather than a rendered page.
     *
@@ -102,10 +109,23 @@ object TagBalance {
       val line = lineOf(stripped, m.start)
 
       if (closing) closeTag(name, line, open, problems)
-      else if (HtmlVocabulary.void.contains(name)) ()
-      // a slash closes only an element of SVG or MathML: <div/> stays open
-      else if (selfClosed && (ForeignRoots(name) || inForeignContent(open))) ()
-      else open.push(Open(name, line))
+      else {
+        // a block's start ends a paragraph left open, as HTML lets it
+        if (ParagraphClosers(name) && open.nonEmpty && open.top.name == "p")
+          open.pop()
+        if (HtmlVocabulary.void.contains(name)) ()
+        // a slash closes only an element of SVG or MathML: <div/> stays open
+        else if (selfClosed && (ForeignRoots(name) || inForeignContent(open)))
+          ()
+        else
+          open.push(
+            Open(
+              name,
+              line,
+              name == "annotation-xml" && htmlEncoded(m.group(3))
+            )
+          )
+      }
     }
 
     problems ++= open.toList
@@ -118,26 +138,75 @@ object TagBalance {
 
   /** Where SVG and MathML hand back to HTML. */
   private val SvgIntegrationPoints = Set("foreignobject", "desc", "title")
-  private val MathIntegrationPoints =
-    Set("mi", "mo", "mn", "ms", "mtext", "annotation-xml")
+  private val MathIntegrationPoints = Set("mi", "mo", "mn", "ms", "mtext")
 
   /** Whether the next element sits in SVG or MathML: the nearest of a foreign
-    * root or one of its integration points decides.
+    * root or one of its integration points decides. An annotation-xml is one
+    * only where its encoding is HTML.
     */
   private def inForeignContent(open: mutable.Stack[Open]): Boolean = {
-    val names = open.toList.map(_.name)
-    names.zipWithIndex
+    val stack = open.toList
+    def within(i: Int, root: String) = stack.drop(i + 1).exists(_.name == root)
+    stack.zipWithIndex
       .collectFirst {
-        case (n, _) if ForeignRoots(n) => true
-        case (n, i)
-            if SvgIntegrationPoints(n) && names.drop(i + 1).contains("svg") =>
+        case (o, _) if ForeignRoots(o.name)                             => true
+        case (o, i) if SvgIntegrationPoints(o.name) && within(i, "svg") =>
           false
-        case (n, i)
-            if MathIntegrationPoints(n) && names.drop(i + 1).contains("math") =>
+        case (o, i)
+            if (MathIntegrationPoints(o.name) || o.handsBackToHtml) &&
+              within(i, "math") =>
           false
       }
       .getOrElse(false)
   }
+
+  private val Encoding =
+    """(?i)\bencoding\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))""".r
+
+  /** Whether an annotation-xml's encoding hands its content back to HTML. */
+  private def htmlEncoded(attributes: String): Boolean =
+    Encoding
+      .findFirstMatchIn(attributes)
+      .flatMap(m => (1 to 3).map(m.group).find(_ != null))
+      .exists(v =>
+        Set("text/html", "application/xhtml+xml")(v.toLowerCase(Locale.ROOT))
+      )
+
+  /** The start tags that end a paragraph left open, as HTML lets them. */
+  private val ParagraphClosers = Set(
+    "address",
+    "article",
+    "aside",
+    "blockquote",
+    "details",
+    "dialog",
+    "div",
+    "dl",
+    "fieldset",
+    "figcaption",
+    "figure",
+    "footer",
+    "form",
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
+    "header",
+    "hgroup",
+    "hr",
+    "main",
+    "menu",
+    "nav",
+    "ol",
+    "p",
+    "pre",
+    "search",
+    "section",
+    "table",
+    "ul"
+  )
 
   /** The parents before whose end a paragraph's end tag may not be left off. */
   private val KeepsParagraphOpen =

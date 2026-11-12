@@ -68,6 +68,10 @@ class RuleExactnessSpec extends AnyWordSpec with Matchers with TwirlSpec {
         SecurityStandards.all,
         form("""<button formmethod="">Go</button>""")
       ) must contain("no-password-in-get")
+      fired(
+        SecurityStandards.all,
+        form("""<button type="" formmethod="">Go</button>""")
+      ) must contain("no-password-in-get")
       // a disabled button sends nothing
       fired(
         SecurityStandards.all,
@@ -131,6 +135,11 @@ class RuleExactnessSpec extends AnyWordSpec with Matchers with TwirlSpec {
         AriaStandards.all,
         """<div role="scrollbar" aria-valuenow="50" aria-label="Scroll"></div>"""
       ) must contain("aria-required-attr")
+      // an empty reference controls nothing
+      fired(
+        AriaStandards.all,
+        """<input role="combobox" aria-expanded="true" aria-label="Country" aria-controls=" ">"""
+      ) must contain("aria-required-attr")
       // only a combobox is asked, whatever else is expanded
       fired(
         AriaStandards.all,
@@ -147,6 +156,11 @@ class RuleExactnessSpec extends AnyWordSpec with Matchers with TwirlSpec {
         HtmlStandards.all,
         """<button type="button" popovertarget="help" onclick="go()">Help</button><div id="help" popover>Help text</div>"""
       ) must not contain "known-attributes"
+      fired(
+        HtmlStandards.all,
+        """<div onpointerenter="void 0">Text</div>"""
+      ) must
+        not contain "known-attributes"
       val custom =
         fired(HtmlStandards.all, """<flag-icon country="nl"></flag-icon>""")
       custom must not contain "known-elements"
@@ -169,6 +183,19 @@ class RuleExactnessSpec extends AnyWordSpec with Matchers with TwirlSpec {
       TagBalance.check("""<main><a href="/x"><p>Link</a></main>""") must
         not be empty
       TagBalance.check("<main><div><p>Text</div></main>") mustBe empty
+      // though the next paragraph ends one there
+      TagBalance.check(
+        """<main><a href="/x"><p>First<p>Second</p></a></main>"""
+      ) mustBe empty
+      // a name is read whole, a custom element's dots and all
+      TagBalance.check("<main><x-a.foo></x-a.bar></main>") must not be empty
+      // a MathML annotation is HTML only when its encoding says so
+      TagBalance.check(
+        """<main><math><semantics><mi>x</mi><annotation-xml encoding="application/mathml+xml"><mrow/></annotation-xml></semantics></math></main>"""
+      ) mustBe empty
+      TagBalance.check(
+        """<main><math><annotation-xml encoding="text/html"><div/></annotation-xml></math></main>"""
+      ) must not be empty
       // a comment marker inside an attribute is no comment
       TagBalance.check(
         """<main><div title="<!--">x</div></main>"""

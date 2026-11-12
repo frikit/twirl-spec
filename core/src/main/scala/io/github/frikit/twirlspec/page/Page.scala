@@ -745,9 +745,17 @@ final class Page(
   }
 
   /** Whether a button or an input can submit its form. */
-  private def canSubmit(e: Element): Boolean = {
+  private[twirlspec] def canSubmit(e: Element): Boolean = {
     val kind = e.attr("type").toLowerCase(Locale.ROOT)
-    if (e.tagName() == "button") kind != "button" && kind != "reset"
+    if (e.tagName() == "button") kind match {
+      case "submit"           => true
+      case "button" | "reset" => false
+      // HTML's Auto state: it submits unless it invokes a command, or is a
+      // select's own button
+      case _ =>
+        !e.hasAttr("commandfor") &&
+        !Option(e.parent()).exists(_.tagName() == "select")
+    }
     else kind == "submit" || kind == "image"
   }
 

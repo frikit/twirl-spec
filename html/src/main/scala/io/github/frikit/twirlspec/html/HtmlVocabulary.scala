@@ -617,6 +617,37 @@ object HtmlVocabulary {
     "onwheel"
   )
 
+  /** The handlers other specifications add to every element: pointer events,
+    * CSS animations and transitions, selection and touch.
+    */
+  val eventHandlerExtensions: Set[String] = Set(
+    "ongotpointercapture",
+    "onlostpointercapture",
+    "onpointercancel",
+    "onpointerdown",
+    "onpointerenter",
+    "onpointerleave",
+    "onpointermove",
+    "onpointerout",
+    "onpointerover",
+    "onpointerrawupdate",
+    "onpointerup",
+    "onanimationcancel",
+    "onanimationend",
+    "onanimationiteration",
+    "onanimationstart",
+    "ontransitioncancel",
+    "ontransitionend",
+    "ontransitionrun",
+    "ontransitionstart",
+    "onselectionchange",
+    "onselectstart",
+    "ontouchcancel",
+    "ontouchend",
+    "ontouchmove",
+    "ontouchstart"
+  )
+
   /** A character a custom element's name may hold after its first letter. */
   private val PCENChar =
     "[-._0-9a-z\\u00B7\\u00C0-\\u00D6\\u00D8-\\u00F6\\u00F8-\\u037D\\u037F-\\u1FFF\\u200C-\\u200D\\u203F-\\u2040\\u2070-\\u218F\\u2C00-\\u2FEF\\u3001-\\uD7FF\\uF900-\\uFDCF\\uFDF0-\\uFFFD\\x{10000}-\\x{EFFFF}]"
@@ -656,7 +687,7 @@ object HtmlVocabulary {
       n.startsWith
     ) ||
     globalAttributes.contains(n) || elementAttributes.contains(n) ||
-    eventHandlerAttributes.contains(n)
+    eventHandlerAttributes.contains(n) || eventHandlerExtensions.contains(n)
   }
 
 }
