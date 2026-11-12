@@ -10,6 +10,24 @@ release, and each one has a GitHub Release whose notes are its section here. Eve
 recorded in full; earlier lines are kept to one entry each, so the file stays
 readable.
 
+## [2.11.0] - 2026-11-12
+
+### Added
+
+- `summaryList` takes a row's key as any expected value as well as a message key,
+  so a key with arguments can be stated: `messageKey("x.dob", name)`, new to the
+  DSL, gives a key its arguments, and `literal`, `matching` and `anyText` read as
+  they do elsewhere. A key given as a string is still a message key, and a failure
+  shows each key as stated.
+
+### Changed
+
+- `tags-are-balanced` names the block that ended a paragraph whose `</p>` then
+  closes nothing: "`</p>` on line 6 closes nothing that was open: `<ul>` on line 3
+  ended the `<p>` from line 2". While the element the paragraph was in is still
+  open, `TagBalance` reports such a `</p>` as `EndedParagraph`, a new `Problem`,
+  where it reported `StrayClose`.
+
 ## [2.10.0] - 2026-11-12
 
 ### Changed
@@ -933,6 +951,7 @@ them in `twirl-spec-all`. The renames a service built against a 0.x snapshot
 would meet are listed in [the adoption guide](docs/adopting.md).
 
 [Unreleased]: https://github.com/frikit/twirl-spec/compare/v2.9.0...HEAD
+[2.11.0]: https://github.com/frikit/twirl-spec/compare/v2.10.0...v2.11.0
 [2.10.0]: https://github.com/frikit/twirl-spec/compare/v2.9.0...v2.10.0
 [2.9.0]: https://github.com/frikit/twirl-spec/compare/v2.8.0...v2.9.0
 [2.8.0]: https://github.com/frikit/twirl-spec/compare/v2.7.0...v2.8.0

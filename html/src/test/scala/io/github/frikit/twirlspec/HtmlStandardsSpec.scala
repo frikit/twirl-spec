@@ -71,6 +71,23 @@ class HtmlStandardsSpec
       )
     }
 
+    "name the block that ended a paragraph its end tag then finds closed" in {
+      TagBalance
+        .check("<main>\n<p>Intro\n<ul>\n<li>a</li>\n</ul>\n</p>\n</main>")
+        .map(_.message) mustBe List(
+        "</p> on line 6 closes nothing that was open: <ul> on line 3 ended the <p> from line 2"
+      )
+      TagBalance.check("<p>a<div>b</div></p>").map(_.message) mustBe List(
+        "</p> on line 1 closes nothing that was open: <div> on line 1 ended the <p> from line 1"
+      )
+      // past the end of the paragraph's parent, the </p> meant something else
+      TagBalance
+        .check("<main><div><p>a<ul></ul></div></p></main>")
+        .map(_.message) mustBe List(
+        "</p> on line 1 closes nothing that was open"
+      )
+    }
+
     "report a close tag when nothing at all is open" in {
       TagBalance.check("</div>").map(_.message) mustBe List(
         "</div> on line 1 closes nothing that was open"

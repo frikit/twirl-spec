@@ -165,6 +165,29 @@ class DslExactnessSpec extends AnyWordSpec with Matchers with TwirlSpec {
           page(twice)
         ) must not be empty
     }
+
+    "state a summary list's keys with their arguments, or as any expected value" in {
+      val list = page(
+        """<dl class="govuk-summary-list">
+          |<div class="govuk-summary-list__row"><dt class="govuk-summary-list__key">Name</dt><dd class="govuk-summary-list__value">Ada</dd></div>
+          |<div class="govuk-summary-list__row"><dt class="govuk-summary-list__key">Does Ada live in the UK?</dt><dd class="govuk-summary-list__value">Yes</dd></div>
+          |</dl>""".stripMargin
+      )
+      summaryList(
+        "checkAnswers.name" -> "Ada",
+        messageKey("livesInUk.heading", "Ada") -> "Yes"
+      ).check(list) mustBe empty
+      summaryList(literal("Name") -> "Ada", matching("UK".r) -> "Yes")
+        .check(list) mustBe empty
+      // another argument is another key, and a failure shows each key as stated
+      summaryList(
+        "checkAnswers.name" -> "Ada",
+        messageKey("livesInUk.heading", "Bob") -> "Yes"
+      ).check(list) must not be empty
+      summaryList(literal("Name") -> "Ada", anyText -> "No")
+        .check(list)
+        .flatMap(_.expected) mustBe List("Name = Ada | anything non-empty = No")
+    }
   }
 
 }
