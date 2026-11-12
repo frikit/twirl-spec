@@ -79,12 +79,14 @@ trait PageCases extends TwirlSpec with I18nChecks {
 
   /** A page with a form: blank, with the errors of an empty submission, and
     * with those of each submission named here. The empty submission is the
-    * blank form sent untouched, as a browser sends it, with each of its fields
-    * empty rather than missing, so it meets the form's own messages rather than
-    * Play's generic `error.required`. Where more than one form on the page
-    * could send the fields, which is sent is the user's choice, so it sends
-    * nothing. A submission that gives no errors fails its check, because that
-    * state would show nothing the blank form does not.
+    * blank form sent untouched, as a browser sends it: each control with the
+    * value it renders with, so a field left empty arrives empty rather than
+    * missing and meets the form's own message rather than Play's generic
+    * `error.required`, and an unchecked or disabled control is left out. Where
+    * it cannot tell which of several forms holds the fields, as when more than
+    * one could send them or none is named after them, it sends nothing. A
+    * submission that gives no errors fails its check, because that state would
+    * show nothing the blank form does not.
     */
   def formPage[A](
       label: String,
@@ -106,7 +108,7 @@ trait PageCases extends TwirlSpec with I18nChecks {
           )
         case None =>
           (
-            "nothing, as more than one form on the page could send the fields,",
+            "nothing, as which of the page's forms holds the fields cannot be told,",
             blank.bind(Map.empty[String, String])
           )
       }
@@ -137,8 +139,10 @@ trait PageCases extends TwirlSpec with I18nChecks {
   /** What a browser sends when the blank form is submitted untouched, each name
     * with every value it sends, in order: the controls of the page's one form,
     * or of the one form among several that holds this form's fields. A page
-    * with no form sends all it has. None where more than one form could send
-    * the fields, as which of them is sent is the user's choice.
+    * with no form sends all it has. None where which form holds the fields
+    * cannot be told: more than one could send them, as which is sent is the
+    * user's choice, or among several none is named after a mapping key, as a
+    * list field's is not.
     */
   private def sentUntouched(
       page: Page,

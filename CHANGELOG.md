@@ -15,18 +15,23 @@ readable.
 ### Fixed
 
 - `formPage`'s empty submission is the blank form sent untouched, as a browser sends
-  it: the controls of the page's form, each field empty rather than missing, bound as
-  Play binds a request. It bound nothing at all, which Play answers with its generic
-  `error.required`, so a form whose fields have messages of their own showed the
-  generic one on each, a state no user meets: on a real service, two fields both
-  reading "Please enter a value" made `link-names-distinct` warn. Of several forms on a
-  page, the one that holds the fields is sent; where two or more could send them,
-  which is sent is the user's choice, so nothing is, as before.
+  it: each control of the page's form with the value it renders with, bound as Play
+  binds a request. A field left empty arrives empty rather than missing, a hidden
+  value, a selected option or a checked choice keeps its value, and an unchecked or
+  disabled control is left out. It bound nothing at all, which Play answers with its
+  generic `error.required`, so a form whose fields have messages of their own showed
+  the generic one on each, a state no user meets: on a real service, two fields both
+  reading "Please enter a value" made `link-names-distinct` warn. Of several forms on
+  a page, the one with a control named after one of the form's fields is sent. Where
+  that cannot be told, because two or more could send the fields or none is named
+  after them, as a list field's are not, nothing is sent, as before.
 
 These can fail a page that passed:
 
-- The `with errors` state shows the form's own error messages, so the rules and the
-  language comparison now read those.
+- The `with errors` state shows the errors of what a browser sends, which can differ
+  from those of sending nothing: the form's own messages rather than Play's, and none
+  for a field whose rendered value is valid. The rules and the language comparison
+  read that page.
 - A form whose untouched submission is valid fails `formPage`'s check, naming the
   `with errors` state, as a form whose empty submission gave no errors always did: one
   of fields Play's `text` takes empty, say, which only the missing fields of an empty

@@ -875,10 +875,10 @@ class EveryPageSpec extends ViewSpecBase with PageCatalogue {
 
 A form page is rendered blank, with the errors of an empty submission, and with
 those of each submission named; a submission that gives no errors fails its test.
-The empty submission is the blank form sent untouched, as a browser sends it, so
-each field arrives empty and meets the form's own message rather than Play's
-generic `error.required`. Where more than one form on the page could send the
-fields, which is sent is the user's choice, so it sends nothing.
+The empty submission is the blank form sent untouched, as a browser sends it:
+each control with the value it renders with, so a field left empty meets the
+form's own message rather than Play's generic `error.required`. Where it cannot
+tell which of several forms holds the fields, it sends nothing.
 Nothing is rendered until a test runs, so each state renders in the language
 under test. Every state runs in every language, and a failure reports each that
 went wrong, by state and language.
