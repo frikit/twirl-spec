@@ -46,8 +46,12 @@ object SecurityStandards extends RuleSet {
           .filter(owned(page, _, "input[type=password]").nonEmpty)
           // by its own method, or by a button of its own that sends it by another
           .filter(form =>
-            form.is("form[method=get], form:not([method])") ||
-              submittersOf(page, form).exists(Attrs.is(_, "formmethod", "get"))
+            methodOf(form.attr("method")) == "get" ||
+              submittersOf(page, form).exists(s =>
+                s.hasAttr("formmethod") && methodOf(
+                  s.attr("formmethod")
+                ) == "get"
+              )
           )
           .map { form =>
             Violation(
@@ -171,6 +175,15 @@ object SecurityStandards extends RuleSet {
       .asScala
       .toList
       .filter(page.formOwner(_).contains(form))
+
+  /** The method a method or formmethod value names, in any case: GET where it
+    * names none HTML knows, as where a form has none at all.
+    */
+  private def methodOf(value: String): String =
+    value.toLowerCase(Locale.ROOT) match {
+      case m @ ("post" | "dialog") => m
+      case _                       => "get"
+    }
 
   /** What can submit the form: the enabled submit buttons it owns. */
   private def submittersOf(page: Page, form: Element): List[Element] =

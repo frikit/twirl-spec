@@ -676,12 +676,32 @@ final case class DropdownExpectation(
     Matching.exactlyOne(rule, sel) match {
       case Left(v)        => Seq(v)
       case Right(element) =>
-        val id = if (element.id().nonEmpty) element.id() else name
         val actual =
           element.select("option").asScala.toList.map(_.attr("value"))
 
+        // A label's `for` names an id, never a name, so a select with no id
+        // has no label to find.
         val labelIssues =
-          FormChecks.labelIssues(page, rule, id, label, labelRequired = true)
+          if (element.id().nonEmpty)
+            FormChecks.labelIssues(
+              page,
+              rule,
+              element.id(),
+              label,
+              labelRequired = true
+            )
+          else
+            Seq(
+              Violation
+                .missing(
+                  s"$rule label",
+                  "label[for]",
+                  "field has no id, so no label[for] can name it"
+                )
+                .withHint(
+                  "WCAG 3.3.2 — every input needs a label whose `for` matches the input id"
+                )
+            )
         val valueIssues = optionValues.toSeq.flatMap { expected =>
           if (expected.forall(actual.contains)) Nil
           else

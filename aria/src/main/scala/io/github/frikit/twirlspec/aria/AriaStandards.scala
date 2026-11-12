@@ -599,7 +599,12 @@ object AriaStandards extends RuleSet {
       case "option" if e.closest("select, datalist") != null => Some("option")
       case "optgroup" if e.closest("select") != null         => Some("group")
       case "input" if Attrs.is(e, "type", "radio")           => Some("radio")
-      case _                                                 => None
+      // a native table's parts carry the roles a table's and a row's ask for
+      case "tr"                        => Some("row")
+      case "td"                        => Some("cell")
+      case "th"                        => Some("columnheader")
+      case "thead" | "tbody" | "tfoot" => Some("rowgroup")
+      case _                           => None
     })
 
   private val Presentational = Set("presentation", "none")

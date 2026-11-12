@@ -20,7 +20,7 @@ import io.github.frikit.twirlspec.aria.AriaStandards
 import io.github.frikit.twirlspec.govuk.GovukStandards
 import io.github.frikit.twirlspec.page.Page
 import io.github.frikit.twirlspec.standards.Rule
-import io.github.frikit.twirlspec.wcag.SecurityStandards
+import io.github.frikit.twirlspec.wcag.{SecurityStandards, WcagStandards}
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 
@@ -54,6 +54,15 @@ class RuleExactnessSpec extends AnyWordSpec with Matchers with TwirlSpec {
         contain("no-password-in-get")
       fired(SecurityStandards.all, form("<button>Go</button>")) must
         not contain "no-password-in-get"
+      // a method HTML does not know is GET, the form's or a button's
+      fired(
+        SecurityStandards.all,
+        form("<button>Go</button>").replace("method=\"post\"", "method=\"\"")
+      ) must contain("no-password-in-get")
+      fired(
+        SecurityStandards.all,
+        form("""<button formmethod="">Go</button>""")
+      ) must contain("no-password-in-get")
       // a disabled button sends nothing
       fired(
         SecurityStandards.all,
@@ -82,6 +91,27 @@ class RuleExactnessSpec extends AnyWordSpec with Matchers with TwirlSpec {
         """<div class="govuk-error-summary"><ul class="govuk-error-summary__list">
           |<li><a href="#">Enter a name</a></li></ul></div>""".stripMargin
       ) must contain("error-summary-targets")
+    }
+
+    "ask a row for its cells, and a hidden control for no name" in {
+      fired(
+        AriaStandards.all,
+        """<div role="table" aria-label="Results"><div role="row"></div></div>"""
+      ) must contain("aria-required-children")
+      fired(
+        AriaStandards.all,
+        """<div role="table" aria-label="Results"><div role="row"><div role="cell">1</div></div></div>"""
+      ) must not contain "aria-required-children"
+      // native rows and cells count, with or without a role written on them
+      fired(
+        AriaStandards.all,
+        """<table role="table" aria-label="R"><tr role="row"><td>1</td></tr></table>"""
+      ) must not contain "aria-required-children"
+      fired(
+        WcagStandards.all,
+        """<div hidden><input name="website"></div>"""
+      ) must
+        not contain "labelled-controls"
     }
 
     "count native options and radios as the children their roles need" in {

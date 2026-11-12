@@ -289,6 +289,7 @@ object AriaVocabulary {
     "menu" -> Set("menuitem", "menuitemcheckbox", "menuitemradio", "group"),
     "menubar" -> Set("menuitem", "menuitemcheckbox", "menuitemradio", "group"),
     "radiogroup" -> Set("radio"),
+    "row" -> Set("cell", "columnheader", "gridcell", "rowheader"),
     "rowgroup" -> Set("row"),
     "table" -> Set("row", "rowgroup"),
     "tablist" -> Set("tab"),

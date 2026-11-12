@@ -213,15 +213,20 @@ object WcagStandards extends RuleSet {
         Criterion("3.3.2", "Labels or Instructions", Level.A, WcagVersion.V2_0)
       )
     ) { page =>
-      page.formControls.filter(page.accessibleName(_).isEmpty).map { e =>
-        Violation(
-          "labelled-controls",
-          s"<${e.tagName()}${describeControl(e)}> has no label",
-          expected =
-            Some(s"""label[for="${e.id()}"], aria-label or aria-labelledby"""),
-          actual = Some(Text.preview(e.outerHtml(), 120))
-        ).withHint("WCAG 3.3.2 / 4.1.2")
-      }
+      // one nobody can see or reach, as a hidden honeypot, needs no name
+      page.formControls
+        .filter(page.isExposed)
+        .filter(page.accessibleName(_).isEmpty)
+        .map { e =>
+          Violation(
+            "labelled-controls",
+            s"<${e.tagName()}${describeControl(e)}> has no label",
+            expected = Some(
+              s"""label[for="${e.id()}"], aria-label or aria-labelledby"""
+            ),
+            actual = Some(Text.preview(e.outerHtml(), 120))
+          ).withHint("WCAG 3.3.2 / 4.1.2")
+        }
     },
     Rule(
       "grouped-choices",

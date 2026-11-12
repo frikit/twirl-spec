@@ -304,11 +304,11 @@ final class Page(
   }
 
   /** What a textarea holds, as a browser reads it: its text as written, with
-    * its line breaks and spaces, less the one line break HTML drops right after
-    * the opening tag.
+    * its line breaks and spaces. The parser has already dropped the one line
+    * break HTML drops right after the opening tag, so a second stays.
     */
   private[twirlspec] def textareaValue(e: Element): String =
-    e.wholeText().replaceAll("\r\n?", "\n").stripPrefix("\n")
+    e.wholeText().replaceAll("\r\n?", "\n")
 
   /** The form a control belongs to. A `form` attribute names it by id, and then
     * it is that form or, where the id names no form, none at all; without one

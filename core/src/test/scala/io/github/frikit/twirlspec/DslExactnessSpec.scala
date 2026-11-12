@@ -67,6 +67,17 @@ class DslExactnessSpec extends AnyWordSpec with Matchers with TwirlSpec {
       expectation.check(
         page("""<label for="x">Name</label><input id="x" name="x">""")
       ) mustBe empty
+      // a dropdown's label names its id too
+      dropdown("x").check(
+        page(
+          """<label for="x">Name</label><select name="x"><option>A</option></select>"""
+        )
+      ) must not be empty
+      dropdown("x").check(
+        page(
+          """<label for="x">Name</label><select id="x" name="x"><option>A</option></select>"""
+        )
+      ) mustBe empty
       // one its legend labels asks for no label
       textInput("x").labelledByLegend.check(
         page("""<fieldset><legend>Name</legend><input name="x"></fieldset>""")
@@ -102,6 +113,11 @@ class DslExactnessSpec extends AnyWordSpec with Matchers with TwirlSpec {
         page(s"""<form><input name="n" $attributes></form>""")
           .formValues("n") mustBe sent
       }
+    }
+
+    "keep a textarea's second leading newline, as the parser drops only one" in {
+      page("<form><textarea name=\"n\">\n\nx</textarea></form>")
+        .formValues("n") mustBe "\nx"
     }
 
     "write a date and time in ASCII digits whatever the default locale" in {
