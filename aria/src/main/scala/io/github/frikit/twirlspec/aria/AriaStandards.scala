@@ -23,6 +23,7 @@ import io.github.frikit.twirlspec.standards.{Rule, RuleSet}
 import org.jsoup.nodes.{Element, TextNode}
 
 import java.util.regex.Pattern
+import java.util.Locale
 import scala.jdk.CollectionConverters._
 
 /** The checks an automated accessibility tool makes that need no browser.
@@ -75,7 +76,10 @@ object AriaStandards extends RuleSet {
         AriaVocabulary.tokenValues.toSeq.sortBy(_._1).flatMap {
           case (attr, allowed) =>
             val value = e.attr(attr)
-            if (e.hasAttr(attr) && !allowed.contains(value.toLowerCase.trim))
+            if (
+              e.hasAttr(attr) && !allowed
+                .contains(value.toLowerCase(Locale.ROOT).trim)
+            )
               Seq(
                 Violation(
                   "aria-attr-value-is-allowed",
@@ -105,7 +109,7 @@ object AriaStandards extends RuleSet {
     ) { page =>
       elementsWith(page, _.hasAttr("role")).flatMap { e =>
         e.attr("role").split("\\s+").filter(_.nonEmpty).toSeq.flatMap { role =>
-          if (AriaVocabulary.roles.contains(role.toLowerCase)) Nil
+          if (AriaVocabulary.roles.contains(role.toLowerCase(Locale.ROOT))) Nil
           else
             Seq(
               Violation(
@@ -250,7 +254,7 @@ object AriaStandards extends RuleSet {
           .select("[accesskey]")
           .asScala
           .toSeq
-          .groupBy(_.attr("accesskey").toLowerCase)
+          .groupBy(_.attr("accesskey").toLowerCase(Locale.ROOT))
           .toSeq
           .sortBy(_._1)
           .collect {
@@ -270,7 +274,7 @@ object AriaStandards extends RuleSet {
       "an autocomplete attribute uses tokens the specification defines"
     ) { page =>
       page.document.select("[autocomplete]").asScala.toSeq.flatMap { e =>
-        val raw = e.attr("autocomplete").toLowerCase.trim
+        val raw = e.attr("autocomplete").toLowerCase(Locale.ROOT).trim
         if (raw.isEmpty || autocompleteIsValid(e, raw)) Nil
         else
           Seq(
@@ -580,7 +584,7 @@ object AriaStandards extends RuleSet {
       e.attr("role")
         .split("\\s+")
         .find(_.nonEmpty)
-        .map(_.toLowerCase)
+        .map(_.toLowerCase(Locale.ROOT))
         // A browser ignores presentation on what it has to expose anyway.
         .filterNot(role => Presentational(role) && exposed(e))
     explicit.orElse(implicitRole(e))
@@ -607,7 +611,7 @@ object AriaStandards extends RuleSet {
     */
   private def exposed(e: Element): Boolean =
     focusable(e) || e.attributes.asScala.exists { a =>
-      val key = a.getKey.toLowerCase
+      val key = a.getKey.toLowerCase(Locale.ROOT)
       AriaVocabulary.globalAttributes(key) ||
       key == "aria-hidden" && !a.getValue.trim.equalsIgnoreCase("true")
     }

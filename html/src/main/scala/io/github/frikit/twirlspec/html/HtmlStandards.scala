@@ -19,6 +19,7 @@ package io.github.frikit.twirlspec.html
 import io.github.frikit.twirlspec.expect.Violation
 import io.github.frikit.twirlspec.standards.{Rule, RuleSet}
 
+import java.util.Locale
 import scala.jdk.CollectionConverters._
 
 /** Basic HTML validity, checked without a browser or a 20-dependency validator.
@@ -51,7 +52,7 @@ class HtmlStandards(attributePrefixes: Set[String]) extends RuleSet {
       "every element is one the HTML specification defines"
     ) { page =>
       page.document.getAllElements.asScala.toSeq
-        .map(_.tagName.toLowerCase)
+        .map(_.tagName.toLowerCase(Locale.ROOT))
         .distinct
         .sorted
         .filterNot(
@@ -76,7 +77,10 @@ class HtmlStandards(attributePrefixes: Set[String]) extends RuleSet {
       page.document.getAllElements.asScala.toSeq
         .flatMap(e =>
           e.attributes.asScala.map(a =>
-            (e.tagName.toLowerCase, a.getKey.toLowerCase)
+            (
+              e.tagName.toLowerCase(Locale.ROOT),
+              a.getKey.toLowerCase(Locale.ROOT)
+            )
           )
         )
         .distinct

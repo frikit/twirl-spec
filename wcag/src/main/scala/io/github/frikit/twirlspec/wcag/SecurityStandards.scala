@@ -26,6 +26,7 @@ import org.jsoup.nodes.Element
 import java.net.URLDecoder
 import java.nio.charset.StandardCharsets
 import scala.jdk.CollectionConverters._
+import java.util.Locale
 import scala.util.Try
 
 /** Markup that is a safety problem rather than an accessibility one. */
@@ -90,7 +91,10 @@ object SecurityStandards extends RuleSet {
       page.links.elements
         .filter(_.attr("target") == "_blank")
         .filterNot(
-          _.attr("rel").toLowerCase.split("\\s+").exists(seversTheOpener)
+          _.attr("rel")
+            .toLowerCase(Locale.ROOT)
+            .split("\\s+")
+            .exists(seversTheOpener)
         )
         .map(e =>
           Violation(

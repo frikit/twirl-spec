@@ -20,6 +20,7 @@ import io.github.frikit.twirlspec.render.Templates
 
 import java.nio.file.Path
 import scala.annotation.tailrec
+import java.util.Locale
 import scala.collection.mutable
 
 /** Whether every element that was opened was closed, read from the source.
@@ -96,7 +97,7 @@ object TagBalance {
 
     tag.findAllMatchIn(stripped).foreach { m =>
       val closing = m.group(1) == "/"
-      val name = m.group(2).toLowerCase
+      val name = m.group(2).toLowerCase(Locale.ROOT)
       val selfClosed = m.group(4) == "/"
       val line = lineOf(stripped, m.start)
 
@@ -158,7 +159,7 @@ object TagBalance {
     HtmlVocabulary.rawText.foreach { el =>
       val start = s"(?i)<$el\\b[^>]*>".r
       start.findAllMatchIn(source).foreach { m =>
-        val closeAt = source.toLowerCase.indexOf(s"</$el", m.end)
+        val closeAt = source.toLowerCase(Locale.ROOT).indexOf(s"</$el", m.end)
         if (closeAt > m.end) blank(m.end, closeAt)
       }
     }

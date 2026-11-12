@@ -23,6 +23,7 @@ import io.github.frikit.twirlspec.standards.Rule
 import play.api.i18n.{Lang, Messages, MessagesImpl}
 import play.twirl.api.Html
 
+import java.util.Locale
 import scala.collection.mutable
 import scala.jdk.CollectionConverters._
 
@@ -288,7 +289,7 @@ final class Page(
           case "textarea" => List(textareaValue(e))
           case "select"   => selectedOptions(e).map(optionValue)
           case _          =>
-            e.attr("type").toLowerCase(java.util.Locale.ROOT) match {
+            e.attr("type").toLowerCase(Locale.ROOT) match {
               case "checkbox" =>
                 if (e.hasAttr("checked")) List(checkedValue(e)) else Nil
               case "radio" =>
@@ -412,7 +413,8 @@ final class Page(
     * case, as a language tag is read.
     */
   private[twirlspec] def declaresItsLanguage(declared: String): Boolean =
-    declared.toLowerCase.takeWhile(_ != '-') == lang.language.toLowerCase
+    declared.toLowerCase(Locale.ROOT).takeWhile(_ != '-') == lang.language
+      .toLowerCase(Locale.ROOT)
 
   /** The `<h1>` elements; a page should have exactly one. */
   def h1: Selection = named("h1", "h1")
@@ -456,8 +458,8 @@ final class Page(
         .filter { e =>
           !e.hasAttr("hreflang") || !e
             .attr("hreflang")
-            .toLowerCase
-            .startsWith(lang.code.toLowerCase)
+            .toLowerCase(Locale.ROOT)
+            .startsWith(lang.code.toLowerCase(Locale.ROOT))
         }
     record(elements)
     Selection("language toggle", selector, elements)
@@ -611,7 +613,8 @@ final class Page(
   def formAction: Option[String] = forms.attr("action")
 
   /** The method of the first form, upper-cased, if there is one. */
-  def formMethod: Option[String] = forms.attr("method").map(_.toUpperCase)
+  def formMethod: Option[String] =
+    forms.attr("method").map(_.toUpperCase(Locale.ROOT))
 
   /** The inputs with this name or id. */
   def input(nameOrId: String): Selection =
@@ -928,7 +931,9 @@ object Page {
       .replaceAll(StyleNoise, "")
       .split(";")
       .toList
-      .map(_.split(":", 2).map(_.replaceAll("\\s+", "").toLowerCase))
+      .map(
+        _.split(":", 2).map(_.replaceAll("\\s+", "").toLowerCase(Locale.ROOT))
+      )
       .collect { case Array(`property`, value) => value }
     declared
       .filter(_.endsWith("!important"))

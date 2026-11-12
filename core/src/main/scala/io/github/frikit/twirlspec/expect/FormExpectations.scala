@@ -21,6 +21,7 @@ import io.github.frikit.twirlspec.expect.Matching._
 import io.github.frikit.twirlspec.page.{Page, Text}
 import io.github.frikit.twirlspec.standards.Rule
 
+import java.util.Locale
 import scala.jdk.CollectionConverters._
 
 /** Expectations about form controls and the error states they can be in. */
@@ -134,7 +135,8 @@ trait FormExpectations {
       if (forms.isEmpty) Seq(Violation.missing("form", "form"))
       else {
         val actualUrl = forms.attr("action").getOrElse("")
-        val actualMethod = forms.attr("method").fold("GET")(_.toUpperCase)
+        val actualMethod =
+          forms.attr("method").fold("GET")(_.toUpperCase(Locale.ROOT))
         val urlIssue =
           if (actualUrl == url) Nil
           else Seq(Violation.mismatch("form action", url, actualUrl))

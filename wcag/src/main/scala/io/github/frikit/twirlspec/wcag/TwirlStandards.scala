@@ -21,6 +21,7 @@ import io.github.frikit.twirlspec.standards._
 import io.github.frikit.twirlspec.expect.{Matching, Violation}
 import io.github.frikit.twirlspec.page.{Text, Tree}
 
+import java.util.Locale
 import scala.jdk.CollectionConverters._
 
 /** Mistakes specific to rendering a Twirl template with Play i18n. */
@@ -166,7 +167,7 @@ object TwirlStandards extends RuleSet {
     KeyShaped.pattern.matcher(text).matches() &&
       !text.startsWith("www.") &&
       !VersionShaped.pattern.matcher(text).matches() &&
-      !FileLike.contains(text.split("\\.").last.toLowerCase) &&
+      !FileLike.contains(text.split("\\.").last.toLowerCase(Locale.ROOT)) &&
       (!NameShaped.pattern.matcher(text).matches() ||
         families.contains(text.takeWhile(_ != '.')))
 

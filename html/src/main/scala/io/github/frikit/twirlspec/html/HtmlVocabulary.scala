@@ -16,6 +16,8 @@
 
 package io.github.frikit.twirlspec.html
 
+import java.util.Locale
+
 /** The parts of the HTML vocabulary a checker needs to know to tell a mistake
   * from a shorthand.
   */
@@ -508,13 +510,13 @@ object HtmlVocabulary {
 
   /** Whether the HTML specification defines an element with this name. */
   def isKnownElement(name: String): Boolean =
-    elements.contains(name.toLowerCase)
+    elements.contains(name.toLowerCase(Locale.ROOT))
 
   /** `data-*` and `aria-*` are open sets by design, and a framework may add its
     * own prefix.
     */
   def isKnownAttribute(name: String, extraPrefixes: Set[String]): Boolean = {
-    val n = name.toLowerCase
+    val n = name.toLowerCase(Locale.ROOT)
     n.startsWith("data-") || n.startsWith("aria-") || extraPrefixes.exists(
       n.startsWith
     ) ||

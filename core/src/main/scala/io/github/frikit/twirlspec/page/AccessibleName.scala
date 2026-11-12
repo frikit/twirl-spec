@@ -18,6 +18,7 @@ package io.github.frikit.twirlspec.page
 
 import org.jsoup.nodes.{Document, Element, TextNode}
 
+import java.util.Locale
 import scala.jdk.CollectionConverters._
 
 /** The name an assistive technology announces for an element.
@@ -93,7 +94,7 @@ object AccessibleName {
 
   private def valueIsTheName(e: Element): Boolean =
     e.tagName() == "input" &&
-      ValueNamedInputTypes.contains(e.attr("type").toLowerCase)
+      ValueNamedInputTypes.contains(e.attr("type").toLowerCase(Locale.ROOT))
 
   /** Content taken out of the accessibility tree. It is announced to nobody, so
     * it names nothing it sits inside: the arrow in
