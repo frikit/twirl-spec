@@ -85,16 +85,19 @@ These can fail a page that passed:
 - `no-password-in-get` takes an empty `method` or `formmethod`, or one HTML does
   not know, as GET, as a browser does, and counts every button that can submit.
 - `submitButton`, `submitButtonText` and `hasSubmitButton` take the control with
-  the id `submit` first, then the controls inside a form, then any other that can
-  submit, where 2.9.0 took a `type="submit"` first: beside a
-  `<button type="submit">Save draft</button>`, a `<button id="submit">Continue</button>`
-  is now the submit button. They no longer take a `type="button"`, or a button
-  with no type that invokes a command.
+  the id `submit` first, then the controls a form owns, inside it or naming it with
+  `form`, then any other that can submit, where 2.9.0 took a `type="submit"`
+  first: beside a `<button type="submit">Save draft</button>`, a
+  `<button id="submit">Continue</button>` is now the submit button, and a button
+  with no type that names the form from outside it is one more. They no longer
+  take a `type="button"`, or a button with no type that invokes a command.
 - `labelled-controls` reports a control wrapped in a label whose `for` names
   another element, and each control after the first in a label without `for`: a
   browser names neither by that label.
-- A textarea's value keeps a second leading newline, so `textArea(...).withValue`
-  and `formValues` no longer match a value written without it.
+- A textarea's value keeps a second leading newline: `page.formValues` and
+  `formSubmission` give it, and `textArea(...).withValue` no longer matches a value
+  written without it. The `formValues` expectation compares text loosely, and is
+  unaffected.
 - Under a default locale whose case rules differ, such as Turkish, the rules read
   case as they do everywhere else: `accesskey-unique` takes `I` and `i` for the
   same key.
@@ -109,9 +112,11 @@ These can fail a page that passed:
 
 ### Outline
 
-- A form's method is written in upper case by the root locale's rules, so under a
-  default such as Turkish a `dialog` method reads `DIALOG` where it read `DİALOG`.
-  A snapshot recorded under such a default is written again with
+- Case is read by the root locale's rules. Under a default such as Turkish, a
+  form's `dialog` method now reads `DIALOG` where it read `DİALOG`. A link whose
+  `hreflang` names the page's own language in capitals, as `IT` on an Italian
+  page, is no longer taken for a language toggle, so its `lang toggle` row goes. A
+  snapshot recorded under such a default is written again with
   `TWIRLSPEC_UPDATE_SNAPSHOTS=true`; one recorded anywhere else is unchanged.
 
 ## [2.9.0] - 2026-11-12
