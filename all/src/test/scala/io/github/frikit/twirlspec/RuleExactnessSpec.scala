@@ -26,8 +26,12 @@ import io.github.frikit.twirlspec.html.{
 import io.github.frikit.twirlspec.page.Page
 import io.github.frikit.twirlspec.standards.Rule
 import io.github.frikit.twirlspec.wcag.{SecurityStandards, WcagStandards}
+import org.jsoup.Jsoup
+import org.jsoup.parser.Parser
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
+
+import scala.jdk.CollectionConverters._
 
 /** Rules reading what a browser does with the markup. */
 class RuleExactnessSpec extends AnyWordSpec with Matchers with TwirlSpec {
@@ -183,6 +187,12 @@ class RuleExactnessSpec extends AnyWordSpec with Matchers with TwirlSpec {
       TagBalance.check("""<main><a href="/x"><p>Link</a></main>""") must
         not be empty
       TagBalance.check("<main><div><p>Text</div></main>") mustBe empty
+      // nor at the end of a custom element, or of an SVG or MathML parent
+      TagBalance.check("<main><my-card><p>Text</my-card></main>") must
+        not be empty
+      TagBalance.check(
+        "<main><svg><foreignObject><p>Text</foreignObject></svg></main>"
+      ) must not be empty
       // though the next paragraph ends one there
       TagBalance.check(
         """<main><a href="/x"><p>First<p>Second</p></a></main>"""
@@ -207,6 +217,68 @@ class RuleExactnessSpec extends AnyWordSpec with Matchers with TwirlSpec {
       TagBalance.check(
         """<main><div title="<!--">x</div></main>"""
       ) mustBe empty
+      // a text-only element left open takes the rest, as a cut-off tag does
+      TagBalance.check("<main><textarea>x</main>") must not be empty
+      TagBalance.check("<main></main><div class=x") mustBe empty
+      TagBalance.check("<main></main></div") mustBe empty
+      TagBalance.elementsOf("<main><plaintext></main><div>") mustBe
+        List("main" -> "html", "plaintext" -> "html")
+    }
+
+    "read markup as HTML's tokenizer does, opening what jsoup opens" in {
+      val space = Map(
+        Parser.NamespaceHtml -> "html",
+        Parser.NamespaceSvg -> "svg",
+        Parser.NamespaceMathml -> "math"
+      )
+      // what jsoup opens from the source itself, not what its parser adds
+      def jsoupOpens(html: String) =
+        Jsoup
+          .parse(html, "", Parser.htmlParser().setTrackPosition(true))
+          .getAllElements
+          .asScala
+          .toList
+          .filter(e => e.sourceRange.isTracked && !e.sourceRange.isImplicit)
+          .map(e => e.normalName -> space(e.tag.namespace))
+      // each source with whether it is clean, decided before either reads it
+      Seq(
+        // an encoding inside another attribute's value is no encoding, nor is
+        // the second of a name
+        """<main><math><semantics><mi>x</mi><annotation-xml data-note=" encoding='text/html'" encoding="application/mathml+xml" ENCODING="text/html"><mrow/><mn>1</mn></annotation-xml></semantics></math></main>""" -> true,
+        """<main><math><annotation-xml><svg><path/></svg></annotation-xml></math></main>""" -> true,
+        // straight inside a MathML token a glyph or an align mark stays MathML,
+        // and other elements are HTML's, a void one included
+        """<main><math><mi><mglyph src="g.png" alt="x"/><mi>y</mi></mi><mtext><malignmark/>a<br>b</mtext></math></main>""" -> true,
+        // under an HTML element a glyph is HTML, so its slash closes nothing
+        "<main><math><mi><span><mglyph/></span></mi></math></main>" -> false,
+        """<main><svg><title><b>x</b></title><desc><i>d</i></desc></svg></main>""" -> true,
+        // nor does a slash that ends an unquoted value, or one that stands apart
+        "<main><svg><path d=M0/><circle/></svg></main>" -> false,
+        "<main><svg><path / ><circle/></svg></main>" -> false,
+        // an SVG element named tr is no table row, and needs its end tag
+        "<main><svg><tr></svg></main>" -> false,
+        """<main><svg><![CDATA[ a > b <div> ]]><g/></svg><![CDATA[<em>]]><s>t</s></main>""" -> true,
+        // a script's content is text, through its escapes, however like a tag
+        """<main><script>const x = "<tag attr='";</script><!-- '><div> --></main>""" -> true,
+        """<main><script>var s = "<!--";</script><p>after</p></main>""" -> true,
+        """<main><script><!--<script></script><b>in</b>--></script><i>out</i></main>""" -> true,
+        """<main><TEXTAREA><!-- </em></textarea><p>x</p><p>İ</p><script>a<b</script></main>""" -> true,
+        """<main><iframe><div></iframe><xmp><b></xmp><noembed><i></noembed><noframes><u></noframes></main>""" -> true,
+        """<main><noscript><p>x</p></noscript><style-guide><div></div></style-guide></main>""" -> true,
+        """<main><!--><b>1</b><!---><i>2</i><!-- x --!><u>3</u><!---->< div>4<?x><![CDATA[x]]></ x></main>""" -> true
+      ).foreach { case (html, clean) =>
+        withClue(html) {
+          TagBalance.check(html).isEmpty mustBe clean
+          TagBalance.elementsOf(html) mustBe jsoupOpens(html)
+        }
+      }
+      // HTML's tokenizer reads an SVG script as markup, where jsoup reads text
+      TagBalance.elementsOf(
+        "<main><svg><script>a<g/>b</script></svg></main>"
+      ) mustBe
+        List("main" -> "html", "svg" -> "svg", "script" -> "svg", "g" -> "svg")
+      // an SVG element named br is no void element, wherever a parser puts it
+      TagBalance.check("<main><svg><br></svg></main>") must not be empty
     }
 
     "ask a row for its cells, and a hidden control for no name" in {
