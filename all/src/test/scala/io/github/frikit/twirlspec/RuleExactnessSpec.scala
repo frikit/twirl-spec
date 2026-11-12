@@ -93,6 +93,25 @@ class RuleExactnessSpec extends AnyWordSpec with Matchers with TwirlSpec {
       ) must contain("error-summary-targets")
     }
 
+    "name a submit or reset input as a browser does, and a label only its own control" in {
+      // with no value a browser calls them Submit and Reset; an empty one says nothing
+      val unvalued = fired(
+        WcagStandards.all,
+        """<form action="/a" method="post"><input type="reset"><input type="submit"></form>"""
+      )
+      unvalued must not contain "labelled-controls"
+      unvalued must not contain "submit-has-name"
+      fired(
+        WcagStandards.all,
+        """<form action="/a" method="post"><input type="submit" value=""></form>"""
+      ) must contain("submit-has-name")
+      // a label with a for names that control, not the one it wraps
+      fired(
+        WcagStandards.all,
+        """<label for="other">Wrong<input id="x" name="x"></label><input id="other" name="other">"""
+      ) must contain("labelled-controls")
+    }
+
     "ask a row for its cells, and a hidden control for no name" in {
       fired(
         AriaStandards.all,

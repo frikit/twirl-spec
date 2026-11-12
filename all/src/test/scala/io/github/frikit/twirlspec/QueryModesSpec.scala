@@ -64,12 +64,12 @@ class QueryModesSpec extends AnyWordSpec with Matchers with TwirlSpec {
     }
 
     "not include an id, which compares exactly everywhere" in {
-      page(
-        """<form><input type="button" id="SUBMIT" value="Go"></form>"""
-      ).submitButton.isEmpty mustBe true
-      page(
-        """<form><input type="button" id="submit" value="Go"></form>"""
-      ).submitButton.nonEmpty mustBe true
+      // the id submit picks one of two submit buttons only when it is exactly that
+      def chosen(id: String) = page(
+        s"""<form><input type="submit" id="$id" value="Go"><input type="submit" value="Back"></form>"""
+      ).submitButton.elements.size
+      chosen("SUBMIT") mustBe 2
+      chosen("submit") mustBe 1
     }
   }
 

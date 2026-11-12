@@ -66,6 +66,7 @@ object AccessibleName {
             .getOrElse("")
         else "",
       () => if (valueIsTheName(e)) e.attr("value") else "",
+      () => defaultName(e),
       () => fromContent(e),
       () => e.attr("title")
     )
@@ -91,6 +92,18 @@ object AccessibleName {
 
   private def isImageInput(e: Element): Boolean =
     e.tagName() == "input" && e.attr("type").equalsIgnoreCase("image")
+
+  /** What a browser calls a submit or reset input that gives no value of its
+    * own. One given an empty value shows, and says, nothing.
+    */
+  private def defaultName(e: Element): String =
+    if (e.tagName() == "input" && !e.hasAttr("value"))
+      e.attr("type").toLowerCase(Locale.ROOT) match {
+        case "submit" => "Submit"
+        case "reset"  => "Reset"
+        case _        => ""
+      }
+    else ""
 
   private def valueIsTheName(e: Element): Boolean =
     e.tagName() == "input" &&
@@ -211,6 +224,18 @@ object AccessibleName {
     */
   private def wrappingLabel(e: Element): String =
     Option(e.closest("label"))
+      // a label with a `for` names that element alone; one without names the
+      // first control it holds
+      .filter(label =>
+        !label.hasAttr("for") &&
+          label
+            .select(
+              "button, input:not([type=hidden]), meter, output, progress, select, textarea"
+            )
+            .asScala
+            .headOption
+            .exists(_ eq e)
+      )
       .map(label => announcedText(label, NestedControls))
       .getOrElse("")
 

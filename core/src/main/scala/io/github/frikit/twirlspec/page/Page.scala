@@ -724,27 +724,33 @@ final class Page(
   def buttons: Selection =
     named("button", ".govuk-button, button, input[type=submit]")
 
-  /** The control that submits the form. */
+  /** The control that submits the form, chosen among those that can submit one:
+    * a button whose type is submit, missing or one HTML does not know, a submit
+    * input or an image input. The one with the id `submit` comes first, then
+    * those inside a form, then any.
+    */
   def submitButton: Selection = {
-    val candidates = Seq(
-      "button[type=submit], input[type=submit]",
-      "[id=submit]",
-      "form .govuk-button:not(a)",
-      ".govuk-button:not(a)"
-    )
-    // One candidate at a time: `named` records what it matches as asserted, and trying every
-    // selector would record every button on the page rather than the one this resolves to.
-    candidates.iterator
-      .map {
-        // An id compares exactly, as every lookup by id on a page does.
-        case "[id=submit]" =>
-          exactly("submit button", "[id=submit]", "[id]")(e =>
-            says(e.id(), "submit")
-          )
-        case selector => named("submit button", selector)
-      }
-      .find(_.nonEmpty)
-      .getOrElse(Selection.empty("submit button", candidates.mkString(", ")))
+    val submitters = inScope("button, input").filter(canSubmit)
+    val chosen = Iterator(
+      submitters.filter(e => says(e.id(), "submit")),
+      submitters.filter(formOwner(_).nonEmpty),
+      submitters
+    ).find(_.nonEmpty).getOrElse(Nil)
+    // Only the chosen are recorded as asserted, not every button weighed.
+    exactly(
+      "submit button",
+      "button:not([type=button]):not([type=reset]), input[type=submit], input[type=image]",
+      "button, input"
+    )(e => chosen.exists(_ eq e))
+  }
+
+  private def canSubmit(e: Element): Boolean = {
+    val kind = e.attr("type").toLowerCase(Locale.ROOT)
+    e.tagName() match {
+      case "button" => kind != "button" && kind != "reset"
+      case "input"  => kind == "submit" || kind == "image"
+      case _        => false
+    }
   }
 
   // --------------------------------------------------------------- components
