@@ -744,13 +744,11 @@ final class Page(
     )(e => chosen.exists(_ eq e))
   }
 
+  /** Whether a button or an input can submit its form. */
   private def canSubmit(e: Element): Boolean = {
     val kind = e.attr("type").toLowerCase(Locale.ROOT)
-    e.tagName() match {
-      case "button" => kind != "button" && kind != "reset"
-      case "input"  => kind == "submit" || kind == "image"
-      case _        => false
-    }
+    if (e.tagName() == "button") kind != "button" && kind != "reset"
+    else kind == "submit" || kind == "image"
   }
 
   // --------------------------------------------------------------- components

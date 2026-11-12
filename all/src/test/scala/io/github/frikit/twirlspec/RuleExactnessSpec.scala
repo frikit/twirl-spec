@@ -18,6 +18,11 @@ package io.github.frikit.twirlspec
 
 import io.github.frikit.twirlspec.aria.AriaStandards
 import io.github.frikit.twirlspec.govuk.GovukStandards
+import io.github.frikit.twirlspec.html.{
+  HtmlStandards,
+  HtmlVocabulary,
+  TagBalance
+}
 import io.github.frikit.twirlspec.page.Page
 import io.github.frikit.twirlspec.standards.Rule
 import io.github.frikit.twirlspec.wcag.{SecurityStandards, WcagStandards}
@@ -112,6 +117,64 @@ class RuleExactnessSpec extends AnyWordSpec with Matchers with TwirlSpec {
       ) must contain("labelled-controls")
     }
 
+    "ask an open combobox and a scrollbar what they control, and a cell for its own table's headers" in {
+      fired(
+        AriaStandards.all,
+        """<input role="combobox" aria-expanded="true" aria-label="Country">"""
+      ) must contain("aria-required-attr")
+      // a closed one's popup need not exist yet
+      fired(
+        AriaStandards.all,
+        """<input role="combobox" aria-expanded="false" aria-label="Country">"""
+      ) must not contain "aria-required-attr"
+      fired(
+        AriaStandards.all,
+        """<div role="scrollbar" aria-valuenow="50" aria-label="Scroll"></div>"""
+      ) must contain("aria-required-attr")
+      // only a combobox is asked, whatever else is expanded
+      fired(
+        AriaStandards.all,
+        """<div role="button" tabindex="0" aria-expanded="true">Menu</div>"""
+      ) must not contain "aria-required-attr"
+      fired(
+        AriaStandards.all,
+        """<table><tr><td headers="inner">Outer<table><tr><th id="inner">Inner</th></tr></table></td></tr></table>"""
+      ) must contain("table-headers-resolve")
+    }
+
+    "know HTML's own attributes and custom elements, and read tags as HTML does" in {
+      fired(
+        HtmlStandards.all,
+        """<button type="button" popovertarget="help" onclick="go()">Help</button><div id="help" popover>Help text</div>"""
+      ) must not contain "known-attributes"
+      val custom =
+        fired(HtmlStandards.all, """<flag-icon country="nl"></flag-icon>""")
+      custom must not contain "known-elements"
+      custom must not contain "known-attributes"
+      HtmlVocabulary.isCustomElementName("x-!") mustBe false
+      HtmlVocabulary.isCustomElementName("font-face") mustBe false
+      // a slash closes only a void or a foreign element
+      TagBalance.check("<main><div/></main>") must not be empty
+      TagBalance.check("<main><svg><path/></svg></main>") mustBe empty
+      TagBalance.check(
+        "<main><svg><foreignObject><div/></foreignObject></svg></main>"
+      ) must not be empty
+      TagBalance.check("<main><math><mspace/></math></main>") mustBe empty
+      TagBalance.check(
+        "<main><math><mtext><div/></mtext></math></main>"
+      ) must not be empty
+      // a doctype that never closes takes the rest with it, as a comment does
+      TagBalance.check("<main></main><!DOCTYPE") mustBe empty
+      // a paragraph's end tag is not left off inside a link
+      TagBalance.check("""<main><a href="/x"><p>Link</a></main>""") must
+        not be empty
+      TagBalance.check("<main><div><p>Text</div></main>") mustBe empty
+      // a comment marker inside an attribute is no comment
+      TagBalance.check(
+        """<main><div title="<!--">x</div></main>"""
+      ) mustBe empty
+    }
+
     "ask a row for its cells, and a hidden control for no name" in {
       fired(
         AriaStandards.all,
@@ -121,6 +184,12 @@ class RuleExactnessSpec extends AnyWordSpec with Matchers with TwirlSpec {
         AriaStandards.all,
         """<div role="table" aria-label="Results"><div role="row"><div role="cell">1</div></div></div>"""
       ) must not contain "aria-required-children"
+      // HTML lets a native row be empty
+      fired(
+        AriaStandards.all,
+        """<table aria-label="R"><tr></tr></table>"""
+      ) must
+        not contain "aria-required-children"
       // native rows and cells count, with or without a role written on them
       fired(
         AriaStandards.all,

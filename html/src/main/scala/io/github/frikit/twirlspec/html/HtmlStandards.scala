@@ -85,7 +85,9 @@ class HtmlStandards(attributePrefixes: Set[String]) extends RuleSet {
         )
         .distinct
         .sortBy(_._2)
-        .filterNot { case (_, a) =>
+        // a custom element defines its own attributes
+        .filterNot { case (tag, a) =>
+          HtmlVocabulary.isCustomElementName(tag) ||
           HtmlVocabulary.isKnownAttribute(a, attributePrefixes)
         }
         .map { case (tag, a) =>

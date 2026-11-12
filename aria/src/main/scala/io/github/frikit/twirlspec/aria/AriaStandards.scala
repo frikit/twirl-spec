@@ -132,8 +132,12 @@ object AriaStandards extends RuleSet {
             if (focusable(e) && !(e.is(Control) && page.isDisabled(e)))
               AriaVocabulary.requiredWhenFocusable.getOrElse(role, Set.empty)
             else Set.empty[String]
+          val whenExpanded =
+            if (Attrs.is(e, "aria-expanded", "true"))
+              AriaVocabulary.requiredWhenExpanded.getOrElse(role, Set.empty)
+            else Set.empty[String]
           (AriaVocabulary.requiredAttributes.getOrElse(role, Set.empty)
-            ++ whenFocusable).toList.sorted
+            ++ whenFocusable ++ whenExpanded).toList.sorted
             .collect {
               case attr
                   if !e.hasAttr(attr) &&
@@ -175,30 +179,35 @@ object AriaStandards extends RuleSet {
       "a role that must contain something is not empty"
     ) { page =>
       rolesOn(page).flatMap { case (e, role) =>
-        AriaVocabulary.requiredChildren.get(role).toSeq.flatMap { allowed =>
-          val contained =
-            e.getAllElements.asScala.filterNot(_ eq e).flatMap(childRole)
-          val owned =
-            ownedBy(e).flatMap(Tree.withDescendants).flatMap(childRole)
-          val found = contained ++ owned
-          // ARIA lets what is still loading, marked busy, go without them for now.
-          val busy = (e +: e.parents.asScala.toSeq).exists(
-            _.attr("aria-busy").trim.equalsIgnoreCase("true")
-          )
-          if (busy || found.exists(allowed.contains)) Nil
-          else
-            Seq(
-              Violation(
-                "aria-required-children",
-                s"""role="$role" contains none of the roles it is defined by""",
-                expected = Some(allowed.toList.sorted.mkString(", ")),
-                actual = Some(
-                  if (found.isEmpty) "nothing with a role"
-                  else found.toList.distinct.mkString(", ")
-                )
-              ).at(describe(e))
+        AriaVocabulary.requiredChildren
+          .get(role)
+          // HTML lets a native row be empty; one given role="row" is asked
+          .filterNot(_ => role == "row" && !e.hasAttr("role"))
+          .toSeq
+          .flatMap { allowed =>
+            val contained =
+              e.getAllElements.asScala.filterNot(_ eq e).flatMap(childRole)
+            val owned =
+              ownedBy(e).flatMap(Tree.withDescendants).flatMap(childRole)
+            val found = contained ++ owned
+            // ARIA lets what is still loading, marked busy, go without them for now.
+            val busy = (e +: e.parents.asScala.toSeq).exists(
+              _.attr("aria-busy").trim.equalsIgnoreCase("true")
             )
-        }
+            if (busy || found.exists(allowed.contains)) Nil
+            else
+              Seq(
+                Violation(
+                  "aria-required-children",
+                  s"""role="$role" contains none of the roles it is defined by""",
+                  expected = Some(allowed.toList.sorted.mkString(", ")),
+                  actual = Some(
+                    if (found.isEmpty) "nothing with a role"
+                    else found.toList.distinct.mkString(", ")
+                  )
+                ).at(describe(e))
+              )
+          }
       }
     },
     Rule(
@@ -351,8 +360,15 @@ object AriaStandards extends RuleSet {
       "every headers attribute points at a header on the same table"
     ) { page =>
       page.document.select("table").asScala.toSeq.flatMap { table =>
-        val ids = table.select("th[id]").asScala.map(_.id()).toSet
-        table.select("td[headers], th[headers]").asScala.toSeq.flatMap { cell =>
+        // the table's own headers and cells, not those of a table inside it
+        def own(selector: String) =
+          table
+            .select(selector)
+            .asScala
+            .toSeq
+            .filter(_.closest("table") eq table)
+        val ids = own("th[id]").map(_.id()).toSet
+        own("td[headers], th[headers]").flatMap { cell =>
           cell.attr("headers").split("\\s+").filter(_.nonEmpty).toSeq.collect {
             case target if !ids.contains(target) =>
               Violation(
@@ -599,10 +615,7 @@ object AriaStandards extends RuleSet {
       case "option" if e.closest("select, datalist") != null => Some("option")
       case "optgroup" if e.closest("select") != null         => Some("group")
       case "input" if Attrs.is(e, "type", "radio")           => Some("radio")
-      // a native table's parts carry the roles a table's and a row's ask for
-      case "tr"                        => Some("row")
-      case "td"                        => Some("cell")
-      case "th"                        => Some("columnheader")
+      // a native table's row groups; its rows and cells have their roles already
       case "thead" | "tbody" | "tfoot" => Some("rowgroup")
       case _                           => None
     })

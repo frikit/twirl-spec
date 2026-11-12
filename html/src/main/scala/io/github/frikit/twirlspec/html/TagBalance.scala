@@ -19,8 +19,8 @@ package io.github.frikit.twirlspec.html
 import io.github.frikit.twirlspec.render.Templates
 
 import java.nio.file.Path
-import scala.annotation.tailrec
 import java.util.Locale
+import scala.annotation.tailrec
 import scala.collection.mutable
 
 /** Whether every element that was opened was closed, read from the source.
@@ -102,8 +102,10 @@ object TagBalance {
       val line = lineOf(stripped, m.start)
 
       if (closing) closeTag(name, line, open, problems)
-      else if (!selfClosed && !HtmlVocabulary.void.contains(name))
-        open.push(Open(name, line))
+      else if (HtmlVocabulary.void.contains(name)) ()
+      // a slash closes only an element of SVG or MathML: <div/> stays open
+      else if (selfClosed && (ForeignRoots(name) || inForeignContent(open))) ()
+      else open.push(Open(name, line))
     }
 
     problems ++= open.toList
@@ -111,6 +113,35 @@ object TagBalance {
       .map(o => Unclosed(o.name, o.line))
     problems.toList.sortBy(_.line)
   }
+
+  private val ForeignRoots = Set("svg", "math")
+
+  /** Where SVG and MathML hand back to HTML. */
+  private val SvgIntegrationPoints = Set("foreignobject", "desc", "title")
+  private val MathIntegrationPoints =
+    Set("mi", "mo", "mn", "ms", "mtext", "annotation-xml")
+
+  /** Whether the next element sits in SVG or MathML: the nearest of a foreign
+    * root or one of its integration points decides.
+    */
+  private def inForeignContent(open: mutable.Stack[Open]): Boolean = {
+    val names = open.toList.map(_.name)
+    names.zipWithIndex
+      .collectFirst {
+        case (n, _) if ForeignRoots(n) => true
+        case (n, i)
+            if SvgIntegrationPoints(n) && names.drop(i + 1).contains("svg") =>
+          false
+        case (n, i)
+            if MathIntegrationPoints(n) && names.drop(i + 1).contains("math") =>
+          false
+      }
+      .getOrElse(false)
+  }
+
+  /** The parents before whose end a paragraph's end tag may not be left off. */
+  private val KeepsParagraphOpen =
+    Set("a", "audio", "del", "ins", "map", "noscript", "video")
 
   private def closeTag(
       name: String,
@@ -138,7 +169,9 @@ object TagBalance {
     val top = open.pop()
     if (top.name == name) ()
     else {
-      if (!HtmlVocabulary.optionalEndTag.contains(top.name))
+      val keptOpenByParent = top.name == "p" && open.nonEmpty &&
+        KeepsParagraphOpen(open.top.name)
+      if (!HtmlVocabulary.optionalEndTag.contains(top.name) || keptOpenByParent)
         problems += MisNested(name, line, top.name, top.line)
       unwind(name, line, open, problems)
     }
@@ -154,8 +187,24 @@ object TagBalance {
         if (out.charAt(i) != '\n') out.setCharAt(i, ' ')
       )
 
-    blankBetween(source, "<!--", "-->", blank)
-    blankBetween(source, "<!", ">", blank)
+    // A comment or a doctype starts only between tags: a <!-- inside a quoted
+    // attribute value is text.
+    var i = 0
+    while (i < source.length) {
+      if (source.startsWith("<!--", i)) {
+        val end = source.indexOf("-->", i + 4)
+        val stop = if (end < 0) source.length else end + 3
+        blank(i, stop); i = stop
+      } else if (source.startsWith("<!", i)) {
+        val end = source.indexOf('>', i + 2)
+        val stop = if (end < 0) source.length else end + 1
+        blank(i, stop); i = stop
+      } else if (
+        source.charAt(i) == '<' && i + 1 < source.length &&
+        (source.charAt(i + 1).isLetter || source.charAt(i + 1) == '/')
+      ) i = endOfTag(source, i)
+      else i += 1
+    }
     HtmlVocabulary.rawText.foreach { el =>
       val start = s"(?i)<$el\\b[^>]*>".r
       start.findAllMatchIn(source).foreach { m =>
@@ -166,19 +215,25 @@ object TagBalance {
     out.toString
   }
 
-  private def blankBetween(
-      source: String,
-      from: String,
-      to: String,
-      blank: (Int, Int) => Unit
-  ): Unit = {
-    var i = source.indexOf(from)
-    while (i >= 0) {
-      val end = source.indexOf(to, i + from.length)
-      if (end < 0) { blank(i, source.length); i = -1 }
-      else {
-        blank(i, end + to.length); i = source.indexOf(from, end + to.length)
-      }
+  /** Just past the tag starting here, reading past a > inside a quoted
+    * attribute value. Where a quote never closes, the tag ends at its first >,
+    * as the tag pattern reads it.
+    */
+  private def endOfTag(source: String, start: Int): Int = {
+    var quote = 0.toChar
+    var j = start + 1
+    var end = -1
+    while (end < 0 && j < source.length) {
+      val c = source.charAt(j)
+      if (quote != 0) { if (c == quote) quote = 0.toChar }
+      else if (c == '"' || c == '\'') quote = c
+      else if (c == '>') end = j + 1
+      j += 1
+    }
+    if (end >= 0) end
+    else {
+      val first = source.indexOf('>', start)
+      if (first < 0) source.length else first + 1
     }
   }
 
