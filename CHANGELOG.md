@@ -34,7 +34,10 @@ Nineteen releases, from 2.0.0 on 2026-09-13 to 2.15.0 on 2026-11-13, for Scala
 - **Expectations:** among the new ones are `within`, `columnHeaders`,
   `summaryList` keys with arguments, and `matchOutlineSnapshot`.
 - **Reading markup:** `tags-are-balanced` reads it in one pass, as HTML's
-  tokenizer does, and the rules read a page alike in jsoup's two query modes.
+  tokenizer does. The rules read a page alike in jsoup's two query modes, but
+  for one difference jsoup intends: Web mode keeps a class name's case, so a
+  GOV.UK or HMRC class written in capitals is found only in the legacy mode. A
+  spec's own CSS selector is read in whichever mode jsoup is in.
 - **Catalogue and report:** `PageCatalogue` became a table of a service's pages,
   with a test for each state, rule and language. `cataloguePage` puts a view's
   own tests under its label, and `TwirlSpecReporter` reports a run as a page.
