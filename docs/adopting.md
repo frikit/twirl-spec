@@ -164,6 +164,16 @@ tree, and a new spec can start loose and tighten:
 | `doc.title mustBe messages("x.title")` | `title("x.title")`, which reports an undefined key instead of passing on it |
 | nothing | `noErrors`, `errorSummary(...)`, `assertEverything`, every rule |
 
+## Moving from 2.x to 3.x
+
+3.0.0 draws a line under 2.x and starts the stable line from 2.15.0's code: the
+same API, rule ids, published dependencies and verdicts. A service on 2.15.0
+changes its version and nothing else. One on an earlier 2.x meets what the
+releases between changed, chiefly in the page catalogue: from 2.12.0 it names a
+test after each check, and from 2.14.0 after each language as well, so a test
+filter on the old names matches nothing. Each release's notes, on its GitHub
+Release, say what it changed.
+
 ## Moving from 1.x to 2.x
 
 2.0.0 is published for Scala 3 only, on the 3.3 LTS line. On Scala 3, the API
@@ -172,12 +182,12 @@ takes its attribute prefixes explicitly, and the `HtmlStandards` object remains
 the set with none. Play 3.0.0 is now the floor rather than 3.0.11, so a service
 on any 3.0.x resolves the artifacts without upgrading Play.
 
-A service on Scala 2.13 cannot use 2.x, and 1.0.0 is not a place to adopt in
+A service on Scala 2.13 cannot use 2.x or 3.x, and 1.0.0 is not a place to adopt in
 the meantime. It is historical and receives no fixes: it still reports
 `rel="noreferrer"`, `tabindex="-1"` and `maximum-scale=10` as problems when
 they are not, misses a password field in a form that names no method, names a
 control differently from rule to rule, and renders a bilingual service's Welsh
-specs in English. Adopt 2.x as part of the service's move to Scala 3, which
+specs in English. Adopt 3.x as part of the service's move to Scala 3, which
 touches the build anyway.
 
 ## Moving from a 0.x snapshot
