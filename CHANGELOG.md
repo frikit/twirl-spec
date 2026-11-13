@@ -10,6 +10,16 @@ release, and each one has a GitHub Release whose notes are its section here. Eve
 recorded in full; earlier lines are kept to one entry each, so the file stays
 readable.
 
+## [2.13.0] - 2026-11-13
+
+### Added
+
+- `cataloguePage(page) { ... }` puts a page's own tests under its label, after a
+  test for each of its checks, so a spec per view names the view once in the
+  report, where a catalogue and the spec's own `"View" must { ... }` each named
+  it. `catalogue(pages*)` writes each page as `cataloguePage` does, with no tests
+  of its own.
+
 ## [2.12.0] - 2026-11-13
 
 ### Changed
@@ -985,6 +995,7 @@ them in `twirl-spec-all`. The renames a service built against a 0.x snapshot
 would meet are listed in [the adoption guide](docs/adopting.md).
 
 [Unreleased]: https://github.com/frikit/twirl-spec/compare/v2.9.0...HEAD
+[2.13.0]: https://github.com/frikit/twirl-spec/compare/v2.12.0...v2.13.0
 [2.12.0]: https://github.com/frikit/twirl-spec/compare/v2.11.0...v2.12.0
 [2.11.0]: https://github.com/frikit/twirl-spec/compare/v2.10.0...v2.11.0
 [2.10.0]: https://github.com/frikit/twirl-spec/compare/v2.9.0...v2.10.0

@@ -19,7 +19,13 @@ package io.github.frikit.twirlspec
 import io.github.frikit.twirlspec.expect.Violation
 import io.github.frikit.twirlspec.i18n.TranslationStandards
 import io.github.frikit.twirlspec.standards.Rule
-import org.scalatest.events.{Event, TestCanceled, TestFailed, TestSucceeded}
+import org.scalatest.events.{
+  Event,
+  ScopeOpened,
+  TestCanceled,
+  TestFailed,
+  TestSucceeded
+}
 import org.scalatest.exceptions.{
   TestCanceledException,
   TestFailedException,
@@ -74,23 +80,26 @@ class PageCatalogueSpec extends AnyWordSpec with Matchers {
   private final case class Outcome(
       passed: Seq[String],
       failed: Seq[String],
-      cancelled: Seq[String]
+      cancelled: Seq[String],
+      scopes: Seq[String]
   )
 
   private def run(suite: Suite): Outcome = {
     val passed = mutable.ListBuffer.empty[String]
     val failed = mutable.ListBuffer.empty[String]
     val cancelled = mutable.ListBuffer.empty[String]
+    val scopes = mutable.ListBuffer.empty[String]
     val reporter = new Reporter {
       def apply(event: Event): Unit = event match {
         case e: TestSucceeded => passed += e.testName
         case e: TestFailed    => failed += s"${e.testName}: ${e.message}"
         case e: TestCanceled  => cancelled += s"${e.testName}: ${e.message}"
+        case e: ScopeOpened   => scopes += e.message
         case _                => ()
       }
     }
     suite.run(None, Args(reporter)).waitUntilCompleted()
-    Outcome(passed.toSeq, failed.toSeq, cancelled.toSeq)
+    Outcome(passed.toSeq, failed.toSeq, cancelled.toSeq, scopes.toSeq)
   }
 
   private val comparisons = TranslationStandards.all()
@@ -107,6 +116,18 @@ class PageCatalogueSpec extends AnyWordSpec with Matchers {
       ) ++ comparisons.map(r =>
         s"Info must translate consistently by ${r.id}: ${r.description}"
       )
+    }
+
+    "put a page's own tests under its one label, after its checks" in {
+      val spec = new Spec {
+        cataloguePage(staticPage("Info")(pageOf("<p>Fine</p>"))) {
+          "say it is fine" in succeed
+        }
+      }
+      val outcome = run(spec)
+      outcome.scopes mustBe Seq("Info")
+      outcome.passed.head mustBe "Info must render as it stands, in every language"
+      outcome.passed.last mustBe "Info must say it is fine"
     }
 
     "render nothing until a test runs, then each state once in each language" in {

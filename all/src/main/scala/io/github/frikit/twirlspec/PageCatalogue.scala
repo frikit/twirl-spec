@@ -531,12 +531,25 @@ trait PageCatalogue extends AnyWordSpecLike with PageCases {
     */
   def catalogue(pages: PageCase*): Unit = {
     require(pages.nonEmpty, "a catalogue of no pages would check nothing")
-    pages.foreach { page =>
-      // Outside the scope, where ScalaTest would hide a refusal behind its own.
-      val checks = checksOf(page)
-      page.label must {
-        checks.foreach(check => check.name in check.run())
-      }
+    pages.foreach(cataloguePage(_)(()))
+  }
+
+  /** A page's tests under its one label: a test for each of its checks, as
+    * [[catalogue]] writes them, then the spec's own, so the report does not
+    * name the page twice:
+    *
+    * {{{
+    * cataloguePage(formPage("Name", nameForm)(inject[NameView](_, draftId))) {
+    *   "ask for the name" in { ... }
+    * }
+    * }}}
+    */
+  def cataloguePage(page: PageCase)(tests: => Unit): Unit = {
+    // Outside the scope, where ScalaTest would hide a refusal behind its own.
+    val checks = checksOf(page)
+    page.label must {
+      checks.foreach(check => check.name in check.run())
+      tests
     }
   }
 

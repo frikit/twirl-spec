@@ -912,6 +912,15 @@ under test, and once in each language, however many tests read it. Where a state
 does not render, its own test fails, and a rule's test that found nothing in the
 states that did is cancelled, as it could not check them all.
 
+A page with tests of its own, of what it shows, takes them under the same label,
+after its checks, so the report names the page once:
+
+```scala
+cataloguePage(formPage("Name", nameForm)(inject[NameView](_, draftId))) {
+  "ask for the name" in { ... }
+}
+```
+
 The tests are named after `standardsRules` as the spec is built, so define the
 rules with a `def` or a `lazy val`, or declare them above `catalogue(...)`.
 It writes its tests in the `AnyWordSpec` style. In another style, mix in
