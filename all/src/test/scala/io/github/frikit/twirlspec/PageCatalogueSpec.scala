@@ -628,6 +628,22 @@ class PageCatalogueSpec extends AnyWordSpec with Matchers {
       )
     }
 
+    "register the checks a spec's own checksOf gives, tagged where known" in {
+      val spec = new Spec {
+        override def checksOf(page: PageCase): Seq[PageCheck] =
+          super.checksOf(page).filterNot(_.name.startsWith("translate")) :+
+            PageCheck("hold a check of its own", () => ())
+        catalogue(staticPage("Info")(pageOf("<p>Fine</p>")))
+      }
+      spec.testNames must contain("Info must hold a check of its own")
+      spec.testNames.exists(_.contains("translate")) mustBe false
+      spec.tags("Info must hold a check of its own") mustBe
+        Set("twirlspec.catalogue")
+      spec.tags("Info must render as it stands, in en") must contain(
+        "twirlspec.render"
+      )
+    }
+
     "refuse a page with no states, and a catalogue with no pages" in {
       the[IllegalArgumentException] thrownBy PageCase(
         "Info",

@@ -103,12 +103,14 @@ class TwirlSpecReporterSpec extends AnyWordSpec with Matchers {
       val funSuite = new org.scalatest.funsuite.AnyFunSuite {
         test("a test of another style")(succeed)
       }
-      val (html, md) = report(Some(System.currentTimeMillis() - 1500)) { r =>
+      // A run that took 1.5 s, whatever the machine.
+      val start = 1_000_000L
+      val (html, md) = report(Some(start)) { r =>
         runSuite(r, spec, starting = true, duration = Some(2500))
         runSuite(r, funSuite, starting = true, duration = None)
         r(SuiteStarting(ordinal, "Broken", "broken", None))
         r(SuiteAborted(ordinal, "it would not start", "Broken", "broken", None))
-        r(RunCompleted(ordinal))
+        r(RunCompleted(ordinal, timeStamp = start + 1500))
       }
       html must include("<code>no-such</code>")
       html must include("a test of another style")
@@ -167,6 +169,26 @@ class TwirlSpecReporterSpec extends AnyWordSpec with Matchers {
       ran(RunStopped(ordinal))._1 must include("✗ Run stopped")
       ran(RunAborted(ordinal, "out of memory", None))._2 must include(
         "# ✗ Run aborted: out of memory"
+      )
+    }
+
+    "give a page's own test to the longest label it starts with" in {
+      val spec = new Spec {
+        cataloguePage(staticPage("Name")(pageOf("<p>Fine</p>"))) {
+          "ask" in succeed
+        }
+        cataloguePage(staticPage("Name with errors")(pageOf("<p>Fine</p>"))) {
+          "explain" in succeed
+        }
+      }
+      val (html, _) = report(None) { r =>
+        runSuite(r, spec, starting = false, duration = None)
+        r(RunCompleted(ordinal))
+      }
+      "must explain".r.findAllIn(html).size mustBe 1
+      html.indexOf("must ask") must be < html.indexOf("<h3>Name with errors")
+      html.indexOf("must explain") must be > html.indexOf(
+        "<h3>Name with errors"
       )
     }
 

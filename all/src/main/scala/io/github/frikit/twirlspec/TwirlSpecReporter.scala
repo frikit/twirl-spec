@@ -381,6 +381,12 @@ object TwirlSpecReporter {
             )}</td></tr>"""
         }.mkString("<table class=\"tests\">\n", "\n", "</table>")
 
+    /** The page a test of no check of its own belongs to: the longest label it
+      * starts with, so "Name with errors" keeps its tests from "Name".
+      */
+    private def owner(l: Line, pages: List[String]): Option[String] =
+      pages.filter(p => l.test.startsWith(s"$p ")).maxByOption(_.length)
+
     /** A page's catalogue checks as rules by language, then its own tests. */
     private def page(label: String, in: List[Line]): String = {
       val checks = in.filter(_.cell.exists(_.page == label))
@@ -415,7 +421,9 @@ object TwirlSpecReporter {
             about
           )}</span></th>${row.mkString}</tr>"""
       }
-      val own = in.filter(l => l.cell.isEmpty && l.test.startsWith(s"$label "))
+      val pages = in.flatMap(_.cell).map(_.page).distinct
+      val own =
+        in.filter(l => l.cell.isEmpty && owner(l, pages).contains(label))
       val failing = checks
         .filter(l => l.status == "failed" || l.status == "cancelled")
         .map(l =>
@@ -438,9 +446,7 @@ object TwirlSpecReporter {
     private def suite(s: Suite, index: Int): String = {
       val in = ofSuite(s)
       val pages = in.flatMap(_.cell).map(_.page).distinct
-      val rest = in.filter(l =>
-        l.cell.isEmpty && !pages.exists(p => l.test.startsWith(s"$p "))
-      )
+      val rest = in.filter(l => l.cell.isEmpty && owner(l, pages).isEmpty)
       val aborted = s.aborted.fold("")(m =>
         s"""<div class="message failed"><b>The suite aborted</b><pre>${esc(
             m
