@@ -886,20 +886,25 @@ class EveryPageSpec extends ViewSpecBase with PageCatalogue {
 
 ```text
 Name
-- must render blank, in every language
-- must render with errors, in every language
-- must meet one-h1: a page has exactly one <h1>
-- must meet title-present: a page has a non-empty <title>
+- must render blank, in en
+- must render with errors, in en
+- must meet one-h1 in en: a page has exactly one <h1>
+- must meet title-present in en: a page has a non-empty <title>
   ...
-- must translate consistently by i18n-same-links: every language links to the same places
+- must render blank, in cy
+  ...
+- must meet one-h1 in cy: a page has exactly one <h1>
+  ...
+- must translate consistently by i18n-same-links, cy against en: every language links to the same places
   ...
 ```
 
-Each state has a test that it renders in every language. Each standards rule
-has a test that runs it on every state in every language, and each comparison
-rule a test that compares the languages in every state, so a failure names the
-rule, and the state and language it failed in. A rule the page is excused from
-has a test that says so.
+In each language the application is configured for, each state has a test that
+it renders, and each standards rule a test that runs it on every state. For
+each language other than English, each comparison rule has a test that compares
+it with English in every state. So the report names each language a check ran
+in, and a failure names the rule, the language and the state. A rule the page is
+excused from has a test that says so.
 
 A form page is rendered blank, with the errors of an empty submission, and with
 those of each submission named; a submission that gives no errors fails its test.
