@@ -232,12 +232,13 @@ trait PageCases extends TwirlSpec with I18nChecks {
     * what [[checkStandards]] and [[checkTranslation]] check, and a failure
     * names the rule.
     *
-    * Each state renders once in each language, when a check first reads it.
-    * Where it does not render, its own check fails, and a rule's check that
-    * found nothing in the states that did is cancelled, as it could not check
-    * them all. The check of a standards rule the page is excused from runs the
-    * rule silently, as `meetStandardsExcept` does, for [[unusedExclusions]],
-    * and fails where the spec runs no rule of that id.
+    * Each state renders once in each language, when a check first reads it, and
+    * again in each run of the suite. Where it does not render, its own check
+    * fails, and a rule's check that found nothing in the states that did is
+    * cancelled, as it could not check them all. The check of a standards rule
+    * the page is excused from runs the rule silently, as `meetStandardsExcept`
+    * does, for [[unusedExclusions]], and fails where the spec runs no rule of
+    * that id.
     *
     * The checks are named after `standardsRules` when this is called, so the
     * rules must be defined by then: by a `def`, a `lazy val`, or a `val`
@@ -303,17 +304,25 @@ trait PageCases extends TwirlSpec with I18nChecks {
     rendering ++ standards ++ translation
   }
 
-  /** A page's states, each rendered in a language when a check first reads it.
+  /** A page's states, each rendered in a language when a check first reads it
+    * in a run of the suite, which a run started since forgets.
     */
   private final class Renders(page: PageCase) {
 
     private val rendered = mutable.Map.empty[(Int, String), Try[Page]]
+    private var run = SuiteRuns.current(PageCases.this)
 
-    def apply(state: Int, lang: Lang): Try[Page] =
+    def apply(state: Int, lang: Lang): Try[Page] = {
+      val now = SuiteRuns.current(PageCases.this)
+      if (now != run) {
+        rendered.clear()
+        run = now
+      }
       rendered.getOrElseUpdate(
         (state, lang.code),
         attempt(inLanguage(lang)(renderPage(page.states(state).render())))
       )
+    }
 
     /** Where a state did not render, by language. */
     def failures(state: Int): List[Problem] =

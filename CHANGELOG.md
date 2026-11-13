@@ -27,9 +27,10 @@ readable.
   that id.
 - Test names and counts change for every catalogue, so a filter such as
   `-z "meet the standards"` now matches nothing.
-- Each state renders once in each language, however many tests read it, where
-  each test rendered it again. A state that does not render fails its own test,
-  and a rule's test that found nothing where the page did render is cancelled.
+- Each state renders once in each language in a run of the suite, however many
+  tests read it, where each test rendered it again. A state that does not render
+  fails its own test, and a rule's test that found nothing where the page did
+  render is cancelled.
 - A catalogue reads `standardsRules` as the spec is built, to name the tests,
   and refuses rules it cannot read then, such as a `val` declared below
   `catalogue(...)`. As the tests run, they build the rules again in each

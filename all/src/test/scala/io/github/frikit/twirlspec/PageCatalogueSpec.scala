@@ -123,6 +123,37 @@ class PageCatalogueSpec extends AnyWordSpec with Matchers {
       renders mustBe 2
     }
 
+    "render its pages again when the same suite runs again" in {
+      var body = "<p>bad</p>"
+      val spec = new Spec {
+        catalogue(staticPage("Again")(pageOf(body)))
+      }
+      run(spec).failed must have size 1
+      body = "<p>Fine</p>"
+      run(spec).failed mustBe empty
+    }
+
+    "render a run's pages once, whatever another instance of its spec does" in {
+      var renders = 0
+      var meanwhile = Option.empty[Suite]
+      def spec(): Spec = new Spec {
+        catalogue(staticPage("Overlap") {
+          renders += 1
+          // Another instance of the same class runs in the middle of this run.
+          meanwhile.foreach { other =>
+            meanwhile = None
+            PageCatalogueSpec.this.run(other)
+          }
+          pageOf("<p>Fine</p>")
+        })
+      }
+      val first = spec()
+      meanwhile = Some(spec())
+      run(first).failed mustBe empty
+      // Each instance renders its page once in each language.
+      renders mustBe 4
+    }
+
     "render a page in the language under test, and say which that was" in {
       val spec = new Spec {
         catalogue(staticPage("Welsh only")(pageOf(messages.lang.code match {
