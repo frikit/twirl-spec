@@ -104,11 +104,9 @@ jobs:
 
       - uses: sbt/setup-sbt@b113b960ba361e87e08ce02a390d51871b7ee459 # v1.5.13
 
-      - name: Publish the library locally
-        run: sbt 'set ThisBuild / version := "0.0.0-CONSUMER"' publishLocal makePom
-
-      - name: Check the POMs against the dependency decisions
-        run: python3 .github/scripts/check-poms.py 0.0.0-CONSUMER
+      # checkPoms holds the POMs makePom wrote to the dependency decisions.
+      - name: Publish the library locally, and check its POMs
+        run: sbt 'set ThisBuild / version := "0.0.0-CONSUMER"' publishLocal makePom checkPoms
 
       - name: Run a service's view specs against it
         working-directory: consumer

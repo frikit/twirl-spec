@@ -25,8 +25,7 @@ a service today, and a row on the newest Scala whose Play is the default in
 `consumer/project/plugins.sbt`, which Scala Steward keeps current. Locally:
 
 ```sh
-sbt 'set ThisBuild / version := "0.0.0-CONSUMER"' publishLocal makePom
-python3 .github/scripts/check-poms.py 0.0.0-CONSUMER
+sbt 'set ThisBuild / version := "0.0.0-CONSUMER"' publishLocal makePom checkPoms
 cd consumer && sbt test
 ```
 
