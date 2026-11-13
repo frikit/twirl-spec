@@ -46,6 +46,9 @@ lazy val licenceHeader =
 lazy val testSummary =
   taskKey[Unit]("Summarise the last run's tests, for CI's run page")
 
+lazy val checkPoms =
+  taskKey[Unit]("Hold the POMs makePom wrote to the dependency decisions")
+
 lazy val commonSettings = Seq(
   licenceHeader,
   // Play and Twirl sit on the oldest 3.0.x on purpose, and Scala on the LTS
@@ -113,7 +116,15 @@ lazy val root = Project("twirl-spec", file("."))
       target.value / "twirl-spec-report" / "report.md",
       streams.value.log
     ),
-    testSummary / aggregate := false
+    testSummary / aggregate := false,
+    // The POMs makePom wrote for this build's version, as CI's consumer job
+    // makes them.
+    checkPoms := CheckPoms(
+      baseDirectory.value,
+      (ThisBuild / version).value,
+      streams.value.log
+    ),
+    checkPoms / aggregate := false
   )
   .settings(
     // `sbt unidoc` renders every module into one Scaladoc site, which the docs
