@@ -100,7 +100,9 @@ form page is rendered blank, with the errors of an empty submission, and with
 those of each submission named, and a submission that gives no errors fails its
 test. The empty submission is the blank form sent untouched, as a browser sends
 it, each control with the value it renders with, and nothing where it cannot
-tell which of several forms holds the fields. In a style other than
+tell which of several forms holds the fields. A spec per view can put its own
+tests under the page's label with `cataloguePage(page) { ... }`, so the report
+names the view once. In a style other than
 `AnyWordSpec`, mix in `PageCases` and write a test for each of `checksOf(page)`,
 or call `checkStandards(page)` and `checkTranslation(page)` from tests of your
 own.
