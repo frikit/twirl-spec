@@ -48,22 +48,42 @@ class TwirlSpecReporter(directory: Path) extends Reporter {
   def this() =
     this(TwirlSpecReporter.configuredDirectory(sys.props.get, sys.env.get))
 
-  private val results = mutable.ArrayBuffer.empty[TwirlSpecReporter.Line]
+  import TwirlSpecReporter.{Line, Suite}
+
+  private val results = mutable.ArrayBuffer.empty[Line]
+  // By suite id, as two suites in two packages can share a name.
+  private val suites = mutable.LinkedHashMap.empty[String, Suite]
+  private val began = mutable.Map.empty[String, Long]
+  private val warned = mutable.Set.empty[(String, String)]
   private var started = Option.empty[Long]
-  private val warned = mutable.Set.empty[(Option[String], Option[String])]
+  private var ended = Option.empty[String]
 
   def apply(event: Event): Unit = synchronized {
     event match {
-      case e: RunStarting => started = Some(e.timeStamp)
+      case e: RunStarting   => started = Some(e.timeStamp)
+      case e: SuiteStarting =>
+        suite(e.suiteId, e.suiteName)
+        began(e.suiteId) = e.timeStamp
       // A rule's warnings come as an alert while its test runs.
       case e: AlertProvided if e.message.startsWith("twirl-spec: ") =>
-        e.nameInfo.foreach(n => warned += ((n.suiteClassName, n.testName)))
+        e.nameInfo.foreach(n =>
+          n.testName.foreach(t => warned += ((n.suiteId, t)))
+        )
       case e: TestSucceeded =>
-        val key = (e.suiteClassName, Some(e.testName))
-        val status = if (warned(key)) "warned" else "passed"
-        add(e.suiteName, e.testName, e.testText, status, e.duration, "")
+        val status =
+          if (warned.remove((e.suiteId, e.testName))) "warned" else "passed"
+        add(
+          e.suiteId,
+          e.suiteName,
+          e.testName,
+          e.testText,
+          status,
+          e.duration,
+          ""
+        )
       case e: TestFailed =>
         add(
+          e.suiteId,
           e.suiteName,
           e.testName,
           e.testText,
@@ -73,6 +93,7 @@ class TwirlSpecReporter(directory: Path) extends Reporter {
         )
       case e: TestCanceled =>
         add(
+          e.suiteId,
           e.suiteName,
           e.testName,
           e.testText,
@@ -81,44 +102,82 @@ class TwirlSpecReporter(directory: Path) extends Reporter {
           e.message
         )
       case e: TestPending =>
-        add(e.suiteName, e.testName, e.testText, "pending", e.duration, "")
-      case e: TestIgnored =>
-        add(e.suiteName, e.testName, e.testText, "ignored", None, "")
-      case e: SuiteAborted =>
-        val test = "the suite itself"
-        add(e.suiteName, test, test, "failed", e.duration, e.message)
-        write(e.timeStamp)
-      case e: SuiteCompleted                               => write(e.timeStamp)
-      case _: RunCompleted | _: RunStopped | _: RunAborted =>
-        write(event.timeStamp)
-        println(
-          s"twirl-spec report: ${directory.resolve("index.html").toAbsolutePath}"
+        add(
+          e.suiteId,
+          e.suiteName,
+          e.testName,
+          e.testText,
+          "pending",
+          e.duration,
+          ""
         )
+      case e: TestIgnored =>
+        add(e.suiteId, e.suiteName, e.testName, e.testText, "ignored", None, "")
+      case e: SuiteCompleted =>
+        finish(e.suiteId, e.suiteName, e.duration, e.timeStamp, None)
+      case e: SuiteAborted =>
+        finish(e.suiteId, e.suiteName, e.duration, e.timeStamp, Some(e.message))
+      case e: RunCompleted => end(e.timeStamp, None)
+      case e: RunStopped   => end(e.timeStamp, Some("✗ Run stopped"))
+      case e: RunAborted   =>
+        end(e.timeStamp, Some(s"✗ Run aborted: ${e.message}"))
       case _ => ()
     }
   }
 
+  private def suite(id: String, name: String): Suite =
+    suites.getOrElseUpdate(id, Suite(id, name, None, None))
+
   private def add(
-      suite: String,
+      suiteId: String,
+      suiteName: String,
       test: String,
       text: String,
       status: String,
       duration: Option[Long],
       message: String
-  ): Unit =
-    results += TwirlSpecReporter.Line(
-      suite,
+  ): Unit = {
+    suite(suiteId, suiteName)
+    results += Line(
+      suiteId,
       test,
       status,
       duration.getOrElse(0L),
       message,
       TwirlSpecReporter.cellOf(test, text)
     )
+  }
+
+  /** A suite's own time, from ScalaTest, else from its start, else none. */
+  private def finish(
+      id: String,
+      name: String,
+      duration: Option[Long],
+      now: Long,
+      aborted: Option[String]
+  ): Unit = {
+    val took = duration.orElse(began.get(id).map(now - _))
+    suites(id) = suite(id, name).copy(millis = took, aborted = aborted)
+    write(now)
+  }
+
+  private def end(now: Long, how: Option[String]): Unit = {
+    ended = how
+    write(now)
+    println(
+      s"twirl-spec report: ${directory.resolve("index.html").toAbsolutePath}"
+    )
+  }
 
   private def write(now: Long): Unit = {
     val took = started.fold(results.map(_.millis).sum)(now - _)
-    val run =
-      TwirlSpecReporter.Run(results.toList, started.getOrElse(now), took)
+    val run = TwirlSpecReporter.Run(
+      results.toList,
+      suites.values.toList,
+      started.getOrElse(now),
+      took,
+      ended
+    )
     Files.createDirectories(directory)
     Files.writeString(directory.resolve("index.html"), run.html)
     Files.writeString(directory.resolve("report.md"), run.markdown)
@@ -199,6 +258,16 @@ object TwirlSpecReporter {
       cell: Option[CheckCell]
   )
 
+  /** A suite: its id, the name shown, its own time where known, and why it
+    * aborted where it did.
+    */
+  private[twirlspec] final case class Suite(
+      id: String,
+      name: String,
+      millis: Option[Long],
+      aborted: Option[String]
+  )
+
   private val order =
     List("failed", "warned", "cancelled", "pending", "ignored", "passed")
 
@@ -230,22 +299,34 @@ object TwirlSpecReporter {
 
   private[twirlspec] final case class Run(
       lines: List[Line],
+      all: List[Suite],
       started: Long,
-      took: Long
+      took: Long,
+      ended: Option[String]
   ) {
 
-    private def ofSuite(suite: String) = lines.filter(_.suite == suite)
+    private def ofSuite(s: Suite) = lines.filter(_.suite == s.id)
+
+    private def failed(s: Suite) =
+      s.aborted.isDefined || ofSuite(s).exists(_.status == "failed")
 
     // Those that failed first, then by name.
-    private val suites = lines
-      .map(_.suite)
-      .distinct
-      .sortBy(s => (!ofSuite(s).exists(_.status == "failed"), s))
+    private val suites = all.sortBy(s => (!failed(s), s.name, s.id))
+
+    private def tallyOf(s: Suite) =
+      (s.aborted.map(_ => "aborted").toList :+ tally(counts(ofSuite(s))))
+        .filter(_.nonEmpty)
+        .mkString(" ")
+
+    private def timeOf(s: Suite) = s.millis.fold(spent(ofSuite(s)))(time)
 
     private val total = counts(lines)
 
-    private val headline =
-      if (total.contains("failed")) "✗ Tests failed" else "✓ Tests passed"
+    private val bad = ended.isDefined || suites.exists(failed)
+
+    private val headline = ended.getOrElse(
+      if (bad) "✗ Tests failed" else "✓ Tests passed"
+    )
 
     private val when = DateTimeFormatter
       .ofPattern("yyyy-MM-dd HH:mm:ss")
@@ -257,12 +338,19 @@ object TwirlSpecReporter {
 
     def markdown: String = {
       val rows = suites.map { s =>
-        val in = ofSuite(s)
-        s"| $s | ${in.size} | ${tally(counts(in))} | ${spent(in)} |"
+        s"| ${s.name} | ${ofSuite(s).size} | ${tallyOf(s)} | ${timeOf(s)} |"
       }
-      val failures = lines.filter(_.status == "failed").map { l =>
-        s"- **${l.suite}**: ${l.test}\n\n  ```\n  ${l.message.replace("\n", "\n  ")}\n  ```"
-      }
+      def block(title: String, message: String) =
+        s"- $title\n\n  ```\n  ${message.replace("\n", "\n  ")}\n  ```"
+      val failures =
+        suites.flatMap(s =>
+          s.aborted.map(m => block(s"**${s.name}** aborted", m))
+        ) ++
+          suites.flatMap(s =>
+            ofSuite(s)
+              .filter(_.status == "failed")
+              .map(l => block(s"**${s.name}**: ${l.test}", l.message))
+          )
       // Joined, not stripMargin'd, as a row's own `|` would be stripped.
       (Seq(
         s"# $headline",
@@ -347,22 +435,25 @@ object TwirlSpecReporter {
       ).mkString("\n")
     }
 
-    private def suite(name: String, index: Int): String = {
-      val in = ofSuite(name)
-      val c = counts(in)
+    private def suite(s: Suite, index: Int): String = {
+      val in = ofSuite(s)
       val pages = in.flatMap(_.cell).map(_.page).distinct
       val rest = in.filter(l =>
         l.cell.isEmpty && !pages.exists(p => l.test.startsWith(s"$p "))
       )
+      val aborted = s.aborted.fold("")(m =>
+        s"""<div class="message failed"><b>The suite aborted</b><pre>${esc(
+            m
+          )}</pre></div>"""
+      )
       Seq(
-        s"""<details id="s$index"${
-            if (c.contains("failed")) " open" else ""
-          }>""",
-        s"""<summary><span class="name">${esc(
-            name
-          )}</span><span class="tally">${tally(
-            c
-          )}</span><span class="time">${spent(in)}</span></summary>""",
+        s"""<details id="s$index"${if (failed(s)) " open" else ""}>""",
+        s"""<summary title="${esc(s.id)}"><span class="name">${esc(
+            s.name
+          )}</span><span class="tally">${tallyOf(
+            s
+          )}</span><span class="time">${timeOf(s)}</span></summary>""",
+        aborted,
         pages.map(page(_, in)).mkString("\n"),
         tests(rest, ""),
         "</details>"
@@ -375,16 +466,15 @@ object TwirlSpecReporter {
         .map(s => s"""<span class="pill $s">${total(s)} $s</span>""")
         .mkString(" ")
       val index = suites.zipWithIndex.map { case (s, i) =>
-        val in = ofSuite(s)
-        val c = counts(in)
         s"""<tr class="${
-            if (c.contains("failed")) "failed"
-            else "passed"
-          }"><td><a href="#s$i">${esc(
+            if (failed(s)) "failed" else "passed"
+          }"><td><a href="#s$i" title="${esc(
+            s.id
+          )}">${esc(s.name)}</a></td><td class="num">${ofSuite(
             s
-          )}</a></td><td class="num">${in.size}</td><td>${tally(
-            c
-          )}</td><td class="time">${spent(in)}</td></tr>"""
+          ).size}</td><td>${tallyOf(s)}</td><td class="time">${timeOf(
+            s
+          )}</td></tr>"""
       }
       s"""<!DOCTYPE html>
          |<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
@@ -412,10 +502,7 @@ object TwirlSpecReporter {
          |.message{margin:8px 0}.message.failed b{color:var(--fail)}
          |.tests td.status{width:24px;text-align:center}.tests td.time{width:80px}
          |</style></head><body>
-         |<h1 class="${
-          if (total.contains("failed")) "failed"
-          else "passed"
-        }">$headline</h1>
+         |<h1 class="${if (bad) "failed" else "passed"}">${esc(headline)}</h1>
          |<div class="meta">$summary</div>
          |<div>$pills</div>
          |<h2>Suites</h2>

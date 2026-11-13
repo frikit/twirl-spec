@@ -21,7 +21,7 @@ import io.github.frikit.twirlspec.standards.Rule
 import org.scalatest.events._
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
-import org.scalatest.{Args, ConfigMap, Filter, Suite}
+import org.scalatest.{Args, ConfigMap, Filter, Reporter, Suite}
 
 import java.nio.file.{Files, Paths}
 
@@ -50,29 +50,35 @@ class TwirlSpecReporterSpec extends AnyWordSpec with Matchers {
 
   private def ordinal = new Ordinal(1)
 
-  private def report(suites: Seq[Suite], first: Option[Long])(
-      end: Event
+  /** The report of a run, with the events `run` sends after its start. */
+  private def report(first: Option[Long])(
+      run: Reporter => Unit
   ): (String, String) = {
     val dir = Files.createTempDirectory("twirl-spec-report")
     val reporter = new TwirlSpecReporter(dir)
     first.foreach(t =>
       reporter(RunStarting(ordinal, 0, ConfigMap.empty, timeStamp = t))
     )
-    suites.foreach { s =>
-      s.run(None, Args(reporter)).waitUntilCompleted()
-      reporter(
-        SuiteCompleted(
-          ordinal,
-          s.suiteName,
-          s.suiteId,
-          Some(s.getClass.getName)
-        )
-      )
-    }
-    reporter(end)
+    run(reporter)
     (
       Files.readString(dir.resolve("index.html")),
       Files.readString(dir.resolve("report.md"))
+    )
+  }
+
+  /** A suite run as ScalaTest's runner runs it, with the time it reports. */
+  private def runSuite(
+      reporter: Reporter,
+      s: Suite,
+      starting: Boolean,
+      duration: Option[Long]
+  ): Unit = {
+    val className = Some(s.getClass.getName)
+    if (starting)
+      reporter(SuiteStarting(ordinal, s.suiteName, s.suiteId, className))
+    s.run(None, Args(reporter)).waitUntilCompleted()
+    reporter(
+      SuiteCompleted(ordinal, s.suiteName, s.suiteId, className, duration)
     )
   }
 
@@ -97,16 +103,23 @@ class TwirlSpecReporterSpec extends AnyWordSpec with Matchers {
       val funSuite = new org.scalatest.funsuite.AnyFunSuite {
         test("a test of another style")(succeed)
       }
-      val aborted =
-        SuiteAborted(ordinal, "it would not start", "Broken", "broken", None)
-      val (html, md) =
-        report(Seq(spec, funSuite), Some(System.currentTimeMillis() - 1500))(
-          aborted
-        )
+      val (html, md) = report(Some(System.currentTimeMillis() - 1500)) { r =>
+        runSuite(r, spec, starting = true, duration = Some(2500))
+        runSuite(r, funSuite, starting = true, duration = None)
+        r(SuiteStarting(ordinal, "Broken", "broken", None))
+        r(SuiteAborted(ordinal, "it would not start", "Broken", "broken", None))
+        r(RunCompleted(ordinal))
+      }
       html must include("<code>no-such</code>")
       html must include("a test of another style")
       html must include("✗ Tests failed")
+      // the run's time, and a suite's as ScalaTest reports it
       html must include("1.5 s")
+      html must include("2.5 s")
+      // an aborted suite is no test, but fails the run
+      html must include("The suite aborted")
+      html must not include "the suite itself"
+      md must include("| Broken | 0 | aborted |")
       // the catalogue's checks as rules by language
       Seq(
         "<th>en</th>",
@@ -125,8 +138,7 @@ class TwirlSpecReporterSpec extends AnyWordSpec with Matchers {
         "wait",
         "give up",
         "be skipped",
-        "Another test should fail",
-        "the suite itself"
+        "Another test should fail"
       )
         .foreach(html must include(_))
       md must include("# ✗ Tests failed")
@@ -142,14 +154,41 @@ class TwirlSpecReporterSpec extends AnyWordSpec with Matchers {
       val spec = new Spec {
         catalogue(staticPage("Fine")(pageOf("<p>Fine</p>")))
       }
-      val (html, md) = report(Seq(spec), None)(RunCompleted(ordinal))
+      def ran(end: Event) = report(None) { r =>
+        runSuite(r, spec, starting = false, duration = None)
+        r(end)
+      }
+      val (html, md) = ran(RunCompleted(ordinal))
       html must include("✓ Tests passed")
       html must not include "<details id=\"s0\" open"
       md must include("# ✓ Tests passed")
       md must not include "## Failures"
-      Seq(RunStopped(ordinal), RunAborted(ordinal, "stopped", None)).foreach(
-        end => report(Seq(spec), None)(end)._1 must include("✓ Tests passed")
+      // A run that did not finish did not pass, whatever its tests did.
+      ran(RunStopped(ordinal))._1 must include("✗ Run stopped")
+      ran(RunAborted(ordinal, "out of memory", None))._2 must include(
+        "# ✗ Run aborted: out of memory"
       )
+    }
+
+    "keep apart suites that share a name, and a warning to its own test" in {
+      def alert(suite: String, test: Option[String]) = AlertProvided(
+        ordinal,
+        "twirl-spec: 1 warning(s)",
+        Some(NameInfo("IndexSpec", suite, None, test))
+      )
+      def passed(suite: String) =
+        TestSucceeded(ordinal, "IndexSpec", suite, None, "t", "t", Vector.empty)
+      val (_, md) = report(None) { r =>
+        r(alert("a.IndexSpec", Some("t")))
+        r(alert("a.IndexSpec", None))
+        r(AlertProvided(ordinal, "someone else's", None))
+        r(passed("b.IndexSpec"))
+        r(passed("a.IndexSpec"))
+        r(passed("a.IndexSpec"))
+        r(RunCompleted(ordinal))
+      }
+      md must include("| IndexSpec | 1 | 1 ✓ |")
+      md must include("| IndexSpec | 2 | 1 ! 1 ✓ |")
     }
 
     "read what a catalogue test checks from its name, and nothing from another's" in {
