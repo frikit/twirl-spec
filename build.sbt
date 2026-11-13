@@ -43,6 +43,9 @@ ThisBuild / scalacOptions ++= Seq(
 lazy val licenceHeader =
   headerLicense := Some(HeaderLicense.ALv2("2026", "frikiT"))
 
+lazy val testSummary =
+  taskKey[Unit]("Summarise the last run's tests, for CI's run page")
+
 lazy val commonSettings = Seq(
   licenceHeader,
   // Play and Twirl sit on the oldest 3.0.x on purpose, and Scala on the LTS
@@ -103,7 +106,14 @@ lazy val root = Project("twirl-spec", file("."))
     publish / skip := true,
     licenceHeader,
     // The aggregate publishes nothing, so there is nothing to compare.
-    mimaPreviousArtifacts := Set.empty
+    mimaPreviousArtifacts := Set.empty,
+    // A summary of the last run's tests, for CI's run page.
+    testSummary := TestSummary(
+      baseDirectory.value,
+      target.value / "twirl-spec-report" / "report.md",
+      streams.value.log
+    ),
+    testSummary / aggregate := false
   )
   .settings(
     // `sbt unidoc` renders every module into one Scaladoc site, which the docs
@@ -227,6 +237,16 @@ lazy val all = Project("twirl-spec-all", file("all"))
     html
   )
   .settings(commonSettings)
+  .settings(
+    // A report of each run of this module's tests, at
+    // target/twirl-spec-report, which CI adds to its summary. Only here, where
+    // the reporter is on the test classpath.
+    Test / testOptions += Tests.Argument(
+      TestFrameworks.ScalaTest,
+      "-C",
+      "io.github.frikit.twirlspec.TwirlSpecReporter"
+    )
+  )
   .settings(CodeCoverageSettings())
   .settings(libraryDependencies ++= LibDependencies.rules)
   .settings(description := "All of twirl-spec in one dependency.")

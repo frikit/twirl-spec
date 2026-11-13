@@ -56,6 +56,22 @@ jobs:
           path: '*/target/scala-*/scoverage-report'
           if-no-files-found: warn
 
+      # Each module's JUnit XML, as sbt writes it, in the job's summary, then
+      # the report TwirlSpecReporter writes of the all module's tests.
+      - name: Summarise the tests
+        if: always()
+        run: sbt testSummary
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: test-reports
+          path: |
+            */target/test-reports
+            target/twirl-spec-report
+          if-no-files-found: warn
+
       # jsoup's Web query mode reads some selectors differently and becomes its
       # default in 1.25.1, so the rules have to read a page alike in both modes.
       # Tests are not forked, so the property reaches them.
