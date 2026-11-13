@@ -227,6 +227,16 @@ lazy val all = Project("twirl-spec-all", file("all"))
     html
   )
   .settings(commonSettings)
+  .settings(
+    // A report of each run of this module's tests, at
+    // target/twirl-spec-report, which CI adds to its summary. Only here, where
+    // the reporter is on the test classpath.
+    Test / testOptions += Tests.Argument(
+      TestFrameworks.ScalaTest,
+      "-C",
+      "io.github.frikit.twirlspec.TwirlSpecReporter"
+    )
+  )
   .settings(CodeCoverageSettings())
   .settings(libraryDependencies ++= LibDependencies.rules)
   .settings(description := "All of twirl-spec in one dependency.")
