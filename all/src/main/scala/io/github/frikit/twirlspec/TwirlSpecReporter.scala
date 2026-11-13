@@ -201,11 +201,12 @@ object TwirlSpecReporter {
         .getOrElse("target/twirl-spec-report")
     )
 
-  private val Render = "must render (.+), in (\\S+)".r
+  // (?s), as a state's name or a rule's description may run over lines.
+  private val Render = "(?s)must render (.+), in (\\S+)".r
   private val Translation =
-    "must (translate|be excused from translating) consistently by (\\S+), (.+?): (.*)".r
+    "(?s)must (translate|be excused from translating) consistently by (\\S+), (.+?): (.*)".r
   private val Standard =
-    "must (meet|be excused from) (\\S+) in (\\S+)(?:: (.*))?".r
+    "(?s)must (meet|be excused from) (\\S+) in (\\S+)(?:: (.*))?".r
 
   /** What a catalogue test checks, read from its name as [[PageCatalogue]]
     * writes it: its page is the scope its text follows, and its text says the

@@ -271,6 +271,20 @@ class TwirlSpecReporterSpec extends AnyWordSpec with Matchers {
           )
         )
       cell("Name", "must ask for a name, in English and Welsh") mustBe None
+      // a description over two lines, which tags must still find
+      cell("Name", "must meet two-lines in cy: one\ntwo").map(_.tags) mustBe
+        Some(
+          Seq(
+            "twirlspec.catalogue",
+            "twirlspec.standards",
+            "twirlspec.lang.cy",
+            "twirlspec.rule.two-lines"
+          )
+        )
+      cell(
+        "Name",
+        "must translate consistently by i18n-x, cy against en: one\ntwo"
+      ).map(_.about) mustBe Some("one\ntwo")
       TwirlSpecReporter.cellOf(
         "must meet one-h1 in en",
         "must meet one-h1 in en"
