@@ -628,6 +628,43 @@ class PageCatalogueSpec extends AnyWordSpec with Matchers {
       )
     }
 
+    "register the checks a spec's own checksOf gives, tagged where known" in {
+      val spec = new Spec {
+        override def checksOf(page: PageCase): Seq[PageCheck] =
+          super.checksOf(page).filterNot(_.name.startsWith("translate")) :+
+            PageCheck("hold a check of its own", () => ())
+        catalogue(staticPage("Info")(pageOf("<p>Fine</p>")))
+      }
+      spec.testNames must contain("Info must hold a check of its own")
+      spec.testNames.exists(_.contains("translate")) mustBe false
+      spec.tags("Info must hold a check of its own") mustBe
+        Set("twirlspec.catalogue")
+      spec.tags("Info must render as it stands, in en") must contain(
+        "twirlspec.render"
+      )
+      // One that replaces them all reads neither the rules nor the languages.
+      val alone = new Spec {
+        override def standardsRules: Seq[Rule] = throw new IllegalStateException
+        override def checksOf(page: PageCase): Seq[PageCheck] =
+          Seq(PageCheck("stand alone", () => ()))
+        catalogue(staticPage("Info")(pageOf("<p>Fine</p>")))
+      }
+      alone.testNames mustBe Set("Info must stand alone")
+      // A rule's tags whatever its id holds, so a filtered run finds it.
+      val housed = new Spec {
+        override def standardsRules: Seq[Rule] =
+          Seq(Rule("house rule", "a house rule")(_ => Nil))
+        catalogue(staticPage("Info")(pageOf("<p>Fine</p>")))
+      }
+      housed.tags("Info must meet house rule in cy: a house rule") mustBe
+        Set(
+          "twirlspec.catalogue",
+          "twirlspec.standards",
+          "twirlspec.lang.cy",
+          "twirlspec.rule.house rule"
+        )
+    }
+
     "refuse a page with no states, and a catalogue with no pages" in {
       the[IllegalArgumentException] thrownBy PageCase(
         "Info",

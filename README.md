@@ -933,6 +933,39 @@ It writes its tests in the `AnyWordSpec` style. In another style, mix in
 each of `checksOf(page)`, or call `checkStandards(page)` and
 `checkTranslation(page)` for all of a page's checks at once.
 
+### Running part of a catalogue, and reading the run
+
+Each catalogue test carries tags, so a run can take part of it:
+
+| Tag | Tests |
+|---|---|
+| `twirlspec.catalogue` | every catalogue test |
+| `twirlspec.render`, `twirlspec.standards`, `twirlspec.translation` | each kind of check |
+| `twirlspec.lang.cy` | the checks in one language, and its comparison with English |
+| `twirlspec.rule.one-h1` | one rule, on every page and in every language |
+| `twirlspec.excused` | the rules a page is excused from |
+
+```sh
+sbt 'testOnly views.* -- -n twirlspec.lang.cy'
+sbt 'testOnly views.* -- -l twirlspec.catalogue'
+```
+
+`TwirlSpecReporter` writes a report of the whole run: a page showing what passed,
+failed, warned and was cancelled, and how long each suite and test took. It lays
+each catalogue page's checks out as rules by language, with each failure's
+message beside it, and lists the other tests under their suite. It also writes
+the same summary as Markdown, for a CI job's summary. Add it to the run:
+
+```scala
+Test / testOptions += Tests.Argument(
+  TestFrameworks.ScalaTest, "-C", "io.github.frikit.twirlspec.TwirlSpecReporter"
+)
+```
+
+It writes `index.html` and `report.md` to `target/twirl-spec-report`, or to the
+directory the `twirlspec.report.dir` system property or the
+`TWIRLSPEC_REPORT_DIR` environment variable names, and prints where at the end.
+
 ## Languages
 
 ```scala
