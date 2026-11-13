@@ -17,8 +17,9 @@
 package io.github.frikit.twirlspec
 
 import io.github.frikit.twirlspec.expect.Violation
+import io.github.frikit.twirlspec.i18n.TranslationStandards
 import io.github.frikit.twirlspec.standards.Rule
-import org.scalatest.events.{Event, TestFailed, TestSucceeded}
+import org.scalatest.events.{Event, TestCanceled, TestFailed, TestSucceeded}
 import org.scalatest.exceptions.{
   TestCanceledException,
   TestFailedException,
@@ -70,40 +71,45 @@ class PageCatalogueSpec extends AnyWordSpec with Matchers {
 
   }
 
-  private final case class Outcome(passed: Seq[String], failed: Seq[String])
+  private final case class Outcome(
+      passed: Seq[String],
+      failed: Seq[String],
+      cancelled: Seq[String]
+  )
 
   private def run(suite: Suite): Outcome = {
     val passed = mutable.ListBuffer.empty[String]
     val failed = mutable.ListBuffer.empty[String]
+    val cancelled = mutable.ListBuffer.empty[String]
     val reporter = new Reporter {
       def apply(event: Event): Unit = event match {
         case e: TestSucceeded => passed += e.testName
         case e: TestFailed    => failed += s"${e.testName}: ${e.message}"
+        case e: TestCanceled  => cancelled += s"${e.testName}: ${e.message}"
         case _                => ()
       }
     }
     suite.run(None, Args(reporter)).waitUntilCompleted()
-    Outcome(passed.toSeq, failed.toSeq)
+    Outcome(passed.toSeq, failed.toSeq, cancelled.toSeq)
   }
 
-  private val standardsTest =
-    "meet the standards in every language, in each of its states"
-  private val translationTest =
-    "say the same thing in every language, in each of its states"
+  private val comparisons = TranslationStandards.all()
 
   "A catalogue" should {
 
-    "give each page two tests, named after it" in {
+    "give each page a test for each state and each rule, named after them" in {
       val spec = new Spec {
         catalogue(staticPage("Info")(pageOf("<p>Fine</p>")))
       }
-      run(spec).passed must contain theSameElementsAs Seq(
-        s"Info must $standardsTest",
-        s"Info must $translationTest"
+      run(spec).passed mustBe Seq(
+        "Info must render as it stands, in every language",
+        "Info must meet no-bad: a page does not say bad"
+      ) ++ comparisons.map(r =>
+        s"Info must translate consistently by ${r.id}: ${r.description}"
       )
     }
 
-    "render nothing until a test runs, then each state in each language" in {
+    "render nothing until a test runs, then each state once in each language" in {
       var renders = 0
       val spec = new Spec {
         catalogue(staticPage("Info") {
@@ -113,7 +119,38 @@ class PageCatalogueSpec extends AnyWordSpec with Matchers {
       }
       renders mustBe 0
       run(spec)
-      // Two languages for the standards, and two for the comparison.
+      // However many tests read them.
+      renders mustBe 2
+    }
+
+    "render its pages again when the same suite runs again" in {
+      var body = "<p>bad</p>"
+      val spec = new Spec {
+        catalogue(staticPage("Again")(pageOf(body)))
+      }
+      run(spec).failed must have size 1
+      body = "<p>Fine</p>"
+      run(spec).failed mustBe empty
+    }
+
+    "render a run's pages once, whatever another instance of its spec does" in {
+      var renders = 0
+      var meanwhile = Option.empty[Suite]
+      def spec(): Spec = new Spec {
+        catalogue(staticPage("Overlap") {
+          renders += 1
+          // Another instance of the same class runs in the middle of this run.
+          meanwhile.foreach { other =>
+            meanwhile = None
+            PageCatalogueSpec.this.run(other)
+          }
+          pageOf("<p>Fine</p>")
+        })
+      }
+      val first = spec()
+      meanwhile = Some(spec())
+      run(first).failed mustBe empty
+      // Each instance renders its page once in each language.
       renders mustBe 4
     }
 
@@ -125,7 +162,7 @@ class PageCatalogueSpec extends AnyWordSpec with Matchers {
         })))
       }
       val failures = run(spec).failed.mkString
-      failures must include(standardsTest)
+      failures must include("Welsh only must meet no-bad")
       failures must include("as it stands, in cy: ")
       failures must not include "as it stands, in en: "
       failures must include("it says bad")
@@ -227,7 +264,7 @@ class PageCatalogueSpec extends AnyWordSpec with Matchers {
         )
       }
       val failures = run(spec).failed.mkString
-      failures must include(translationTest)
+      failures must include("translate consistently by i18n-same-links")
       failures must include("blank: ")
       failures must include("with errors: ")
     }
@@ -250,6 +287,34 @@ class PageCatalogueSpec extends AnyWordSpec with Matchers {
         }
     }
 
+    "fail a state's render where it crashes, and cancel what it left unchecked" in {
+      def crashing(body: String) = run(new Spec {
+        catalogue(staticPage("Crash") {
+          if (messages.lang.code == "cy")
+            throw new IllegalStateException("boom")
+          else pageOf(body)
+        })
+      })
+      val rendered = "Crash must render as it stands, in every language"
+      val fine = crashing("<p>Fine</p>")
+      fine.failed.map(_.takeWhile(_ != ':')) mustBe Seq(rendered)
+      fine.failed.head must include(
+        "as it stands, in cy: java.lang.IllegalStateException: boom"
+      )
+      fine.cancelled must have size (1L + comparisons.size)
+      fine.cancelled.head must include(
+        "Crash was not checked against no-bad where it did not render: as it stands, in cy"
+      )
+      fine.cancelled(1) must include(
+        "Crash was not checked against i18n-lang-attribute where it did not render: as it stands"
+      )
+      // A rule that failed where the page rendered fails, rather than cancels.
+      crashing("<p>bad</p>").failed.map(_.takeWhile(_ != ':')) mustBe Seq(
+        rendered,
+        "Crash must meet no-bad"
+      )
+    }
+
     "let a cancelled or a pending test stay so, rather than fail it" in {
       val spec = new Spec {}
       val cancelled = spec.staticPage("Info")(cancel("fixture unavailable"))
@@ -258,6 +323,133 @@ class PageCatalogueSpec extends AnyWordSpec with Matchers {
       intercept[TestCanceledException](spec.checkTranslation(cancelled))
       intercept[TestPendingException](spec.checkStandards(unfinished))
       intercept[TestPendingException](spec.checkTranslation(unfinished))
+      spec
+        .checksOf(cancelled)
+        .foreach(check => intercept[TestCanceledException](check.run()))
+      spec
+        .checksOf(unfinished)
+        .foreach(check => intercept[TestPendingException](check.run()))
+    }
+
+    "check each rule alone, and rules that share an id together" in {
+      def says(id: String, word: String) =
+        Rule(id, s"nor does it say $word")(page =>
+          if (page.contains(word)) Seq(Violation(id, s"it says $word"))
+          else Nil
+        )
+      val spec = new Spec {
+        override def standardsRules: Seq[Rule] =
+          super.standardsRules ++ Seq(
+            says("no-worse", "worse"),
+            says("no-bad", "awful")
+          )
+        catalogue(staticPage("Awful")(pageOf("<p>awful</p>")))
+      }
+      val outcome = run(spec)
+      outcome.passed must contain(
+        "Awful must meet no-worse: nor does it say worse"
+      )
+      outcome.failed.map(_.takeWhile(_ != ':')) mustBe Seq(
+        "Awful must meet no-bad"
+      )
+      outcome.failed.head must include(
+        "Awful must meet no-bad: a page does not say bad; nor does it say awful"
+      )
+    }
+
+    "fail one rule at a time on what a page's checks fail all at once" in {
+      val spec = new AnyWordSpec
+        with Bilingual
+        with PageCatalogue
+        with GovukServiceChecks {
+        // Then a rule that only warns fails both ways.
+        override def failOnWarnings: Boolean = true
+      }
+      val page = spec.staticPage("Rough")(
+        pageOf(
+          if (spec.messages.lang.code == "cy")
+            """<img src="a.png"><a href="/only-welsh">Cymraeg</a>"""
+          else """<img src="a.png"><h1>Again</h1>"""
+        )(spec.messages)
+      )
+      val violated = """(?m)^\s*x (\S+) — """.r
+      def atOnce(check: PageCase => Unit) = violated
+        .findAllMatchIn(intercept[TestFailedException](check(page)).getMessage)
+        .map(_.group(1))
+        .toSet
+      def oneByOne(prefix: String) = spec
+        .checksOf(page)
+        .filter(c => c.name.startsWith(prefix))
+        .filter(c => scala.util.Try(c.run()).isFailure)
+        .map(_.name.stripPrefix(prefix).takeWhile(_ != ':'))
+        .toSet
+      val standards = atOnce(spec.checkStandards)
+      standards.size must be > 3
+      oneByOne("meet ") mustBe standards
+      val translation = atOnce(spec.checkTranslation)
+      translation must not be empty
+      oneByOne("translate consistently by ") mustBe translation
+    }
+
+    "fail where a language's rules are not those its tests were named after" in {
+      val spec = new Spec {
+        override def standardsRules: Seq[Rule] = {
+          val only =
+            if (messages.lang.code == "cy") "welsh-only" else "english-only"
+          super.standardsRules :+ Rule(only, s"a rule $only")(_ => Nil)
+        }
+        catalogue(staticPage("Info")(pageOf("<p>Fine</p>")))
+      }
+      val failures = run(spec).failed.mkString
+      failures must include(
+        "Info must render as it stands, in every language: "
+      )
+      failures must include(
+        "the rules, in cy: the spec runs welsh-only in cy, which no check was named after"
+      )
+      failures must include("Info must meet english-only: ")
+      failures must include("the spec runs no rule called english-only in cy")
+      // Even where no rule had a test of its own.
+      val welshOnly = new Spec {
+        override def standardsRules: Seq[Rule] =
+          if (messages.lang.code == "cy") super.standardsRules else Nil
+        catalogue(staticPage("Info")(pageOf("<p>bad</p>")))
+      }
+      run(welshOnly).failed.mkString must include(
+        "the spec runs no-bad in cy, which no check was named after"
+      )
+    }
+
+    "refuse rules it cannot read as it names the tests" in {
+      val unread =
+        "a page's checks are named after standardsRules, which could not be read when they were: " +
+          "define the rules with a def or a lazy val, or declare them above the checks"
+      the[IllegalStateException] thrownBy new Spec {
+        catalogue(staticPage("Info")(pageOf("<p>Fine</p>")))
+        override val standardsRules: Seq[Rule] = Nil
+      } must have message unread
+      // As a val declared below, among the rules, leaves.
+      the[IllegalStateException] thrownBy new Spec {
+        override def standardsRules: Seq[Rule] = Seq(null)
+        catalogue(staticPage("Info")(pageOf("<p>Fine</p>")))
+      } must have message unread
+      val boom = new IllegalStateException("boom")
+      val failing = the[IllegalStateException] thrownBy new Spec {
+        override def standardsRules: Seq[Rule] = throw boom
+        catalogue(staticPage("Info")(pageOf("<p>Fine</p>")))
+      }
+      failing.getCause mustBe boom
+    }
+
+    "refuse two states of a page with one name, as their tests would share it" in {
+      the[IllegalArgumentException] thrownBy new Spec {
+        catalogue(
+          formPage("Name", nameForm, "with errors" -> Map("name" -> ""))(_ =>
+            pageOf("<p>Fine</p>")
+          )
+        )
+      } must have message
+        "Name has two states called with errors, which their checks are both named after"
     }
 
     "build a spec's rules in the language under test" in {
@@ -310,7 +502,39 @@ class PageCatalogueSpec extends AnyWordSpec with Matchers {
           staticPage("Bad")(pageOf("<p>bad</p>")).exceptStandards("no-bad")
         )
       }
-      run(excused).failed mustBe empty
+      val outcome = run(excused)
+      outcome.failed mustBe empty
+      outcome.passed must contain(
+        "Bad must be excused from no-bad: a page does not say bad"
+      )
+      // The rule still runs, silently, so a needless excuse is known; read
+      // outside a run, as a suite forgets its exclusions once it has run.
+      def unused(spec: Spec, body: String) = {
+        val page = spec
+          .staticPage("Excused")(pageOf(body)(spec.messages))
+          .exceptStandards("no-bad")
+        spec.checksOf(page).foreach(_.run())
+        spec.unusedExclusions
+      }
+      unused(new Spec {}, "<p>bad</p>") mustBe empty
+      unused(new Spec {}, "<p>Fine</p>") mustBe Seq("no-bad")
+      // And all at once.
+      val spec = new Spec {}
+      spec.checkStandards(
+        spec
+          .staticPage("Bad")(pageOf("<p>bad</p>")(spec.messages))
+          .exceptStandards("no-bad")
+      )
+      val misspelt = new Spec {
+        catalogue(
+          staticPage("Bad")(pageOf("<p>Fine</p>")).exceptStandards("no-bda")
+        )
+      }
+      val failures = run(misspelt).failed.mkString
+      failures must include("Bad must be excused from no-bda: ")
+      failures must include(
+        "the spec runs no rule called no-bda in en, only no-bad"
+      )
     }
 
     "excuse a page from the language comparison rules it names" in {
@@ -326,7 +550,20 @@ class PageCatalogueSpec extends AnyWordSpec with Matchers {
             .exceptTranslation("i18n-same-links")
         )
       }
-      run(excused).failed mustBe empty
+      val outcome = run(excused)
+      outcome.failed mustBe empty
+      outcome.passed must contain(
+        "Help must be excused from translating consistently by i18n-same-links: every language links to the same places"
+      )
+      // And all at once.
+      val spec = new Spec {}
+      spec.checkTranslation(
+        spec
+          .staticPage("Help")(
+            pageOf(linked(spec.messages.lang.code))(spec.messages)
+          )
+          .exceptTranslation("i18n-same-links")
+      )
     }
 
     "refuse a page with no states, and a catalogue with no pages" in {
@@ -371,5 +608,8 @@ class PageCasesInAnotherStyleSpec
 
   test("the standards")(checkStandards(page))
   test("the comparison")(checkTranslation(page))
+  checksOf(page).foreach(check =>
+    test(s"A page must ${check.name}")(check.run())
+  )
 
 }

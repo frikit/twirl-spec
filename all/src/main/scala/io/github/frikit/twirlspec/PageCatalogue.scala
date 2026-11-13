@@ -16,16 +16,19 @@
 
 package io.github.frikit.twirlspec
 
-import io.github.frikit.twirlspec.i18n.I18nChecks
+import io.github.frikit.twirlspec.i18n.{I18nChecks, TranslationStandards}
 import io.github.frikit.twirlspec.page.Page
+import io.github.frikit.twirlspec.standards.{ExclusionRegistry, Rule}
 import org.jsoup.nodes.Element
 import org.scalatest.exceptions.{TestCanceledException, TestPendingException}
 import org.scalatest.matchers.MatchResult
 import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatest.{Alerting, Suite}
 import play.api.data.Form
+import play.api.i18n.Lang
 import play.twirl.api.Html
 
+import scala.collection.mutable
 import scala.jdk.CollectionConverters._
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
@@ -62,9 +65,15 @@ final case class PageCase(
 
 }
 
-/** A service's pages as data, and the two checks every page needs, for any test
-  * style: [[PageCatalogue]] is the same for `AnyWordSpec`, with its tests
-  * written for it.
+/** One of a page's checks on its own: its name, as a test's name reads after
+  * the page's label and `must`, and the check.
+  */
+final case class PageCheck(name: String, run: () => Unit)
+
+/** A service's pages as data, and the checks every page needs, for any test
+  * style: all at once, by [[checkStandards]] and [[checkTranslation]], or one
+  * by one, by [[checksOf]]. [[PageCatalogue]] is the same for `AnyWordSpec`,
+  * with a test written for each check.
   *
   * Nothing is rendered until a check runs, so each state renders in the
   * language being checked. A check runs every state in every language, and its
@@ -216,6 +225,233 @@ trait PageCases extends TwirlSpec with I18nChecks {
       }
     )
 
+  /** Each of this page's checks on its own, for a test of its own: that each
+    * state renders in every language, that the page meets each standards rule,
+    * and that it translates consistently by each comparison rule. A rule's
+    * check runs it over every state in every language, so together they check
+    * what [[checkStandards]] and [[checkTranslation]] check, and a failure
+    * names the rule.
+    *
+    * Each state renders once in each language, when a check first reads it, and
+    * again in each run of the suite. Where it does not render, its own check
+    * fails, and a rule's check that found nothing in the states that did is
+    * cancelled, as it could not check them all. The check of a standards rule
+    * the page is excused from runs the rule silently, as `meetStandardsExcept`
+    * does, for [[unusedExclusions]], and fails where the spec runs no rule of
+    * that id.
+    *
+    * The checks are named after `standardsRules` when this is called, so the
+    * rules must be defined by then: by a `def`, a `lazy val`, or a `val`
+    * declared above the call. As they run, the checks build the rules again in
+    * each language: a state's check fails where the spec runs a rule no check
+    * was named after, and a rule's check where the spec does not run it. A
+    * page's states need names of their own, as their checks are named after
+    * them.
+    */
+  def checksOf(page: PageCase): Seq[PageCheck] = {
+    val rules = Try(standardsRules) match {
+      case Success(read) if read != null && !read.contains(null) => read
+      case read                                                  =>
+        throw new IllegalStateException(
+          "a page's checks are named after standardsRules, which could not be read when they were: " +
+            "define the rules with a def or a lazy val, or declare them above the checks",
+          read.failed.toOption.orNull
+        )
+    }
+    val states = page.states.map(_.name)
+    states.diff(states.distinct).headOption.foreach { name =>
+      throw new IllegalArgumentException(
+        s"${page.label} has two states called $name, which their checks are both named after"
+      )
+    }
+    val excused = page.standardsExcept.distinct
+    val named = (rules.map(_.id) ++ excused).distinct
+    val renders = new Renders(page)
+    val rendering = page.states.indices.map { i =>
+      PageCheck(
+        s"render ${page.states(i).name}, in every language",
+        () => report(page, renders.failures(i) ++ unnamed(named))
+      )
+    }
+    val standards = named.map { id =>
+      val about = rules.filter(_.id == id).map(_.description).distinct
+      val described = if (about.isEmpty) id else s"$id: ${about.mkString("; ")}"
+      if (excused.contains(id))
+        PageCheck(
+          s"be excused from $described",
+          () => standardsCheck(page, id, renders)(excuse)
+        )
+      else
+        PageCheck(
+          s"meet $described",
+          () => standardsCheck(page, id, renders)(meet)
+        )
+    }
+    val comparisons = TranslationStandards.all()
+    val translation = comparisons.map { rule =>
+      val described = s"${rule.id}: ${rule.description}"
+      if (page.translationExcept.contains(rule.id))
+        PageCheck(
+          s"be excused from translating consistently by $described",
+          () => ()
+        )
+      else
+        PageCheck(
+          s"translate consistently by $described",
+          () => translationCheck(page, rule.id, comparisons.map(_.id), renders)
+        )
+    }
+    rendering ++ standards ++ translation
+  }
+
+  /** A page's states, each rendered in a language when a check first reads it
+    * in a run of the suite, which a run started since forgets.
+    */
+  private final class Renders(page: PageCase) {
+
+    private val rendered = mutable.Map.empty[(Int, String), Try[Page]]
+    private var run = SuiteRuns.current(PageCases.this)
+
+    def apply(state: Int, lang: Lang): Try[Page] = {
+      val now = SuiteRuns.current(PageCases.this)
+      if (now != run) {
+        rendered.clear()
+        run = now
+      }
+      rendered.getOrElseUpdate(
+        (state, lang.code),
+        attempt(inLanguage(lang)(renderPage(page.states(state).render())))
+      )
+    }
+
+    /** Where a state did not render, by language. */
+    def failures(state: Int): List[Problem] =
+      languages.toList.flatMap(lang =>
+        apply(state, lang).failed.toOption.map(e =>
+          crash(s"${page.states(state).name}, in ${lang.code}", e)
+        )
+      )
+
+  }
+
+  /** Where, in a language, the spec runs a rule no check was named after, as
+    * the rules were others when the checks were named.
+    */
+  private def unnamed(named: Seq[String]): List[Problem] =
+    languages.toList.flatMap { lang =>
+      problemsIn(
+        s"the rules, in ${lang.code}",
+        attempt(inLanguage(lang) {
+          val others = standardsRules.map(_.id).distinct.diff(named)
+          MatchResult(
+            others.isEmpty,
+            s"the spec runs ${others.mkString(", ")} in ${lang.code}, which no check was named after, as the rules were others when the checks were named",
+            "the spec ran only rules its checks were named after"
+          )
+        })
+      )
+    }
+
+  /** A standards rule's check, over each state in each language: `check` gets
+    * the spec's rules of this id, built in the language, and the state's page.
+    */
+  private def standardsCheck(
+      page: PageCase,
+      id: String,
+      renders: Renders
+  )(check: (Seq[Rule], Page) => MatchResult): Unit = {
+    val unchecked = List.newBuilder[String]
+    val problems = for {
+      (state, i) <- page.states.zipWithIndex
+      lang <- languages.toList
+      where = s"${state.name}, in ${lang.code}"
+      problem <- renders(i, lang) match {
+        case Failure(_) =>
+          unchecked += where
+          Nil
+        case Success(rendered) =>
+          problemsIn(
+            where,
+            attempt(inLanguage(lang) {
+              val active = standardsRules
+              if (active.exists(_.id == id))
+                check(active.filter(_.id == id), rendered)
+              else
+                MatchResult(
+                  false,
+                  s"the spec runs no rule called $id in ${lang.code}, only ${active.map(_.id).distinct.sorted.mkString(", ")}",
+                  s"the spec ran $id"
+                )
+            })
+          )
+      }
+    } yield problem
+    settle(page, id, problems, unchecked.result())
+  }
+
+  private def meet(rules: Seq[Rule], page: Page): MatchResult =
+    verdict(
+      checkPage(page, Seq(Rule.expectation(rules))),
+      "page satisfied every check, but was expected not to"
+    )
+
+  /** Run the rules the page is excused from silently, recording for
+    * [[unusedExclusions]] whether they found anything, as `meetStandardsExcept`
+    * does.
+    */
+  private def excuse(rules: Seq[Rule], page: Page): MatchResult = {
+    rules.foreach(r =>
+      ExclusionRegistry.record(
+        getClass.getName,
+        r.id,
+        page.withRecordingPaused(r.check(page)).nonEmpty
+      )
+    )
+    MatchResult(true, "", "the page was excused from the rule")
+  }
+
+  /** A comparison rule's check, over each state across the languages. */
+  private def translationCheck(
+      page: PageCase,
+      id: String,
+      ids: Seq[String],
+      renders: Renders
+  ): Unit = {
+    val unchecked = List.newBuilder[String]
+    val problems = page.states.zipWithIndex.flatMap { case (state, i) =>
+      val rendered = languages.toList.map(lang => renders(i, lang))
+      if (rendered.exists(_.isFailure)) {
+        unchecked += state.name
+        Nil
+      } else
+        problemsIn(
+          state.name,
+          attempt(
+            translateConsistentlyExcept(ids.filterNot(_ == id): _*)(
+              rendered.map(_.get)
+            )
+          )
+        )
+    }
+    settle(page, id, problems, unchecked.result())
+  }
+
+  /** Fail on the problems; failing none, cancel where the check could not run,
+    * which the state's own check reports.
+    */
+  private def settle(
+      page: PageCase,
+      id: String,
+      problems: List[Problem],
+      unchecked: List[String]
+  ): Unit = {
+    report(page, problems)
+    if (unchecked.nonEmpty)
+      cancel(
+        s"${page.label} was not checked against $id where it did not render: ${unchecked.mkString("; ")}"
+      )
+  }
+
   private def standards(page: PageCase) =
     if (page.standardsExcept.isEmpty) meetStandards
     else meetStandardsExcept(page.standardsExcept: _*)
@@ -259,7 +495,8 @@ trait PageCases extends TwirlSpec with I18nChecks {
 
 }
 
-/** A table of a service's pages, with two tests per page:
+/** A table of a service's pages, with a test for each check on each page, so
+  * the report lists what was checked:
   *
   * {{{
   * class EveryPageSpec extends ViewSpecBase with PageCatalogue {
@@ -275,22 +512,30 @@ trait PageCases extends TwirlSpec with I18nChecks {
   * }
   * }}}
   *
+  * {{{
+  * Name
+  * - must render blank, in every language
+  * - must render with errors, in every language
+  * - must meet one-h1: a page has exactly one <h1>
+  * - must translate consistently by i18n-same-links: every language links to the same places
+  * }}}
+  *
   * It writes its tests in the `AnyWordSpec` style. For another style, mix in
   * [[PageCases]] and call its checks from tests of your own.
   */
 trait PageCatalogue extends AnyWordSpecLike with PageCases {
 
-  /** Two tests per page: the standards in every language, and the comparison
-    * across the languages, each over all of the page's states.
+  /** A test for each of a page's checks, under its label, as [[checksOf]] lists
+    * them: that each state renders in every language, and each rule, over every
+    * state in every language.
     */
   def catalogue(pages: PageCase*): Unit = {
     require(pages.nonEmpty, "a catalogue of no pages would check nothing")
     pages.foreach { page =>
+      // Outside the scope, where ScalaTest would hide a refusal behind its own.
+      val checks = checksOf(page)
       page.label must {
-        "meet the standards in every language, in each of its states" in
-          checkStandards(page)
-        "say the same thing in every language, in each of its states" in
-          checkTranslation(page)
+        checks.foreach(check => check.name in check.run())
       }
     }
   }

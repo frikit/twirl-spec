@@ -20,6 +20,8 @@ import io.github.frikit.twirlspec.page.CoverageRegistry
 import io.github.frikit.twirlspec.standards.ExclusionRegistry
 import org.scalatest.{Args, Status, Suite, SuiteMixin}
 
+import java.util.WeakHashMap
+
 /** Starts each run of a suite with a clean coverage and exclusion record, and
   * drops both once it has finished, so a spec run again in the same JVM — from
   * an sbt shell, say — cannot pass `assertEverything` or `unusedExclusions` on
@@ -48,11 +50,35 @@ trait SuiteLifecycle extends SuiteMixin { this: Suite =>
       val forget = () => {
         CoverageRegistry.forget(spec)
         ExclusionRegistry.forget(spec)
+        SuiteRuns.turn(this)
       }
       forget()
       val status = super.run(testName, args)
       status.whenCompleted(_ => forget())
       status
     }
+
+}
+
+/** How often each suite has started or finished a run, so what its tests share
+  * within a run, such as the pages a catalogue's checks render, can tell this
+  * run from the last and start without it. Held here rather than on the suite,
+  * so a suite compiled against an earlier version keeps to it too.
+  */
+private[twirlspec] object SuiteRuns {
+
+  // By the suite itself, so two instances of one spec keep their own count,
+  // and weakly, so a suite done with is not kept for it.
+  private val turns = new WeakHashMap[Suite, Long]()
+
+  /** A run of this suite has started or finished. */
+  def turn(suite: Suite): Unit = turns.synchronized {
+    turns.put(suite, turns.getOrDefault(suite, 0L) + 1)
+  }
+
+  /** Where this suite's runs have got to, to compare with later. */
+  def current(suite: Suite): Long = turns.synchronized {
+    turns.getOrDefault(suite, 0L)
+  }
 
 }

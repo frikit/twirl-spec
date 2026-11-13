@@ -866,8 +866,8 @@ Path.of("app/views") must haveAgreeingEntryPoints(form, false, "a name", Nil, No
 
 Most of what a service's pages need is the same for each: to meet the standards
 in every language, blank and with errors, and to say the same thing in each
-language. `PageCatalogue`, in `twirl-spec-all`, makes that a table, with two
-tests per page:
+language. `PageCatalogue`, in `twirl-spec-all`, makes that a table, with a test
+for each check, so the report lists what was checked:
 
 ```scala
 import io.github.frikit.twirlspec.PageCatalogue
@@ -884,6 +884,23 @@ class EveryPageSpec extends ViewSpecBase with PageCatalogue {
 }
 ```
 
+```text
+Name
+- must render blank, in every language
+- must render with errors, in every language
+- must meet one-h1: a page has exactly one <h1>
+- must meet title-present: a page has a non-empty <title>
+  ...
+- must translate consistently by i18n-same-links: every language links to the same places
+  ...
+```
+
+Each state has a test that it renders in every language. Each standards rule
+has a test that runs it on every state in every language, and each comparison
+rule a test that compares the languages in every state, so a failure names the
+rule, and the state and language it failed in. A rule the page is excused from
+has a test that says so.
+
 A form page is rendered blank, with the errors of an empty submission, and with
 those of each submission named; a submission that gives no errors fails its test.
 The empty submission is the blank form sent untouched, as a browser sends it:
@@ -891,12 +908,16 @@ each control with the value it renders with, so a field left empty meets the
 form's own message rather than Play's generic `error.required`. Where it cannot
 tell which of several forms holds the fields, it sends nothing.
 Nothing is rendered until a test runs, so each state renders in the language
-under test. Every state runs in every language, and a failure reports each that
-went wrong, by state and language.
+under test, and once in each language, however many tests read it. Where a state
+does not render, its own test fails, and a rule's test that found nothing in the
+states that did is cancelled, as it could not check them all.
 
+The tests are named after `standardsRules` as the spec is built, so define the
+rules with a `def` or a `lazy val`, or declare them above `catalogue(...)`.
 It writes its tests in the `AnyWordSpec` style. In another style, mix in
-`PageCases`, which has the same `staticPage` and `formPage`, and call
-`checkStandards(page)` and `checkTranslation(page)` from tests of your own.
+`PageCases`, which has the same `staticPage` and `formPage`, and write a test for
+each of `checksOf(page)`, or call `checkStandards(page)` and
+`checkTranslation(page)` for all of a page's checks at once.
 
 ## Languages
 
