@@ -70,6 +70,22 @@ final case class PageCase(
   */
 final case class PageCheck(name: String, run: () => Unit)
 
+/** What each check [[PageCases.checksOf]] built checks, by the check itself,
+  * for its tags: weakly, so a check is kept only while its test is.
+  */
+private[twirlspec] object CheckCells {
+
+  private val cells = java.util.Collections.synchronizedMap(
+    new java.util.WeakHashMap[PageCheck, CheckCell]()
+  )
+
+  def record(check: PageCheck, cell: CheckCell): Unit =
+    cells.put(check, cell): Unit
+
+  def of(check: PageCheck): Option[CheckCell] = Option(cells.get(check))
+
+}
+
 /** What one of a page's checks checks: its kind (`render`, `standards` or
   * `translation`), the state or rule, the language it ran in (`cy`, or
   * `cy against en` for a comparison), what the rule asks, and whether the page
@@ -393,7 +409,9 @@ trait PageCases extends TwirlSpec with I18nChecks {
         excusedHere
       )
     }
-    inEach ++ translation
+    val described = inEach ++ translation
+    described.foreach { case (check, cell) => CheckCells.record(check, cell) }
+    described
   }
 
   /** A page's states, each rendered in a language when a check first reads it
@@ -643,15 +661,13 @@ trait PageCatalogue extends AnyWordSpecLike with PageCases {
     */
   def cataloguePage(page: PageCase)(tests: => Unit): Unit = {
     // Outside the scope, where ScalaTest would hide a refusal behind its own.
-    // Through checksOf, as a spec may override it, and tagged by each check's
-    // name, as the report reads it, so an override is not made to build the
-    // checks it replaces.
+    // Through checksOf, as a spec may override it; a check describedChecks
+    // built carries its own tags, and one of the spec's own the catalogue's.
     val checks = checksOf(page)
     page.label must {
       checks.foreach { check =>
-        val tags = TwirlSpecReporter
-          .cellOf(s"${page.label} must ${check.name}", check.name)
-          .fold(Seq("twirlspec.catalogue"))(_.tags)
+        val tags =
+          CheckCells.of(check).fold(Seq("twirlspec.catalogue"))(_.tags)
         check.name.taggedAs(Tag(tags.head), tags.tail.map(Tag(_)): _*) in
           check.run()
       }

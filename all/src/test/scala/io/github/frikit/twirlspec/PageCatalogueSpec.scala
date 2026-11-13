@@ -650,6 +650,19 @@ class PageCatalogueSpec extends AnyWordSpec with Matchers {
         catalogue(staticPage("Info")(pageOf("<p>Fine</p>")))
       }
       alone.testNames mustBe Set("Info must stand alone")
+      // A rule's tags whatever its id holds, so a filtered run finds it.
+      val housed = new Spec {
+        override def standardsRules: Seq[Rule] =
+          Seq(Rule("house rule", "a house rule")(_ => Nil))
+        catalogue(staticPage("Info")(pageOf("<p>Fine</p>")))
+      }
+      housed.tags("Info must meet house rule in cy: a house rule") mustBe
+        Set(
+          "twirlspec.catalogue",
+          "twirlspec.standards",
+          "twirlspec.lang.cy",
+          "twirlspec.rule.house rule"
+        )
     }
 
     "refuse a page with no states, and a catalogue with no pages" in {

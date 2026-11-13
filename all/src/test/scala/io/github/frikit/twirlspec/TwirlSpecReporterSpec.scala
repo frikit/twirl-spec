@@ -271,6 +271,18 @@ class TwirlSpecReporterSpec extends AnyWordSpec with Matchers {
           )
         )
       cell("Name", "must ask for a name, in English and Welsh") mustBe None
+      // a rule of the spec's own may have spaces in its id
+      cell("Name", "must meet house rule in cy: one in en: two") mustBe
+        Some(
+          CheckCell(
+            "Name",
+            "standards",
+            "house rule",
+            "cy",
+            "one in en: two",
+            excused = false
+          )
+        )
       // a description over two lines, which tags must still find
       cell("Name", "must meet two-lines in cy: one\ntwo").map(_.tags) mustBe
         Some(

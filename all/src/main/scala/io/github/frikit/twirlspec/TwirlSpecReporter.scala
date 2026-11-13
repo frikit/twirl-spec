@@ -205,8 +205,10 @@ object TwirlSpecReporter {
   private val Render = "(?s)must render (.+), in (\\S+)".r
   private val Translation =
     "(?s)must (translate|be excused from translating) consistently by (\\S+), (.+?): (.*)".r
+  // A rule's own id may hold spaces: it runs to the first " in <language>"
+  // that ends the name or comes before its description.
   private val Standard =
-    "(?s)must (meet|be excused from) (\\S+) in (\\S+)(?:: (.*))?".r
+    "(?s)must (meet|be excused from) (.+?) in (\\S+)(?:: (.*))?".r
 
   /** What a catalogue test checks, read from its name as [[PageCatalogue]]
     * writes it: its page is the scope its text follows, and its text says the
