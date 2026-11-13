@@ -50,7 +50,7 @@ library across a service:
 - [Languages and message files](docs/languages-and-messages.md) — Welsh, or any language, and the files behind it
 - [Coverage and entry points](docs/coverage-and-entry-points.md) — what the spec never looked at
 - [Failure messages](docs/failure-messages.md) — how to read what a red test says
-- [Adopting in an existing service](docs/adopting.md) — replacing a home-grown spec base, and moving from 1.x
+- [Adopting in an existing service](docs/adopting.md) — replacing a home-grown spec base, and moving from 1.x or 2.x
 - [Troubleshooting](docs/troubleshooting.md) — the questions that come up
 
 ## Why
@@ -122,7 +122,7 @@ authority for that release; this table is kept for the current line.
 
 | twirl-spec | Play | Twirl | Scala | Java | ScalaTest | jsoup |
 |---|---|---|---|---|---|---|
-| 2.x | 3.0.0 | 2.0.1 | 3.3.9 | 21 | 3.2.20 | 1.24.1 |
+| 3.x | 3.0.0 | 2.0.1 | 3.3.9 | 21 | 3.2.20 | 1.24.1 |
 
 CI also runs a Play service's view specs against the published artifacts, as a
 service gets them: on Scala 3.3.7 compiled with `-release 11` and Play 3.0.10,
@@ -150,7 +150,7 @@ and fails to load some of its classes, with twirl-spec or without, so on Java 21
 a project on 3.3.0 compiles only with `-release` set to an older Java, such as
 11 or 17; 3.3.1 and later need no flag. A project on a 3.3 patch below 3.3.9
 gets scala3-library 3.3.9 on its test classpath, which sbt resolves without a
-warning. A project on Scala 2.13 cannot use 2.x; see
+warning. A project on Scala 2.13 cannot use 2.x or 3.x; see
 [Moving from 1.x to 2.x](docs/adopting.md#moving-from-1x-to-2x).
 
 **Java.** Compiled with `-release 21`, so the specs run on Java 21 or later. A

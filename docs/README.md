@@ -18,7 +18,7 @@ of all nine modules as one site. These pages are the guide.
 | [Languages and message files](languages-and-messages.md) | your service renders in more than one language, or you want the message files themselves checked |
 | [Coverage and entry points](coverage-and-entry-points.md) | you want to know what a spec never looked at, and to reach the Twirl entry points nothing calls |
 | [Failure messages](failure-messages.md) | a test is red and you want to read its output quickly |
-| [Adopting in an existing service](adopting.md) | you have a home-grown spec base to replace, or are moving from 1.x |
+| [Adopting in an existing service](adopting.md) | you have a home-grown spec base to replace, or are moving from 1.x or 2.x |
 | [Troubleshooting](troubleshooting.md) | something does not behave as you expected |
 
 ## Requirements
@@ -33,7 +33,7 @@ of all nine modules as one site. These pages are the guide.
 ## The shortest possible start
 
 ```scala
-libraryDependencies += "io.github.frikit" %% "twirl-spec-all" % "2.15.0" % Test
+libraryDependencies += "io.github.frikit" %% "twirl-spec-all" % "3.0.0" % Test
 ```
 
 ```scala
