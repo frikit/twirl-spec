@@ -643,14 +643,15 @@ trait PageCatalogue extends AnyWordSpecLike with PageCases {
     */
   def cataloguePage(page: PageCase)(tests: => Unit): Unit = {
     // Outside the scope, where ScalaTest would hide a refusal behind its own.
-    // Through checksOf, as a spec may override it; the tags by each check's name.
+    // Through checksOf, as a spec may override it, and tagged by each check's
+    // name, as the report reads it, so an override is not made to build the
+    // checks it replaces.
     val checks = checksOf(page)
-    val tagged = describedChecks(page).map { case (c, cell) =>
-      c.name -> cell.tags
-    }.toMap
     page.label must {
       checks.foreach { check =>
-        val tags = tagged.getOrElse(check.name, Seq("twirlspec.catalogue"))
+        val tags = TwirlSpecReporter
+          .cellOf(s"${page.label} must ${check.name}", check.name)
+          .fold(Seq("twirlspec.catalogue"))(_.tags)
         check.name.taggedAs(Tag(tags.head), tags.tail.map(Tag(_)): _*) in
           check.run()
       }

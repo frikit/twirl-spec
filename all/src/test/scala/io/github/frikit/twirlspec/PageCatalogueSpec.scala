@@ -642,6 +642,14 @@ class PageCatalogueSpec extends AnyWordSpec with Matchers {
       spec.tags("Info must render as it stands, in en") must contain(
         "twirlspec.render"
       )
+      // One that replaces them all reads neither the rules nor the languages.
+      val alone = new Spec {
+        override def standardsRules: Seq[Rule] = throw new IllegalStateException
+        override def checksOf(page: PageCase): Seq[PageCheck] =
+          Seq(PageCheck("stand alone", () => ()))
+        catalogue(staticPage("Info")(pageOf("<p>Fine</p>")))
+      }
+      alone.testNames mustBe Set("Info must stand alone")
     }
 
     "refuse a page with no states, and a catalogue with no pages" in {
