@@ -19,7 +19,9 @@ readable.
   has a test that it renders, as `must render blank, in cy`, and each standards
   rule a test of its own, as `must meet one-h1 in cy: a page has exactly one
   <h1>`. Each comparison rule has a test for each language other than English,
-  as `must translate consistently by i18n-same-links, cy against en: ...`. A
+  as `must translate consistently by i18n-same-links, cy against en: ...`. With
+  one language, the page still has a test that it declares it, as
+  `i18n-lang-attribute, en alone`, as `checkTranslation` checks. A
   bilingual page now has about twice the tests, and test names change again: a
   filter such as `-z "meet one-h1:"` now matches nothing.
 - The languages are read as the spec is built, to name the tests, and a spec

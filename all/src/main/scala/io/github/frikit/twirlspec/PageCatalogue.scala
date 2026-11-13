@@ -303,12 +303,20 @@ trait PageCases extends TwirlSpec with I18nChecks {
       rendering ++ standards
     }
     val comparisons = TranslationStandards.all()
+    val base = langs.head
+    // With one language there is nothing to compare, but the page must still
+    // declare its own, as checkTranslation asks.
+    val pairs =
+      if (langs.size > 1) langs.drop(1).map(_ -> comparisons)
+      else List(base -> comparisons.filter(_.id == "i18n-lang-attribute"))
     val translation = for {
-      other <- langs.drop(1)
-      rule <- comparisons
+      (other, rules) <- pairs
+      rule <- rules
     } yield {
-      val described =
-        s"${rule.id}, ${other.code} against ${langs.head.code}: ${rule.description}"
+      val against =
+        if (other == base) s"${base.code} alone"
+        else s"${other.code} against ${base.code}"
+      val described = s"${rule.id}, $against: ${rule.description}"
       if (page.translationExcept.contains(rule.id))
         PageCheck(
           s"be excused from translating consistently by $described",
@@ -447,7 +455,9 @@ trait PageCases extends TwirlSpec with I18nChecks {
     val unchecked = List.newBuilder[String]
     val problems = page.states.zipWithIndex.flatMap { case (state, i) =>
       val rendered = List(base, other).map(lang => renders(i, lang))
-      val where = s"${state.name}, ${other.code} against ${base.code}"
+      val where =
+        if (other == base) s"${state.name}, ${base.code} alone"
+        else s"${state.name}, ${other.code} against ${base.code}"
       if (rendered.exists(_.isFailure)) {
         unchecked += where
         Nil

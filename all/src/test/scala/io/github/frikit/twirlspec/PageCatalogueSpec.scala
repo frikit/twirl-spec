@@ -120,6 +120,26 @@ class PageCatalogueSpec extends AnyWordSpec with Matchers {
       )
     }
 
+    "check a page in one language declares it, as checkTranslation does" in {
+      class OneLanguage extends AnyWordSpec with TwirlSpec with PageCatalogue {
+        override def applicationConfig: Map[String, Any] =
+          Map("play.i18n.langs" -> Seq("en"))
+        val page = staticPage("Mislabelled")(
+          Html(
+            """<!DOCTYPE html><html lang="cy"><head><title>t</title></head><body><main><h1>h</h1></main></body></html>"""
+          )
+        )
+        catalogue(page)
+      }
+      val spec = new OneLanguage
+      intercept[TestFailedException](spec.checkTranslation(spec.page))
+      val outcome = run(spec)
+      outcome.failed.map(_.takeWhile(_ != ':')) mustBe Seq(
+        "Mislabelled must translate consistently by i18n-lang-attribute, en alone"
+      )
+      outcome.failed.head must include("as it stands, en alone: ")
+    }
+
     "put a page's own tests under its one label, after its checks" in {
       val spec = new Spec {
         cataloguePage(staticPage("Info")(pageOf("<p>Fine</p>"))) {
