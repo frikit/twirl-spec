@@ -23,7 +23,7 @@ import org.jsoup.nodes.Element
 import org.scalatest.exceptions.{TestCanceledException, TestPendingException}
 import org.scalatest.matchers.MatchResult
 import org.scalatest.wordspec.AnyWordSpecLike
-import org.scalatest.{Alerting, Suite}
+import org.scalatest.{Alerting, Suite, Tag}
 import play.api.data.Form
 import play.api.i18n.Lang
 import play.twirl.api.Html
@@ -69,6 +69,31 @@ final case class PageCase(
   * the page's label and `must`, and the check.
   */
 final case class PageCheck(name: String, run: () => Unit)
+
+/** What one of a page's checks checks: its kind (`render`, `standards` or
+  * `translation`), the state or rule, the language it ran in (`cy`, or
+  * `cy against en` for a comparison), what the rule asks, and whether the page
+  * is excused from it.
+  */
+private[twirlspec] final case class CheckCell(
+    page: String,
+    kind: String,
+    check: String,
+    language: String,
+    about: String,
+    excused: Boolean
+) {
+
+  /** The tags its test carries, to run a part of a catalogue with `-n`. */
+  def tags: Seq[String] =
+    Seq(
+      "twirlspec.catalogue",
+      s"twirlspec.$kind",
+      s"twirlspec.lang.${language.takeWhile(_ != ' ')}"
+    ) ++ Option.when(kind != "render")(s"twirlspec.rule.$check") ++
+      Option.when(excused)("twirlspec.excused")
+
+}
 
 /** A service's pages as data, and the checks every page needs, for any test
   * style: all at once, by [[checkStandards]] and [[checkTranslation]], or one
@@ -249,7 +274,13 @@ trait PageCases extends TwirlSpec with I18nChecks {
     * the spec does not run it. A page's states need names of their own, as
     * their checks are named after them.
     */
-  def checksOf(page: PageCase): Seq[PageCheck] = {
+  def checksOf(page: PageCase): Seq[PageCheck] =
+    describedChecks(page).map(_._1)
+
+  /** [[checksOf]], each with what it checks, for its tags and the report. */
+  private[twirlspec] def describedChecks(
+      page: PageCase
+  ): Seq[(PageCheck, CheckCell)] = {
     val rules = Try(standardsRules) match {
       case Success(read) if read != null && !read.contains(null) => read
       case read                                                  =>
@@ -282,6 +313,13 @@ trait PageCases extends TwirlSpec with I18nChecks {
         PageCheck(
           s"render ${page.states(i).name}, in ${lang.code}",
           () => report(page, renders.failure(i, lang) ++ unnamed(named, lang))
+        ) -> CheckCell(
+          page.label,
+          "render",
+          page.states(i).name,
+          lang.code,
+          "",
+          excused = false
         )
       }
       val standards = named.map { id =>
@@ -289,16 +327,25 @@ trait PageCases extends TwirlSpec with I18nChecks {
         val described =
           if (about.isEmpty) s"$id in ${lang.code}"
           else s"$id in ${lang.code}: ${about.mkString("; ")}"
-        if (excused.contains(id))
-          PageCheck(
-            s"be excused from $described",
-            () => standardsCheck(page, id, lang, renders)(excuse)
-          )
-        else
-          PageCheck(
-            s"meet $described",
-            () => standardsCheck(page, id, lang, renders)(meet)
-          )
+        val check =
+          if (excused.contains(id))
+            PageCheck(
+              s"be excused from $described",
+              () => standardsCheck(page, id, lang, renders)(excuse)
+            )
+          else
+            PageCheck(
+              s"meet $described",
+              () => standardsCheck(page, id, lang, renders)(meet)
+            )
+        check -> CheckCell(
+          page.label,
+          "standards",
+          id,
+          lang.code,
+          about.mkString("; "),
+          excused.contains(id)
+        )
       }
       rendering ++ standards
     }
@@ -317,24 +364,34 @@ trait PageCases extends TwirlSpec with I18nChecks {
         if (other == base) s"${base.code} alone"
         else s"${other.code} against ${base.code}"
       val described = s"${rule.id}, $against: ${rule.description}"
-      if (page.translationExcept.contains(rule.id))
-        PageCheck(
-          s"be excused from translating consistently by $described",
-          () => ()
-        )
-      else
-        PageCheck(
-          s"translate consistently by $described",
-          () =>
-            translationCheck(
-              page,
-              rule.id,
-              comparisons.map(_.id),
-              langs.head,
-              other,
-              renders
-            )
-        )
+      val excusedHere = page.translationExcept.contains(rule.id)
+      val check =
+        if (excusedHere)
+          PageCheck(
+            s"be excused from translating consistently by $described",
+            () => ()
+          )
+        else
+          PageCheck(
+            s"translate consistently by $described",
+            () =>
+              translationCheck(
+                page,
+                rule.id,
+                comparisons.map(_.id),
+                langs.head,
+                other,
+                renders
+              )
+          )
+      check -> CheckCell(
+        page.label,
+        "translation",
+        rule.id,
+        against,
+        rule.description,
+        excusedHere
+      )
     }
     inEach ++ translation
   }
@@ -586,9 +643,12 @@ trait PageCatalogue extends AnyWordSpecLike with PageCases {
     */
   def cataloguePage(page: PageCase)(tests: => Unit): Unit = {
     // Outside the scope, where ScalaTest would hide a refusal behind its own.
-    val checks = checksOf(page)
+    val checks = describedChecks(page)
     page.label must {
-      checks.foreach(check => check.name in check.run())
+      checks.foreach { case (check, cell) =>
+        val tags = cell.tags.map(Tag(_))
+        check.name.taggedAs(tags.head, tags.tail: _*) in check.run()
+      }
       tests
     }
   }

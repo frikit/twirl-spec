@@ -10,6 +10,22 @@ release, and each one has a GitHub Release whose notes are its section here. Eve
 recorded in full; earlier lines are kept to one entry each, so the file stays
 readable.
 
+## [2.15.0] - 2026-11-13
+
+### Added
+
+- `TwirlSpecReporter`, a ScalaTest reporter to add with `-C`, writes a report of
+  the whole run to `target/twirl-spec-report`, as `index.html` and `report.md`.
+  It shows how many tests passed, failed, warned and were cancelled, and how
+  long the run, each suite and each test took. Each catalogue page's checks are
+  laid out as rules by language, with each failure's message beside it, and
+  other tests are listed under their suite.
+- Each catalogue test carries tags, for its kind (`twirlspec.render`,
+  `twirlspec.standards`, `twirlspec.translation`), its language
+  (`twirlspec.lang.cy`) and its rule (`twirlspec.rule.one-h1`), with
+  `twirlspec.catalogue` on all of them and `twirlspec.excused` where the page is
+  excused, so `-n` and `-l` can run part of a catalogue.
+
 ## [2.14.0] - 2026-11-13
 
 ### Changed
@@ -1013,6 +1029,7 @@ them in `twirl-spec-all`. The renames a service built against a 0.x snapshot
 would meet are listed in [the adoption guide](docs/adopting.md).
 
 [Unreleased]: https://github.com/frikit/twirl-spec/compare/v2.9.0...HEAD
+[2.15.0]: https://github.com/frikit/twirl-spec/compare/v2.14.0...v2.15.0
 [2.14.0]: https://github.com/frikit/twirl-spec/compare/v2.13.0...v2.14.0
 [2.13.0]: https://github.com/frikit/twirl-spec/compare/v2.12.0...v2.13.0
 [2.12.0]: https://github.com/frikit/twirl-spec/compare/v2.11.0...v2.12.0
