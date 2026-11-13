@@ -106,15 +106,17 @@ class PageCatalogueSpec extends AnyWordSpec with Matchers {
 
   "A catalogue" should {
 
-    "give each page a test for each state and each rule, named after them" in {
+    "give each page a test for each state and rule in each language, named after them" in {
       val spec = new Spec {
         catalogue(staticPage("Info")(pageOf("<p>Fine</p>")))
       }
-      run(spec).passed mustBe Seq(
-        "Info must render as it stands, in every language",
-        "Info must meet no-bad: a page does not say bad"
+      run(spec).passed mustBe Seq("en", "cy").flatMap(lang =>
+        Seq(
+          s"Info must render as it stands, in $lang",
+          s"Info must meet no-bad in $lang: a page does not say bad"
+        )
       ) ++ comparisons.map(r =>
-        s"Info must translate consistently by ${r.id}: ${r.description}"
+        s"Info must translate consistently by ${r.id}, cy against en: ${r.description}"
       )
     }
 
@@ -126,7 +128,7 @@ class PageCatalogueSpec extends AnyWordSpec with Matchers {
       }
       val outcome = run(spec)
       outcome.scopes mustBe Seq("Info")
-      outcome.passed.head mustBe "Info must render as it stands, in every language"
+      outcome.passed.head mustBe "Info must render as it stands, in en"
       outcome.passed.last mustBe "Info must say it is fine"
     }
 
@@ -149,7 +151,8 @@ class PageCatalogueSpec extends AnyWordSpec with Matchers {
       val spec = new Spec {
         catalogue(staticPage("Again")(pageOf(body)))
       }
-      run(spec).failed must have size 1
+      // no-bad, in each language
+      run(spec).failed must have size 2
       body = "<p>Fine</p>"
       run(spec).failed mustBe empty
     }
@@ -263,7 +266,10 @@ class PageCatalogueSpec extends AnyWordSpec with Matchers {
         catalogue(formPage("Name", nameForm)(_ => pageOf("<p>bad</p>")))
       }
       val failures = run(spec).failed.mkString
-      failures must include("Name failed 4 check(s)")
+      // both states, in each language's test
+      failures must include("Name must meet no-bad in en: ")
+      failures must include("Name must meet no-bad in cy: ")
+      failures must include("Name failed 2 check(s)")
       Seq(
         "blank, in en: ",
         "blank, in cy: ",
@@ -285,9 +291,11 @@ class PageCatalogueSpec extends AnyWordSpec with Matchers {
         )
       }
       val failures = run(spec).failed.mkString
-      failures must include("translate consistently by i18n-same-links")
-      failures must include("blank: ")
-      failures must include("with errors: ")
+      failures must include(
+        "translate consistently by i18n-same-links, cy against en"
+      )
+      failures must include("blank, cy against en: ")
+      failures must include("with errors, cy against en: ")
     }
 
     "name the state and language of a crash, and keep it as the cause" in {
@@ -316,23 +324,27 @@ class PageCatalogueSpec extends AnyWordSpec with Matchers {
           else pageOf(body)
         })
       })
-      val rendered = "Crash must render as it stands, in every language"
+      val rendered = "Crash must render as it stands, in cy"
       val fine = crashing("<p>Fine</p>")
       fine.failed.map(_.takeWhile(_ != ':')) mustBe Seq(rendered)
       fine.failed.head must include(
         "as it stands, in cy: java.lang.IllegalStateException: boom"
+      )
+      // English is checked, and Welsh and the comparison are cancelled.
+      fine.passed must contain(
+        "Crash must meet no-bad in en: a page does not say bad"
       )
       fine.cancelled must have size (1L + comparisons.size)
       fine.cancelled.head must include(
         "Crash was not checked against no-bad where it did not render: as it stands, in cy"
       )
       fine.cancelled(1) must include(
-        "Crash was not checked against i18n-lang-attribute where it did not render: as it stands"
+        "Crash was not checked against i18n-lang-attribute where it did not render: as it stands, cy against en"
       )
       // A rule that failed where the page rendered fails, rather than cancels.
       crashing("<p>bad</p>").failed.map(_.takeWhile(_ != ':')) mustBe Seq(
-        rendered,
-        "Crash must meet no-bad"
+        "Crash must meet no-bad in en",
+        rendered
       )
     }
 
@@ -368,13 +380,14 @@ class PageCatalogueSpec extends AnyWordSpec with Matchers {
       }
       val outcome = run(spec)
       outcome.passed must contain(
-        "Awful must meet no-worse: nor does it say worse"
+        "Awful must meet no-worse in en: nor does it say worse"
       )
       outcome.failed.map(_.takeWhile(_ != ':')) mustBe Seq(
-        "Awful must meet no-bad"
+        "Awful must meet no-bad in en",
+        "Awful must meet no-bad in cy"
       )
       outcome.failed.head must include(
-        "Awful must meet no-bad: a page does not say bad; nor does it say awful"
+        "Awful must meet no-bad in en: a page does not say bad; nor does it say awful"
       )
     }
 
@@ -402,7 +415,8 @@ class PageCatalogueSpec extends AnyWordSpec with Matchers {
         .checksOf(page)
         .filter(c => c.name.startsWith(prefix))
         .filter(c => scala.util.Try(c.run()).isFailure)
-        .map(_.name.stripPrefix(prefix).takeWhile(_ != ':'))
+        // the rule's id, without the language it ran in
+        .map(_.name.stripPrefix(prefix).takeWhile(c => !" ,:".contains(c)))
         .toSet
       val standards = atOnce(spec.checkStandards)
       standards.size must be > 3
@@ -423,12 +437,12 @@ class PageCatalogueSpec extends AnyWordSpec with Matchers {
       }
       val failures = run(spec).failed.mkString
       failures must include(
-        "Info must render as it stands, in every language: "
+        "Info must render as it stands, in cy: "
       )
       failures must include(
         "the rules, in cy: the spec runs welsh-only in cy, which no check was named after"
       )
-      failures must include("Info must meet english-only: ")
+      failures must include("Info must meet english-only in cy: ")
       failures must include("the spec runs no rule called english-only in cy")
       // Even where no rule had a test of its own.
       val welshOnly = new Spec {
@@ -460,6 +474,13 @@ class PageCatalogueSpec extends AnyWordSpec with Matchers {
         catalogue(staticPage("Info")(pageOf("<p>Fine</p>")))
       }
       failing.getCause mustBe boom
+      // The languages are read then too.
+      val unconfigured = the[IllegalStateException] thrownBy new Spec {
+        override def applicationConfig: Map[String, Any] = throw boom
+        catalogue(staticPage("Info")(pageOf("<p>Fine</p>")))
+      }
+      unconfigured.getMessage must include("define applicationConfig")
+      unconfigured.getCause mustBe boom
     }
 
     "refuse two states of a page with one name, as their tests would share it" in {
@@ -517,7 +538,7 @@ class PageCatalogueSpec extends AnyWordSpec with Matchers {
       val bad = new Spec {
         catalogue(staticPage("Bad")(pageOf("<p>bad</p>")))
       }
-      run(bad).failed must have size 1
+      run(bad).failed must have size 2
       val excused = new Spec {
         catalogue(
           staticPage("Bad")(pageOf("<p>bad</p>")).exceptStandards("no-bad")
@@ -526,7 +547,7 @@ class PageCatalogueSpec extends AnyWordSpec with Matchers {
       val outcome = run(excused)
       outcome.failed mustBe empty
       outcome.passed must contain(
-        "Bad must be excused from no-bad: a page does not say bad"
+        "Bad must be excused from no-bad in en: a page does not say bad"
       )
       // The rule still runs, silently, so a needless excuse is known; read
       // outside a run, as a suite forgets its exclusions once it has run.
@@ -552,7 +573,7 @@ class PageCatalogueSpec extends AnyWordSpec with Matchers {
         )
       }
       val failures = run(misspelt).failed.mkString
-      failures must include("Bad must be excused from no-bda: ")
+      failures must include("Bad must be excused from no-bda in en: ")
       failures must include(
         "the spec runs no rule called no-bda in en, only no-bad"
       )
@@ -574,7 +595,7 @@ class PageCatalogueSpec extends AnyWordSpec with Matchers {
       val outcome = run(excused)
       outcome.failed mustBe empty
       outcome.passed must contain(
-        "Help must be excused from translating consistently by i18n-same-links: every language links to the same places"
+        "Help must be excused from translating consistently by i18n-same-links, cy against en: every language links to the same places"
       )
       // And all at once.
       val spec = new Spec {}

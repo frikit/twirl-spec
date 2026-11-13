@@ -10,6 +10,22 @@ release, and each one has a GitHub Release whose notes are its section here. Eve
 recorded in full; earlier lines are kept to one entry each, so the file stays
 readable.
 
+## [2.14.0] - 2026-11-13
+
+### Changed
+
+- A catalogue names the language each test ran in, where a test said "in every
+  language". In each language the application is configured for, each state
+  has a test that it renders, as `must render blank, in cy`, and each standards
+  rule a test of its own, as `must meet one-h1 in cy: a page has exactly one
+  <h1>`. Each comparison rule has a test for each language other than English,
+  as `must translate consistently by i18n-same-links, cy against en: ...`. A
+  bilingual page now has about twice the tests, and test names change again: a
+  filter such as `-z "meet one-h1:"` now matches nothing.
+- The languages are read as the spec is built, to name the tests, and a spec
+  whose application cannot be built then is refused, with a message saying to
+  define `applicationConfig` with a `def` or a `lazy val`.
+
 ## [2.13.0] - 2026-11-13
 
 ### Added
@@ -995,6 +1011,7 @@ them in `twirl-spec-all`. The renames a service built against a 0.x snapshot
 would meet are listed in [the adoption guide](docs/adopting.md).
 
 [Unreleased]: https://github.com/frikit/twirl-spec/compare/v2.9.0...HEAD
+[2.14.0]: https://github.com/frikit/twirl-spec/compare/v2.13.0...v2.14.0
 [2.13.0]: https://github.com/frikit/twirl-spec/compare/v2.12.0...v2.13.0
 [2.12.0]: https://github.com/frikit/twirl-spec/compare/v2.11.0...v2.12.0
 [2.11.0]: https://github.com/frikit/twirl-spec/compare/v2.10.0...v2.11.0

@@ -225,12 +225,13 @@ trait PageCases extends TwirlSpec with I18nChecks {
       }
     )
 
-  /** Each of this page's checks on its own, for a test of its own: that each
-    * state renders in every language, that the page meets each standards rule,
-    * and that it translates consistently by each comparison rule. A rule's
-    * check runs it over every state in every language, so together they check
-    * what [[checkStandards]] and [[checkTranslation]] check, and a failure
-    * names the rule.
+  /** Each of this page's checks on its own, for a test of its own, named for
+    * the language it ran in: in each language the application is configured
+    * for, that each state renders and that the page meets each standards rule,
+    * and then, for each other language, that it translates consistently with
+    * the first, English, by each comparison rule. A rule's check runs it over
+    * every state, so together they check what [[checkStandards]] and
+    * [[checkTranslation]] check, and a failure names the rule and the language.
     *
     * Each state renders once in each language, when a check first reads it, and
     * again in each run of the suite. Where it does not render, its own check
@@ -240,13 +241,13 @@ trait PageCases extends TwirlSpec with I18nChecks {
     * does, for [[unusedExclusions]], and fails where the spec runs no rule of
     * that id.
     *
-    * The checks are named after `standardsRules` when this is called, so the
-    * rules must be defined by then: by a `def`, a `lazy val`, or a `val`
-    * declared above the call. As they run, the checks build the rules again in
-    * each language: a state's check fails where the spec runs a rule no check
-    * was named after, and a rule's check where the spec does not run it. A
-    * page's states need names of their own, as their checks are named after
-    * them.
+    * The checks are named after `standardsRules` and `languages` when this is
+    * called, so the rules and `applicationConfig` must be defined by then: by a
+    * `def`, a `lazy val`, or a `val` declared above the call. As they run, the
+    * checks build the rules again in each language: a state's check fails where
+    * the spec runs a rule no check was named after, and a rule's check where
+    * the spec does not run it. A page's states need names of their own, as
+    * their checks are named after them.
     */
   def checksOf(page: PageCase): Seq[PageCheck] = {
     val rules = Try(standardsRules) match {
@@ -258,6 +259,15 @@ trait PageCases extends TwirlSpec with I18nChecks {
           read.failed.toOption.orNull
         )
     }
+    val langs = Try(languages.toList) match {
+      case Success(read) => read
+      case Failure(e)    =>
+        throw new IllegalStateException(
+          "a page's checks are named after the languages the application is configured for, which could not be read when they were: " +
+            "define applicationConfig with a def or a lazy val, or declare it above the checks",
+          e
+        )
+    }
     val states = page.states.map(_.name)
     states.diff(states.distinct).headOption.foreach { name =>
       throw new IllegalArgumentException(
@@ -267,29 +277,38 @@ trait PageCases extends TwirlSpec with I18nChecks {
     val excused = page.standardsExcept.distinct
     val named = (rules.map(_.id) ++ excused).distinct
     val renders = new Renders(page)
-    val rendering = page.states.indices.map { i =>
-      PageCheck(
-        s"render ${page.states(i).name}, in every language",
-        () => report(page, renders.failures(i) ++ unnamed(named))
-      )
-    }
-    val standards = named.map { id =>
-      val about = rules.filter(_.id == id).map(_.description).distinct
-      val described = if (about.isEmpty) id else s"$id: ${about.mkString("; ")}"
-      if (excused.contains(id))
+    val inEach = langs.flatMap { lang =>
+      val rendering = page.states.indices.map { i =>
         PageCheck(
-          s"be excused from $described",
-          () => standardsCheck(page, id, renders)(excuse)
+          s"render ${page.states(i).name}, in ${lang.code}",
+          () => report(page, renders.failure(i, lang) ++ unnamed(named, lang))
         )
-      else
-        PageCheck(
-          s"meet $described",
-          () => standardsCheck(page, id, renders)(meet)
-        )
+      }
+      val standards = named.map { id =>
+        val about = rules.filter(_.id == id).map(_.description).distinct
+        val described =
+          if (about.isEmpty) s"$id in ${lang.code}"
+          else s"$id in ${lang.code}: ${about.mkString("; ")}"
+        if (excused.contains(id))
+          PageCheck(
+            s"be excused from $described",
+            () => standardsCheck(page, id, lang, renders)(excuse)
+          )
+        else
+          PageCheck(
+            s"meet $described",
+            () => standardsCheck(page, id, lang, renders)(meet)
+          )
+      }
+      rendering ++ standards
     }
     val comparisons = TranslationStandards.all()
-    val translation = comparisons.map { rule =>
-      val described = s"${rule.id}: ${rule.description}"
+    val translation = for {
+      other <- langs.drop(1)
+      rule <- comparisons
+    } yield {
+      val described =
+        s"${rule.id}, ${other.code} against ${langs.head.code}: ${rule.description}"
       if (page.translationExcept.contains(rule.id))
         PageCheck(
           s"be excused from translating consistently by $described",
@@ -298,10 +317,18 @@ trait PageCases extends TwirlSpec with I18nChecks {
       else
         PageCheck(
           s"translate consistently by $described",
-          () => translationCheck(page, rule.id, comparisons.map(_.id), renders)
+          () =>
+            translationCheck(
+              page,
+              rule.id,
+              comparisons.map(_.id),
+              langs.head,
+              other,
+              renders
+            )
         )
     }
-    rendering ++ standards ++ translation
+    inEach ++ translation
   }
 
   /** A page's states, each rendered in a language when a check first reads it
@@ -324,46 +351,42 @@ trait PageCases extends TwirlSpec with I18nChecks {
       )
     }
 
-    /** Where a state did not render, by language. */
-    def failures(state: Int): List[Problem] =
-      languages.toList.flatMap(lang =>
-        apply(state, lang).failed.toOption.map(e =>
-          crash(s"${page.states(state).name}, in ${lang.code}", e)
-        )
+    /** Why a state did not render in a language, if it did not. */
+    def failure(state: Int, lang: Lang): List[Problem] =
+      apply(state, lang).failed.toOption.toList.map(e =>
+        crash(s"${page.states(state).name}, in ${lang.code}", e)
       )
 
   }
 
-  /** Where, in a language, the spec runs a rule no check was named after, as
+  /** Where, in this language, the spec runs a rule no check was named after, as
     * the rules were others when the checks were named.
     */
-  private def unnamed(named: Seq[String]): List[Problem] =
-    languages.toList.flatMap { lang =>
-      problemsIn(
-        s"the rules, in ${lang.code}",
-        attempt(inLanguage(lang) {
-          val others = standardsRules.map(_.id).distinct.diff(named)
-          MatchResult(
-            others.isEmpty,
-            s"the spec runs ${others.mkString(", ")} in ${lang.code}, which no check was named after, as the rules were others when the checks were named",
-            "the spec ran only rules its checks were named after"
-          )
-        })
-      )
-    }
+  private def unnamed(named: Seq[String], lang: Lang): List[Problem] =
+    problemsIn(
+      s"the rules, in ${lang.code}",
+      attempt(inLanguage(lang) {
+        val others = standardsRules.map(_.id).distinct.diff(named)
+        MatchResult(
+          others.isEmpty,
+          s"the spec runs ${others.mkString(", ")} in ${lang.code}, which no check was named after, as the rules were others when the checks were named",
+          "the spec ran only rules its checks were named after"
+        )
+      })
+    )
 
-  /** A standards rule's check, over each state in each language: `check` gets
+  /** A standards rule's check, over each state in one language: `check` gets
     * the spec's rules of this id, built in the language, and the state's page.
     */
   private def standardsCheck(
       page: PageCase,
       id: String,
+      lang: Lang,
       renders: Renders
   )(check: (Seq[Rule], Page) => MatchResult): Unit = {
     val unchecked = List.newBuilder[String]
     val problems = for {
       (state, i) <- page.states.zipWithIndex
-      lang <- languages.toList
       where = s"${state.name}, in ${lang.code}"
       problem <- renders(i, lang) match {
         case Failure(_) =>
@@ -410,22 +433,27 @@ trait PageCases extends TwirlSpec with I18nChecks {
     MatchResult(true, "", "the page was excused from the rule")
   }
 
-  /** A comparison rule's check, over each state across the languages. */
+  /** A comparison rule's check, over each state, of one language against the
+    * base.
+    */
   private def translationCheck(
       page: PageCase,
       id: String,
       ids: Seq[String],
+      base: Lang,
+      other: Lang,
       renders: Renders
   ): Unit = {
     val unchecked = List.newBuilder[String]
     val problems = page.states.zipWithIndex.flatMap { case (state, i) =>
-      val rendered = languages.toList.map(lang => renders(i, lang))
+      val rendered = List(base, other).map(lang => renders(i, lang))
+      val where = s"${state.name}, ${other.code} against ${base.code}"
       if (rendered.exists(_.isFailure)) {
-        unchecked += state.name
+        unchecked += where
         Nil
       } else
         problemsIn(
-          state.name,
+          where,
           attempt(
             translateConsistentlyExcept(ids.filterNot(_ == id): _*)(
               rendered.map(_.get)
@@ -514,10 +542,12 @@ trait PageCases extends TwirlSpec with I18nChecks {
   *
   * {{{
   * Name
-  * - must render blank, in every language
-  * - must render with errors, in every language
-  * - must meet one-h1: a page has exactly one <h1>
-  * - must translate consistently by i18n-same-links: every language links to the same places
+  * - must render blank, in en
+  * - must render with errors, in en
+  * - must meet one-h1 in en: a page has exactly one <h1>
+  * - must render blank, in cy
+  * - must meet one-h1 in cy: a page has exactly one <h1>
+  * - must translate consistently by i18n-same-links, cy against en: every language links to the same places
   * }}}
   *
   * It writes its tests in the `AnyWordSpec` style. For another style, mix in
@@ -526,8 +556,8 @@ trait PageCases extends TwirlSpec with I18nChecks {
 trait PageCatalogue extends AnyWordSpecLike with PageCases {
 
   /** A test for each of a page's checks, under its label, as [[checksOf]] lists
-    * them: that each state renders in every language, and each rule, over every
-    * state in every language.
+    * them: in each language, that each state renders and each rule over every
+    * state, then each comparison of a language with English.
     */
   def catalogue(pages: PageCase*): Unit = {
     require(pages.nonEmpty, "a catalogue of no pages would check nothing")

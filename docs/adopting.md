@@ -93,9 +93,10 @@ class EveryPageSpec extends ViewSpecBase with PageCatalogue {
 }
 ```
 
-Each page gets a test for each check, named after it: one for each state
-rendering in every language, and one for each rule, run on every state in every
-language, so the report says what was checked and a failure names the rule. A
+Each page gets a test for each check in each language, named after both: one
+for each state rendering in `en`, one for each rule run on every state in `en`,
+the same in `cy`, and one for each comparison of `cy` against `en`, so the
+report says what was checked where, and a failure names the rule. A
 form page is rendered blank, with the errors of an empty submission, and with
 those of each submission named, and a submission that gives no errors fails its
 test. The empty submission is the blank form sent untouched, as a browser sends
