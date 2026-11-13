@@ -93,14 +93,17 @@ class EveryPageSpec extends ViewSpecBase with PageCatalogue {
 }
 ```
 
-Each page gets two tests. A form page is rendered blank, with the errors of an
-empty submission, and with those of each submission named, and a submission that
-gives no errors fails its test. The empty submission is the blank form sent
-untouched, as a browser sends it, each control with the value it renders with,
-and nothing where it cannot tell which of several forms holds the fields. Every state runs in every language, and a failure
-reports each that went wrong. In a style other than `AnyWordSpec`, mix in
-`PageCases` and call `checkStandards(page)` and `checkTranslation(page)` from tests
-of your own.
+Each page gets a test for each check, named after it: one for each state
+rendering in every language, and one for each rule, run on every state in every
+language, so the report says what was checked and a failure names the rule. A
+form page is rendered blank, with the errors of an empty submission, and with
+those of each submission named, and a submission that gives no errors fails its
+test. The empty submission is the blank form sent untouched, as a browser sends
+it, each control with the value it renders with, and nothing where it cannot
+tell which of several forms holds the fields. In a style other than
+`AnyWordSpec`, mix in `PageCases` and write a test for each of `checksOf(page)`,
+or call `checkStandards(page)` and `checkTranslation(page)` from tests of your
+own.
 
 ## Keeping an existing application
 

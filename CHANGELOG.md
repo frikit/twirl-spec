@@ -10,6 +10,39 @@ release, and each one has a GitHub Release whose notes are its section here. Eve
 recorded in full; earlier lines are kept to one entry each, so the file stays
 readable.
 
+## [2.12.0] - 2026-11-13
+
+### Changed
+
+- `PageCatalogue` gives each check its own test, so the report lists what was
+  checked, where a page had two tests that checked everything. Under the page's
+  label, a test for each state shows that it renders in every language. Then
+  come one test for each standards rule, as `must meet one-h1: a page has
+  exactly one <h1>`, and one for each comparison rule, as `must translate
+  consistently by i18n-same-links: every language links to the same places`.
+  A rule's test runs it on every state in every language, so a failure names
+  the rule, and the state and language it failed in. A rule the page is excused
+  from has a test that says so. For a standards rule, that test still runs the
+  rule silently, for `unusedExclusions`, and fails where the spec runs no rule of
+  that id.
+- Test names and counts change for every catalogue, so a filter such as
+  `-z "meet the standards"` now matches nothing.
+- Each state renders once in each language, however many tests read it, where
+  each test rendered it again. A state that does not render fails its own test,
+  and a rule's test that found nothing where the page did render is cancelled.
+- A catalogue reads `standardsRules` as the spec is built, to name the tests,
+  and refuses rules it cannot read then, such as a `val` declared below
+  `catalogue(...)`. As the tests run, they build the rules again in each
+  language: a state's test fails where the spec runs a rule no test was named
+  after, and a rule's test where the spec does not run it. A page with two
+  states of one name is refused, as their tests would share it.
+
+### Added
+
+- `PageCases.checksOf(page)` lists a page's checks one by one, each a
+  `PageCheck` with its name and the check, for a test of each in a style other
+  than `AnyWordSpec`.
+
 ## [2.11.0] - 2026-11-12
 
 ### Added
@@ -951,6 +984,7 @@ them in `twirl-spec-all`. The renames a service built against a 0.x snapshot
 would meet are listed in [the adoption guide](docs/adopting.md).
 
 [Unreleased]: https://github.com/frikit/twirl-spec/compare/v2.9.0...HEAD
+[2.12.0]: https://github.com/frikit/twirl-spec/compare/v2.11.0...v2.12.0
 [2.11.0]: https://github.com/frikit/twirl-spec/compare/v2.10.0...v2.11.0
 [2.10.0]: https://github.com/frikit/twirl-spec/compare/v2.9.0...v2.10.0
 [2.9.0]: https://github.com/frikit/twirl-spec/compare/v2.8.0...v2.9.0
