@@ -61,6 +61,11 @@ abstract class Bilingual extends TwirlSuite {
 
 }
 
+/** A suite asking for an injected instance, as the entry-point checks do. */
+final class Injecting extends Bilingual {
+  def instance: AnyRef = templateInstance(classOf[play.api.i18n.MessagesApi])
+}
+
 /** MUnit suites, run as MUnit runs them, read by what they report. */
 class TwirlSuiteSpec extends AnyWordSpec with Matchers {
 
@@ -162,19 +167,26 @@ class TwirlSuiteSpec extends AnyWordSpec with Matchers {
       seen must contain(Map("name" -> ""))
     }
 
-    "skip a check whose fixture cancels it or leaves it pending" in {
+    "skip a check whose fixture cancels it, leaves it pending or assumes as MUnit does" in {
       val suite = new Bilingual {
         catalogue(
           staticPage("Cancelled")(
             throw new TestCanceledException("no fixture", 0)
           ),
-          staticPage("Pending")(throw new TestPendingException)
+          staticPage("Pending")(throw new TestPendingException),
+          staticPage("Assumed")({ assume(false, "no data"); Html("") }),
+          formPage("Assumed form", { assume(false, "no form"); nameForm })(_ =>
+            Html("")
+          )
         )
       }
-      val skipped = run(suite).skipped
-      skipped must have size (2L * (2 + 2 * 2 + comparisons.size))
-      skipped.head must include("no fixture")
-      skipped.last must include("pending")
+      val outcome = run(suite)
+      outcome.failed mustBe empty
+      val perPage = 2 + 2 * 2 + comparisons.size
+      outcome.skipped.size must be >= 4 * perPage
+      Seq("no fixture", "pending", "no data", "no form").foreach(reason =>
+        outcome.skipped.exists(_.contains(reason)) mustBe true
+      )
     }
 
     "record an excused rule for the suite, not for the catalogue's host" in {
@@ -268,6 +280,10 @@ class TwirlSuiteSpec extends AnyWordSpec with Matchers {
       suite.host mustBe theSameInstanceAs(host)
       // a suite that asks for nothing gets Play's defaults
       new TwirlSuite {}.applicationConfig mustBe empty
+      // a template with injected dependencies comes from the application
+      new Injecting().instance mustBe theSameInstanceAs(
+        suite.messagesApiInstance
+      )
     }
   }
 

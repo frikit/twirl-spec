@@ -22,6 +22,7 @@ import io.github.frikit.twirlspec.page.{CoverageRegistry, Page}
 import io.github.frikit.twirlspec.render.{CsrfToken, SharedApplication}
 import io.github.frikit.twirlspec.standards.ExclusionRegistry
 import munit.{FunSuite, Location, Tag, TestOptions}
+import org.junit.internal.AssumptionViolatedException
 import org.scalatest.exceptions.{TestCanceledException, TestPendingException}
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.Matcher
@@ -42,9 +43,12 @@ import scala.util.DynamicVariable
   *
   * {{{
   * class NameViewSuite extends TwirlSuite with HmrcServiceChecks {
-  *   cataloguePage(formPage("NameView", form)(inject[NameView](_, draftId))) {
+  *   private val view = inject[NameView]
+  *   private val form = Form(single("value" -> text))
+  *
+  *   cataloguePage(formPage("NameView", form)(view(_))) {
   *     test("NameView asks for the name") {
-  *       assertDisplays(renderPage(inject[NameView](form, draftId)), title("name.title"))
+  *       assertDisplays(renderPage(view(form)), heading("name.heading"))
   *     }
   *   }
   * }
@@ -125,6 +129,12 @@ trait TwirlSuite extends FunSuite with TwirlSpecDsl with I18nChecks {
   def renderInEachLanguage(html: => Html): Seq[Page] =
     languages.map(lang => inLanguage(lang)(render(html, lang, messages)))
 
+  /** A template with injected dependencies, from the application, for the
+    * entry-point checks, as `TwirlSpec` gives it.
+    */
+  override protected def templateInstance(template: Class[_]): AnyRef =
+    app.injector.instanceOf(template).asInstanceOf[AnyRef]
+
   /** Any of this library's matchers as an MUnit assertion, failing with the
     * matcher's own message: `assertMatches(page, assertEverything)`.
     */
@@ -164,7 +174,7 @@ trait TwirlSuite extends FunSuite with TwirlSpecDsl with I18nChecks {
 
   /** A page with one state, as `PageCases.staticPage` makes it. */
   def staticPage(label: String)(view: => Html): PageCase =
-    host.staticPage(label)(view)
+    host.staticPage(label)(skippable(view))
 
   /** A page with a form, blank and with the errors of its submissions, as
     * `PageCases.formPage` makes it.
@@ -174,7 +184,18 @@ trait TwirlSuite extends FunSuite with TwirlSpecDsl with I18nChecks {
       form: => Form[A],
       submissions: (String, Map[String, String])*
   )(view: Form[A] => Html): PageCase =
-    host.formPage(label, form, submissions: _*)(view)
+    host.formPage(label, skippable(form), submissions: _*)(f =>
+      skippable(view(f))
+    )
+
+  // MUnit's own assume in a fixture skips its checks: the catalogue would take
+  // JUnit's assumption for a crash, so it reaches it as a cancellation.
+  private def skippable[A](block: => A): A =
+    try block
+    catch {
+      case e: AssumptionViolatedException =>
+        throw new TestCanceledException(e.getMessage, 0)
+    }
 
   /** A test for each of each page's checks, as the ScalaTest catalogue writes
     * them: "NameView must meet one-h1 in cy: ...", tagged by kind, language and
@@ -207,9 +228,13 @@ trait TwirlSuite extends FunSuite with TwirlSpecDsl with I18nChecks {
       case _: TestPendingException  => assume(false, "pending")
     }
 
-  // Each run starts without the coverage and exclusion records of the last,
-  // and drops them once it has finished, as SuiteLifecycle does a ScalaTest
-  // spec's; the catalogue's pages render again.
+  /** Each run starts without the coverage and exclusion records of the last,
+    * and drops them once it has finished, as `SuiteLifecycle` does a ScalaTest
+    * spec's; the catalogue's pages render again. A suite that overrides
+    * `beforeAll` or `afterAll` calls `super`, as with ScalaTest's
+    * `BeforeAndAfterAll`, or a second run of it in the same JVM reads the
+    * records and pages of the first.
+    */
   override def beforeAll(): Unit = {
     forgetRun()
     super.beforeAll()

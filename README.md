@@ -979,13 +979,16 @@ libraryDependencies += "io.github.frikit" %% "twirl-spec-munit" % twirlSpecVersi
 
 ```scala
 import io.github.frikit.twirlspec.{HmrcServiceChecks, TwirlSuite}
+import play.api.data.Form
+import play.api.data.Forms.{single, text}
 
 class NameViewSuite extends TwirlSuite with HmrcServiceChecks {
-  private val view = inject[NameView]
+  private val view = inject[views.html.NameView]
+  private val form: Form[String] = Form(single("value" -> text))
 
-  cataloguePage(formPage("NameView", nameForm)(view(_, draftId))) {
+  cataloguePage(formPage("NameView", form)(view(_))) {
     test("NameView asks for the name") {
-      assertDisplays(renderPage(view(nameForm, draftId)), title("name.title"))
+      assertDisplays(renderPage(view(form)), heading("name.heading"))
     }
   }
 }
