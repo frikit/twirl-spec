@@ -25,15 +25,15 @@ of all nine modules as one site. These pages are the guide.
 
 | | |
 |---|---|
-| Scala | 3.3.1 or any later Scala 3; on Java 21, 3.3.0 needs `-release` set to an older Java, such as 11 or 17 |
-| Java | 21 or later |
+| Scala | 3.3.0 or any later Scala 3; on Java 21 or later, 3.3.0 needs `-release` set to an older Java, such as 11 or 17 |
+| Java | 17 or later |
 | Play | any 3.0.x; your project supplies it |
 | ScalaTest | 3.2.20 or later |
 
 ## The shortest possible start
 
 ```scala
-libraryDependencies += "io.github.frikit" %% "twirl-spec-all" % "3.0.0" % Test
+libraryDependencies += "io.github.frikit" %% "twirl-spec-all" % "3.1.0" % Test
 ```
 
 ```scala
