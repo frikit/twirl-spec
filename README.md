@@ -38,7 +38,7 @@ maintain them.
 Everything below is published at
 [frikit.github.io/twirl-spec](https://frikit.github.io/twirl-spec/), together
 with the [API documentation](https://frikit.github.io/twirl-spec/api/) — the
-Scaladoc of all nine modules as one searchable site.
+Scaladoc of all ten modules as one searchable site.
 
 This README is the reference: every expectation, matcher and rule. The
 [`docs`](docs/README.md) folder is the guide, from a first spec to adopting the
@@ -80,6 +80,7 @@ judges a page against a design system you are not using.
 | `twirl-spec-i18n` | core | Language parity: every language renders the same page as the base |
 | `twirl-spec-messages` | core | Message-file integrity checks |
 | `twirl-spec-all` | all of the above | One dependency that pulls in everything, and `AllChecks` |
+| `twirl-spec-munit` | all | `TwirlSuite`: everything above for an MUnit suite instead of a ScalaTest spec |
 
 ```scala
 libraryDependencies ++= Seq(
@@ -966,6 +967,46 @@ Test / testOptions += Tests.Argument(
 It writes `index.html` and `report.md` to `target/twirl-spec-report`, or to the
 directory the `twirlspec.report.dir` system property or the
 `TWIRLSPEC_REPORT_DIR` environment variable names, and prints where at the end.
+
+## MUnit
+
+A suite on MUnit gets the same library from `twirl-spec-munit`, which brings
+`twirl-spec-all` with it:
+
+```scala
+libraryDependencies += "io.github.frikit" %% "twirl-spec-munit" % twirlSpecVersion % Test
+```
+
+```scala
+import io.github.frikit.twirlspec.{HmrcServiceChecks, TwirlSuite}
+
+class NameViewSuite extends TwirlSuite with HmrcServiceChecks {
+  private val view = inject[NameView]
+
+  cataloguePage(formPage("NameView", nameForm)(view(_, draftId))) {
+    test("NameView asks for the name") {
+      assertDisplays(renderPage(view(nameForm, draftId)), title("name.title"))
+    }
+  }
+}
+```
+
+`TwirlSuite` is `TwirlSpec` for MUnit:
+- the shared application, `inject`, `inLanguage`, `renderPage`, the expectation
+  DSL and the same rule traits;
+- `catalogue` and `cataloguePage`, with a test for each check, named and tagged
+  as in ScalaTest;
+- `assertDisplays`, `assertMeetsStandards` and `assertTranslatesConsistently`,
+  with `assertMatches` for any other matcher here, such as
+  `assertMatches(page, assertEverything)`.
+
+A failure has the same message. A check whose fixture cancels it, or leaves it
+pending, is skipped. Tags select part of a catalogue, as in
+`testOnly -- --include-tags=twirlspec.lang.cy`.
+
+ScalaTest stays on the class path, since the rules and matchers are built on it,
+but MUnit runs the suite. `TwirlSpecReporter` is a ScalaTest reporter, so it
+does not report an MUnit run.
 
 ## Languages
 

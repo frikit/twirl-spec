@@ -23,6 +23,10 @@ val specDependencies = Seq(
 lazy val service = (project in file("service"))
   .enablePlugins(PlayScala)
   .settings(libraryDependencies ++= specDependencies)
+  // A service may test its views with MUnit as well, beside ScalaTest.
+  .settings(
+    libraryDependencies += "io.github.frikit" %% "twirl-spec-munit" % twirlSpecVersion % Test
+  )
 
 /** A Play application built without the filters, and so without
   * play-filters-helpers: TwirlSpec has to work there too, without a token.

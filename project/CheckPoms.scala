@@ -32,7 +32,8 @@ import scala.xml.{Elem, XML}
   */
 object CheckPoms {
 
-  private val Modules = 9
+  private val Modules = 10
+  private val MUnit = ("org.scalameta", "munit_3")
   private val Play = "3.0.0"
   private val Provided =
     Set("play_3", "play-test_3", "play-guice_3", "play-filters-helpers_3")
@@ -79,10 +80,17 @@ object CheckPoms {
           .filter(_ => scope == "test")
       ).flatten
     }
+    // MUnit belongs to its own module, so a ScalaTest project never gets it.
+    val forMUnit = pom.getName.startsWith("twirl-spec-munit_3-")
     val required =
       if (pom.getName.startsWith("twirl-spec-core_3-")) EveryModule ++ CoreOnly
+      else if (forMUnit) EveryModule + (MUnit -> (("compile", None)))
       else EveryModule
     val found = declared.toMap
+    val stray =
+      if (!forMUnit && found.contains(MUnit))
+        Seq(s"${MUnit._1}:${MUnit._2} belongs only to twirl-spec-munit")
+      else Nil
     val missing = required.toSeq.sortBy(_._1).flatMap {
       case ((group, artifact), (scope, version)) =>
         found.get((group, artifact)) match {
@@ -94,7 +102,7 @@ object CheckPoms {
           case _ => None
         }
     }
-    wrong ++ missing
+    wrong ++ missing ++ stray
   }
 
   def apply(base: File, version: String, log: Logger): Unit = {
