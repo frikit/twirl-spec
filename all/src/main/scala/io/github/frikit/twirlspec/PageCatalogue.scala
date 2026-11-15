@@ -501,6 +501,12 @@ trait PageCases extends TwirlSpec with I18nChecks {
       "page satisfied every check, but was expected not to"
     )
 
+  /** Whose records an excused rule's findings go to: this spec's, or, where it
+    * hosts another suite's catalogue, as an MUnit suite's is hosted, that
+    * suite's.
+    */
+  private[twirlspec] def recordKey: String = getClass.getName
+
   /** Run the rules the page is excused from silently, recording for
     * [[unusedExclusions]] whether they found anything, as `meetStandardsExcept`
     * does.
@@ -508,7 +514,7 @@ trait PageCases extends TwirlSpec with I18nChecks {
   private def excuse(rules: Seq[Rule], page: Page): MatchResult = {
     rules.foreach(r =>
       ExclusionRegistry.record(
-        getClass.getName,
+        recordKey,
         r.id,
         page.withRecordingPaused(r.check(page)).nonEmpty
       )

@@ -8,7 +8,7 @@ failure messages that show what the template actually rendered.
 The [README](../README.md) is the reference: every expectation, matcher and
 rule is listed there, and the rule tables are held to the code by a test. The
 [API documentation](https://frikit.github.io/twirl-spec/api/) is the Scaladoc
-of all nine modules as one site. These pages are the guide.
+of all ten modules as one site. These pages are the guide.
 
 | Page | Read it when |
 |---|---|
@@ -33,7 +33,7 @@ of all nine modules as one site. These pages are the guide.
 ## The shortest possible start
 
 ```scala
-libraryDependencies += "io.github.frikit" %% "twirl-spec-all" % "3.1.0" % Test
+libraryDependencies += "io.github.frikit" %% "twirl-spec-all" % "3.2.0" % Test
 ```
 
 ```scala

@@ -45,6 +45,11 @@ object LibDependencies {
   )
 
   val rules: Seq[ModuleID] = shared
+
+  /** MUnit, which the MUnit module's suite extends, so a consumer's MUnit
+    * resolves upward to at least this.
+    */
+  val munit: Seq[ModuleID] = shared ++ Seq("org.scalameta" %% "munit" % "1.3.6")
   val messages: Seq[ModuleID] = shared
 
 }

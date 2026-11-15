@@ -53,10 +53,10 @@ build and POMs; check its results before merging.
 3. Commit on a branch, push, open a PR to `main`, inspect its complete diff and wait
    for CI. Merge only after the required checks pass. Do not include unrelated work.
 4. Watch the `Release` workflow on the resulting `main` commit. It verifies, publishes
-   all nine modules to Maven Central, pushes the tag and creates the GitHub Release.
+   all ten modules to Maven Central, pushes the tag and creates the GitHub Release.
    Let the workflow create the tag; do not tag or publish the same version manually.
-5. Verify all nine `io.github.frikit:twirl-spec-<module>_3` coordinates on Maven Central:
-   `core`, `wcag`, `govuk`, `quality`, `messages`, `i18n`, `aria`, `html`, and `all`.
+5. Verify all ten `io.github.frikit:twirl-spec-<module>_3` coordinates on Maven Central:
+   `core`, `wcag`, `govuk`, `quality`, `messages`, `i18n`, `aria`, `html`, `all` and `munit`.
    Check the exact version's POM, main jar, sources, javadoc and signatures, as well
    as the GitHub release tag and notes. The root aggregate is not published.
 6. Wait for `Docs`, which runs after a successful `Release` and builds from the newest

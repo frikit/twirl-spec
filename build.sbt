@@ -143,7 +143,7 @@ lazy val root = Project("twirl-spec", file("."))
       commitOf((ThisBuild / baseDirectory).value)
     )
   )
-  .aggregate(core, wcag, govuk, quality, messages, i18n, aria, html, all)
+  .aggregate(core, wcag, govuk, quality, messages, i18n, aria, html, all, munit)
 
 /** The page model, the expectation DSL and the ScalaTest matchers. Carries no
   * rules of its own, so it never judges a page against a design system.
@@ -262,3 +262,17 @@ lazy val all = Project("twirl-spec-all", file("all"))
   .settings(CodeCoverageSettings())
   .settings(libraryDependencies ++= LibDependencies.rules)
   .settings(description := "All of twirl-spec in one dependency.")
+
+/** twirl-spec for MUnit: `TwirlSuite`, with everything `twirl-spec-all` has.
+  * Nothing else depends on it, so a ScalaTest project never gets MUnit.
+  */
+lazy val munit = Project("twirl-spec-munit", file("munit"))
+  .dependsOn(all)
+  .settings(commonSettings)
+  .settings(CodeCoverageSettings())
+  .settings(libraryDependencies ++= LibDependencies.munit)
+  .settings(
+    description := "twirl-spec for MUnit suites.",
+    // Nothing to compare with until its first release.
+    mimaPreviousArtifacts := Set.empty
+  )
