@@ -122,12 +122,13 @@ authority for that release; this table is kept for the current line.
 
 | twirl-spec | Play | Twirl | Scala | Java | ScalaTest | jsoup |
 |---|---|---|---|---|---|---|
-| 3.x | 3.0.0 | 2.0.1 | 3.3.9 | 21 | 3.2.20 | 1.24.1 |
+| 3.x | 3.0.0 | 2.0.1 | 3.3.9 | 17 | 3.2.20 | 1.24.1 |
 
 CI also runs a Play service's view specs against the published artifacts, as a
-service gets them: on Scala 3.3.7 compiled with `-release 11` and Play 3.0.10,
-and on Scala 3.9.0 with `-release 21` and the newest Play 3.0.x, as the
-consumer build declares it.
+service gets them: on Scala 3.3.7 compiled with `-release 11` and Play 3.0.10;
+on Scala 3.9.0 with `-release 21` and the newest Play 3.0.x, as the consumer
+build declares it; and on the floor, Java 17 with Scala 3.3.0 and Play 3.0.0,
+where the library itself is built on Java 17.
 
 What that means for a project on something close but not identical:
 
@@ -145,7 +146,7 @@ your Twirl either.
 **Scala.** Published for Scala 3 only, built with 3.3.9 on the LTS line, and
 supported from Scala 3.3.0: every later Scala 3 reads what 3.3 compiles, and
 every 3.3 patch reads the same TASTy. Tested on 3.3.0, 3.3.6, 3.3.7 and 3.9.0,
-with 3.3.7 and 3.9.0 kept tested in CI. Scala 3.3.0 came out before Java 21
+with 3.3.0, 3.3.7 and 3.9.0 kept tested in CI. Scala 3.3.0 came out before Java 21
 and fails to load some of its classes, with twirl-spec or without, so on Java 21
 a project on 3.3.0 compiles only with `-release` set to an older Java, such as
 11 or 17; 3.3.1 and later need no flag. A project on a 3.3 patch below 3.3.9
@@ -153,7 +154,7 @@ gets scala3-library 3.3.9 on its test classpath, which sbt resolves without a
 warning. A project on Scala 2.13 cannot use 2.x or 3.x; see
 [Moving from 1.x to 2.x](docs/adopting.md#moving-from-1x-to-2x).
 
-**Java.** Compiled with `-release 21`, so the specs run on Java 21 or later. A
+**Java.** Compiled with `-release 17`, so the specs run on Java 17 or later. A
 project may still compile its own code with `-release 11`, as many service builds
 do by default.
 

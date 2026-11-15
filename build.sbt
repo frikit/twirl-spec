@@ -29,8 +29,9 @@ ThisBuild / scalacOptions ++= Seq(
   "-feature",
   "-deprecation",
   "-unchecked",
+  // Java 17's API and class files, so a service on Java 17 or later can use it.
   "-release",
-  "21",
+  "17",
   "-Wunused:imports",
   "-Wconf:msg=unused import:e",
   "-Wconf:msg=Skipping coverage instrumentation:e"

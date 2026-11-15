@@ -10,6 +10,18 @@ release, and each one has a GitHub Release whose notes are its section here. Eve
 recorded in full; earlier lines are kept to one entry each, so the file stays
 readable.
 
+## [3.1.0] - 2026-11-15
+
+### Changed
+
+- The library is compiled for Java 17 where it was compiled for Java 21, so a
+  service on Java 17 can use it as well. Its classes use nothing newer than
+  Java 17 and are Java 17 class files, which Java 21 and later still run, so
+  nothing changes for a service already on Java 21. Scala 3.3.0, the first of
+  the 3.3 LTS line, stays the oldest Scala it supports.
+- CI runs a service's view specs at the floor as well: Java 17, Scala 3.3.0 and
+  Play 3.0.0, with the library itself built on Java 17.
+
 ## [3.0.0] - 2026-11-13
 
 ### Changed
@@ -58,7 +70,8 @@ the Twirl entry points in `twirl-spec-quality`; language parity in
 them in `twirl-spec-all`. The renames a service built against a 0.x snapshot
 would meet are listed in [the adoption guide](docs/adopting.md).
 
-[Unreleased]: https://github.com/frikit/twirl-spec/compare/v3.0.0...HEAD
+[Unreleased]: https://github.com/frikit/twirl-spec/compare/v3.1.0...HEAD
+[3.1.0]: https://github.com/frikit/twirl-spec/compare/v3.0.0...v3.1.0
 [3.0.0]: https://github.com/frikit/twirl-spec/compare/v2.15.0...v3.0.0
 [2.x]: https://github.com/frikit/twirl-spec/compare/v1.0.0...v2.15.0
 [1.x]: https://github.com/frikit/twirl-spec/releases/tag/v1.0.0
