@@ -52,6 +52,9 @@ library across a service:
 - [Failure messages](docs/failure-messages.md) — how to read what a red test says
 - [Adopting in an existing service](docs/adopting.md) — replacing a home-grown spec base, and moving from 1.x or 2.x
 - [Troubleshooting](docs/troubleshooting.md) — the questions that come up
+- [For coding agents](docs/agents.md) — the same as a procedure, step by step, with
+  instructions to keep in a service; every page is indexed in
+  [`llms.txt`](https://frikit.github.io/twirl-spec/llms.txt)
 
 ## Why
 

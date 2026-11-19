@@ -1,0 +1,38 @@
+# twirl-spec
+
+> A Scala 3 test library for Twirl views in Play 3.0.x services. A spec renders a view in a real, shared Play application and checks it two ways at once: the expectations the spec names, by message key (title, headings, form controls, error summaries), and rule sets for accessibility (WCAG), GOV.UK conventions, ARIA, HTML validity, semantics, metadata and language parity. Works with ScalaTest (TwirlSpec, TwirlSpecDsl) and MUnit (TwirlSuite). Published as io.github.frikit:twirl-spec-<module>_3 on Maven Central; the current version is in the changelog.
+
+Key facts:
+
+- Requires Scala 3.3.0 or later, Java 17 or later, Play 3.0.x (provided by the service), and ScalaTest 3.2.20 or later, or MUnit.
+- `twirl-spec-all` is every module in one dependency; `twirl-spec-munit` adds MUnit support on top of it.
+- Text expectations take message keys, not words; an undefined key is a failure.
+- Rules are turned on by mixing in traits: `HmrcServiceChecks` for play-frontend-hmrc services, `GovukServiceChecks` for other GOV.UK services, `AllChecks` otherwise.
+- `PageCatalogue` gives a test for each rule, on each page, in each configured language.
+
+## Start here
+
+- [For coding agents](https://frikit.github.io/twirl-spec/docs/agents.html): the step-by-step procedure for adding twirl-spec to a service or extending its view specs, with decisions, commands and a definition of done
+- [Getting started](https://frikit.github.io/twirl-spec/docs/getting-started.html): install, a first spec, a first failure
+- [README](https://frikit.github.io/twirl-spec/): the reference, with every expectation, matcher and rule
+
+## Guides
+
+- [Writing view specs](https://frikit.github.io/twirl-spec/docs/writing-view-specs.html): the expectation DSL, control by control
+- [Rules and standards](https://frikit.github.io/twirl-spec/docs/rules-and-standards.html): what each rule trait enforces, excluding rules with a reason, writing house rules
+- [Languages and message files](https://frikit.github.io/twirl-spec/docs/languages-and-messages.html): rendering in each language, comparing languages, checking message files
+- [Coverage and entry points](https://frikit.github.io/twirl-spec/docs/coverage-and-entry-points.html): assertEverything, and the Twirl entry points nothing calls
+- [Failure messages](https://frikit.github.io/twirl-spec/docs/failure-messages.html): reading a failure, warnings, the page outline
+- [Adopting in an existing service](https://frikit.github.io/twirl-spec/docs/adopting.html): replacing a home-grown spec base, and moving between major versions
+- [Troubleshooting](https://frikit.github.io/twirl-spec/docs/troubleshooting.html): errors by their message, and what to do
+
+## Reference
+
+- [API documentation](https://frikit.github.io/twirl-spec/api/): the Scaladoc of every module
+- [Changelog](https://frikit.github.io/twirl-spec/CHANGELOG.html): every release, newest first
+
+## Optional
+
+- [Source](https://github.com/frikit/twirl-spec): the repository
+- [ARCHITECTURE.md](https://github.com/frikit/twirl-spec/blob/main/ARCHITECTURE.md): a map of the code, for contributors
+- [AGENTS.md](https://github.com/frikit/twirl-spec/blob/main/AGENTS.md): how to work on the library itself

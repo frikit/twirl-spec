@@ -1,6 +1,6 @@
 package views
 
-import io.github.frikit.twirlspec.{GovukServiceChecks, TwirlSpec}
+import io.github.frikit.twirlspec.{GovukServiceChecks, PageCatalogue, TwirlSpec}
 import org.scalatest.matchers.must.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import play.api.data.Form
@@ -8,9 +8,10 @@ import play.api.data.Forms.{single, text}
 import play.api.i18n.Lang
 
 /** The path a service takes: TwirlSpec for the application and implicits,
-  * GovukServiceChecks for the rules, the service's own configuration throughout.
+  * GovukServiceChecks for the rules, the service's own configuration throughout,
+  * and one spec for the view, with a test for each check and its own tests after.
   */
-class NameViewSpec extends AnyWordSpec with Matchers with TwirlSpec with GovukServiceChecks {
+class NameViewSpec extends AnyWordSpec with Matchers with TwirlSpec with GovukServiceChecks with PageCatalogue {
 
   private val view = inject[views.html.NameView]
   private val form: Form[String] = Form(single("value" -> text))
@@ -21,7 +22,8 @@ class NameViewSpec extends AnyWordSpec with Matchers with TwirlSpec with GovukSe
     }
   }
 
-  "NameView" should {
+  // a test for each rule in each language, then the view's own tests
+  cataloguePage(staticPage("NameView")(view(form))) {
 
     "render its CSRF field, as it does in production" in {
       render(view(form)).css("input[type=hidden][name=csrfToken]").elements must have size 1
@@ -31,7 +33,7 @@ class NameViewSpec extends AnyWordSpec with Matchers with TwirlSpec with GovukSe
       inLanguage(Lang("cy"))(renderPage(view(form)).h1.text) mustBe "Beth yw eich enw?"
     }
 
-    "meet the standards and say what it should" in {
+    "say what it should" in {
       render(view(form)) must display(
         heading("name.heading"),
         textInput("value").labelled("name.heading"),

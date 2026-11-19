@@ -271,8 +271,4 @@ lazy val munit = Project("twirl-spec-munit", file("munit"))
   .settings(commonSettings)
   .settings(CodeCoverageSettings())
   .settings(libraryDependencies ++= LibDependencies.munit)
-  .settings(
-    description := "twirl-spec for MUnit suites.",
-    // Nothing to compare with until its first release.
-    mimaPreviousArtifacts := Set.empty
-  )
+  .settings(description := "twirl-spec for MUnit suites.")
