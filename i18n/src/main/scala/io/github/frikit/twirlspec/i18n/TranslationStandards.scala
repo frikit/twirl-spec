@@ -18,6 +18,7 @@ package io.github.frikit.twirlspec.i18n
 
 import io.github.frikit.twirlspec.expect.{Severity, Violation}
 import io.github.frikit.twirlspec.page.{Page, Text}
+import io.github.frikit.twirlspec.standards.Rule
 import org.jsoup.nodes.Element
 import play.api.i18n.Lang
 
@@ -92,6 +93,8 @@ object TranslationStandards {
       "the page declares the language it was rendered in"
     ) { (_, other) =>
       other.htmlLang match {
+        // a fragment has no <html> to declare it on, as html-lang allows
+        case _ if !Rule.isFullPage(other)                          => Nil
         case Some(declared) if other.declaresItsLanguage(declared) => Nil
         case declared                                              =>
           Seq(

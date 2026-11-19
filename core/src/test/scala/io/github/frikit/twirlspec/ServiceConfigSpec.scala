@@ -158,6 +158,22 @@ class RegionalLanguagesSpec extends AnyWordSpec with Matchers with TwirlSpec {
   }
 }
 
+/** A suite whose application declares no languages, as Play's own
+  * reference.conf leaves it: Play's one default language is then its only one.
+  */
+class UndeclaredLanguagesSpec extends AnyWordSpec with Matchers with TwirlSpec {
+
+  override def applicationConfig: Map[String, Any] =
+    super.applicationConfig + ("play.i18n.langs" -> Seq.empty[String])
+
+  "an application that declares no languages" should {
+    "have the base language as its one language" in {
+      languages mustBe Seq(currentLang)
+      currentLang.language mustBe "en"
+    }
+  }
+}
+
 /** A suite whose application offers Welsh alone, so English, the base language,
   * is not configured.
   */

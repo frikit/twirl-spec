@@ -12,7 +12,15 @@ readable.
 
 ## [3.2.1] - 2026-11-19
 
-No change to the library's code or behaviour.
+### Fixed
+
+- A service that declares no `play.i18n.langs` has Play's one default
+  language. `languages`, in `TwirlSpec` and `TwirlSuite`, was empty there, so a
+  catalogue aborted its suite. Found by following the new guide on a service
+  that declares none.
+- `i18n-lang-attribute` is silent on a fragment, as `html-lang` already was: a
+  component rendered without a layout has no `<html>` to declare a language
+  on, so a catalogued component could never pass it.
 
 ### Added
 

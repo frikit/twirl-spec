@@ -38,12 +38,12 @@ Read these from the service before writing anything:
 | Question | Where to look | What it decides |
 |---|---|---|
 | Scala version | `scalaVersion` in `build.sbt` | Scala 3.3.0 or later is required. On Scala 2.13 the library cannot be used: stop and report. |
-| Java version | the JDK the build runs on, `-release` in `scalacOptions` | 17 or later. Scala 3.3.0 on Java 21 needs `-release` set to 11 or 17. |
+| Java version | the JDK the build runs on | A JDK of 17 or later. `-release` in `scalacOptions` may still name an older Java, such as 11; only Scala 3.3.0 on a JDK of 21 or later needs it set. |
 | Play version | `project/plugins.sbt` | Any Play 3.0.x. Play 2.x cannot use it: stop and report. |
-| Test framework | test dependencies in `build.sbt` or `project/AppDependencies.scala` | ScalaTest (most services) or MUnit. |
+| Test framework | test dependencies in `build.sbt` or `project/AppDependencies.scala` | MUnit if the build declares it; otherwise ScalaTest, which twirl-spec brings with it. |
 | An existing spec base | `test/**/ViewSpecBase*`, `GuiceOneAppPerSuite`, a home-grown `ViewBehaviours` | `TwirlSpec`, or `TwirlSpecDsl` beside the existing application. |
 | The layout | a `play-frontend-hmrc` dependency, GOV.UK Frontend classes in the templates | `HmrcServiceChecks`, `GovukServiceChecks` or `AllChecks`. |
-| Languages | `play.i18n.langs` in `conf/application.conf`, `conf/messages.*` | How many languages every check runs in. Nothing to configure. |
+| Languages | `play.i18n.langs` in `conf/application.conf`, `conf/messages.*` | How many languages every check runs in; a service that declares none has Play's one default language. Nothing to configure, except that a one-language service turns off the translation requirement (Step 2). |
 | What the application needs to start | modules enabled in `conf/application.conf`, such as Mongo | Whether `applicationConfig` has to switch something off. |
 
 The full requirements are in the [documentation index](README.md#requirements).
@@ -84,8 +84,36 @@ Then the rules:
 | a GOV.UK transactional service on another layout | `GovukServiceChecks` |
 | anything else | `AllChecks`, or the module traits it wants ([table](rules-and-standards.md#turning-rules-on)) |
 
-Put both on one spec base, which every view spec extends. For a service on
-play-frontend-hmrc:
+All of these, and `TwirlSpec`, `TwirlSpecDsl`, `TwirlSuite` and
+`PageCatalogue`, are imported from `io.github.frikit.twirlspec`; the module
+traits come from its sub-packages, such as `io.github.frikit.twirlspec.wcag.WcagChecks`.
+
+Put both on one spec base, which every view spec extends. For most services it
+is no more than this, with the configuration the specs need to differ from the
+service's:
+
+<!-- compiled: all/src/test/scala/snippets/GettingStartedSpecBase.scala -->
+```scala
+import io.github.frikit.twirlspec.{GovukServiceChecks, TwirlSpec}
+import org.scalatest.matchers.must.Matchers
+import org.scalatest.wordspec.AnyWordSpec
+
+trait ViewSpecBase extends AnyWordSpec with Matchers with TwirlSpec with GovukServiceChecks {
+  override def applicationConfig: Map[String, Any] =
+    super.applicationConfig + ("some.feature.enabled" -> true)
+}
+```
+
+The message-file checks require a translation of every key by default. A
+service with one language turns that off on its spec base:
+
+```scala
+override def messagesIntegrityConfig = MessagesIntegrity.Config(requireTranslations = false)
+```
+
+with `import io.github.frikit.twirlspec.messages.MessagesIntegrity`. A
+bilingual service on play-frontend-hmrc keeps the requirement, and its base can
+also gather the furniture every page carries:
 
 <!-- compiled: all/src/test/scala/snippets/AdoptingSpecBase.scala -->
 ```scala
@@ -182,6 +210,12 @@ class NameViewSpec extends AnyWordSpec with Matchers with TwirlSpec with GovukSe
 }
 ```
 
+Three of its tests belong to this example rather than to the pattern: the
+configuration marker, the CSRF field and the Welsh heading prove things about
+the library in this build. A service's spec keeps the catalogue, the tests of
+what the view shows, `assertEverything` and, in one spec only, the message
+files.
+
 How to write each part:
 
 - **The page case.** A view without a form is `staticPage("Label")(view(...))`.
@@ -198,8 +232,21 @@ How to write each part:
   `paragraph`, `textInput(...).labelled(...)`, `submitButton(...)`, `backLink`.
   [Writing view specs](writing-view-specs.md) covers every control, and the
   [README reference](../README.md#reference) lists every expectation.
+- **What an expectation looks at.** The GOV.UK-shaped expectations find GOV.UK
+  markup: `paragraph` reads GOV.UK body text (`p.govuk-body` and its sizes) and
+  any `<p>` inside `<main>`, so it finds nothing in a component rendered without
+  a layout. For an element of any shape, name it by its id:
+  `elementWithText("hello", "hello.key")`.
 - **Completeness.** `assertEverything`, last, fails while anything the page
-  shows has not been asserted by an earlier test of the same spec.
+  shows has not been asserted by an earlier test of the same spec. It counts
+  ids, links and tracked elements, so `content("key")`, which finds text
+  anywhere, does not count for the element with an id that shows it;
+  `elementWithText(id, key)` does. [Coverage](coverage-and-entry-points.md)
+  explains what counts.
+- **Components.** A component rendered without a layout has no `<html>`, so
+  the rules about whole pages (one `<h1>`, a title, a declared language) stay
+  silent on it. The catalogue still lists them as met; they have nothing to
+  find, not nothing wrong.
 - **The message files.** Check them once, in one spec, as above, not in every
   view spec.
 
@@ -241,8 +288,10 @@ It writes `target/twirl-spec-report/index.html` and `report.md`.
    `elementCount` for groups.
 3. **The rule cannot apply to this page.** Excuse that page alone, from that
    rule alone, and say why:
-   - in a catalogue, `staticPage(...)(...).exceptStandards("rule-id")` or
-     `.exceptTranslation("rule-id")`;
+   - in a catalogue, by the failing test's name: a test named `meet <id> in
+     <lang>` is excused with `staticPage(...)(...).exceptStandards("<id>")`, one
+     named `translate consistently by <id>` with `.exceptTranslation("<id>")`.
+     A page case takes no reason, so give it in a comment beside the call;
    - in a single test, `meetStandardsExcept(Seq("rule-id"), because = "...")`.
 
    Then add a last test that checks no exclusion has outlived its reason:
