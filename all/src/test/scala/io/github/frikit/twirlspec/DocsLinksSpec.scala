@@ -70,6 +70,14 @@ class DocsLinksSpec extends AnyWordSpec with Matchers {
 
   private val MarkdownLink = """\[[^\]]*\]\(([^)\s]+)\)""".r
 
+  private val FencedCode = """(?ms)^```.*?^```[^\n]*$""".r
+
+  /** A file without its fenced code, where `get[String]("key")` is Scala, not a
+    * link.
+    */
+  private def prose(path: String): String =
+    FencedCode.replaceAllIn(read(path), "")
+
   /** Every link in a file, as (the file, the target it names, where the target
     * resolves to from the repository root), leaving out absolute ones and
     * anchors within a page.
@@ -77,7 +85,7 @@ class DocsLinksSpec extends AnyWordSpec with Matchers {
   private def linksIn(path: String): List[(String, String, String)] = {
     val from = new File(root, path).toPath.getParent
     MarkdownLink
-      .findAllMatchIn(read(path))
+      .findAllMatchIn(prose(path))
       .map(_.group(1))
       .filterNot(target =>
         target.startsWith("http://") || target.startsWith("https://") ||
@@ -127,7 +135,7 @@ class DocsLinksSpec extends AnyWordSpec with Matchers {
     "sit on one line" in {
       val split = documentation.flatMap { path =>
         MarkdownLink
-          .findAllMatchIn(read(path))
+          .findAllMatchIn(prose(path))
           .map(_.group(0))
           .filter(_.contains("\n"))
           .map(link => s"$path: ${link.replace("\n", " ")}")

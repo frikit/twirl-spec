@@ -10,6 +10,38 @@ release, and each one has a GitHub Release whose notes are its section here. Eve
 recorded in full; earlier lines are kept to one entry each, so the file stays
 readable.
 
+## [3.2.1] - 2026-11-19
+
+### Fixed
+
+- A service that declares no `play.i18n.langs` has Play's one default
+  language. `languages`, in `TwirlSpec` and `TwirlSuite`, was empty there, so a
+  catalogue aborted its suite. Found by following the new guide on a service
+  that declares none.
+- `i18n-lang-attribute` is silent on a fragment, as `html-lang` already was: a
+  component rendered without a layout has no `<html>` to declare a language
+  on, so a catalogued component could never pass it.
+
+### Added
+
+- [For coding agents](docs/agents.md), a guide that takes adoption as a
+  procedure: the facts to collect from a service, the base and rule traits to
+  choose, one spec per view through the catalogue, what to do when a check
+  fails and what never to do to make a run green, a definition of done, and a
+  block of instructions and a skill file to keep in the service. Its examples
+  are the consumer build's specs, compiled and run in CI.
+- `llms.txt` at the site's root, an index of every page for tools that read one.
+- `ARCHITECTURE.md` in the repository: a map of the modules, where each
+  behaviour lives, and the constraints the code relies on. `AGENTS.md` points
+  to it and names the constraints easiest to break.
+
+### Changed
+
+- The consumer service's ScalaTest spec puts its view through `cataloguePage`,
+  as the guide recommends, so CI runs a ScalaTest catalogue on every row.
+- `twirl-spec-munit` is held to binary compatibility with 3.2.0 by MiMa, like
+  every other module.
+
 ## [3.2.0] - 2026-11-15
 
 ### Added
@@ -89,7 +121,8 @@ the Twirl entry points in `twirl-spec-quality`; language parity in
 them in `twirl-spec-all`. The renames a service built against a 0.x snapshot
 would meet are listed in [the adoption guide](docs/adopting.md).
 
-[Unreleased]: https://github.com/frikit/twirl-spec/compare/v3.2.0...HEAD
+[Unreleased]: https://github.com/frikit/twirl-spec/compare/v3.2.1...HEAD
+[3.2.1]: https://github.com/frikit/twirl-spec/compare/v3.2.0...v3.2.1
 [3.2.0]: https://github.com/frikit/twirl-spec/compare/v3.1.0...v3.2.0
 [3.1.0]: https://github.com/frikit/twirl-spec/compare/v3.0.0...v3.1.0
 [3.0.0]: https://github.com/frikit/twirl-spec/compare/v2.15.0...v3.0.0

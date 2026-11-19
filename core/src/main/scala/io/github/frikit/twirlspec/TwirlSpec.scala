@@ -64,10 +64,12 @@ trait TwirlSpec extends TwirlSpecDsl with SuiteLifecycle {
     * a regional English such as `en-GB`.
     */
   def languages: Seq[Lang] = {
-    // Play's reference.conf always defines this, so there is no fallback to write.
+    // Play's reference.conf defines this as an empty list, which Play reads as
+    // its one default language; the base language is that language here.
     val configured =
       app.configuration.get[Seq[String]]("play.i18n.langs").map(Lang(_))
-    configured.sortBy(l => if (l.language == "en") 0 else 1)
+    if (configured.isEmpty) Seq(baseLanguage)
+    else configured.sortBy(l => if (l.language == "en") 0 else 1)
   }
 
   /** The block's language, once [[inLanguage]] has chosen one. */

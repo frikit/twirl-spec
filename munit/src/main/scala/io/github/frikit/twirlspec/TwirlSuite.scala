@@ -81,11 +81,13 @@ trait TwirlSuite extends FunSuite with TwirlSpecDsl with I18nChecks {
   val english: Lang = Lang("en")
 
   /** Every language the application is configured for, English first. */
-  def languages: Seq[Lang] =
-    app.configuration
-      .get[Seq[String]]("play.i18n.langs")
-      .map(Lang(_))
-      .sortBy(l => if (l.language == "en") 0 else 1)
+  def languages: Seq[Lang] = {
+    // An empty list is Play's default: its one default language, the base.
+    val configured =
+      app.configuration.get[Seq[String]]("play.i18n.langs").map(Lang(_))
+    if (configured.isEmpty) Seq(baseLanguage)
+    else configured.sortBy(l => if (l.language == "en") 0 else 1)
+  }
 
   private val currentLanguage = new DynamicVariable[Option[Lang]](None)
 

@@ -106,6 +106,14 @@ class TranslationSpec
       )
       rulesFor(other) must contain("i18n-lang-attribute")
     }
+    "stay silent on a fragment, which has no <html> to declare it on" in {
+      val fragment = Page.fromString(
+        """<p id="intro">Bonjour</p>""",
+        fr,
+        messagesApiInstance.preferred(Seq(fr))
+      )
+      rulesFor(fragment) must not contain "i18n-lang-attribute"
+    }
   }
 
   "i18n-lang-attribute, on how a language is written" should {

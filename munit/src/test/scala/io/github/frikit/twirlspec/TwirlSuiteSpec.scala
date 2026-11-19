@@ -280,6 +280,12 @@ class TwirlSuiteSpec extends AnyWordSpec with Matchers {
       suite.host mustBe theSameInstanceAs(host)
       // a suite that asks for nothing gets Play's defaults
       new TwirlSuite {}.applicationConfig mustBe empty
+      // and an application that declares no languages has the base language
+      val undeclared = new TwirlSuite {
+        override def applicationConfig: Map[String, Any] =
+          Map("play.i18n.langs" -> Seq.empty[String])
+      }
+      undeclared.languages mustBe Seq(undeclared.currentLang)
       // a template with injected dependencies comes from the application
       new Injecting().instance mustBe theSameInstanceAs(
         suite.messagesApiInstance

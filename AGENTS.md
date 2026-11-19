@@ -3,6 +3,24 @@
 Read [CONTRIBUTING.md](CONTRIBUTING.md) before changing the build or release process.
 It describes the compatibility policy, dependency pins, checks and publishing secrets.
 
+Read [ARCHITECTURE.md](ARCHITECTURE.md) before changing code. It maps the ten
+modules, says where each behaviour lives, and lists the constraints the code relies
+on. The ones that are easiest to break:
+
+- Catalogue test names are parsed by `TwirlSpecReporter` and reproduced by
+  `TwirlSuite`; change all three together or not at all.
+- No trait `super` calls and no new trait `val` or `lazy val` in a minor or patch
+  release: MiMa reports them, and they break suites compiled against the last
+  release. Keep per-suite state in objects keyed by the suite, as `SuiteRuns` does.
+- Keep a rule set's blocks under 3000 tree nodes; Scala 3.3.9 stops measuring
+  coverage beyond that, and the build fails when it does.
+- `twirl-spec-all` and every module below it must not depend on `twirl-spec-munit`.
+- No Python or other extra languages: build and CI helpers are sbt tasks in
+  `project/` or shell scripts in `.github/scripts`.
+
+Agents adopting the library in a service follow `docs/agents.md` instead, published
+at https://frikit.github.io/twirl-spec/docs/agents.html.
+
 ## Documentation
 
 - Edit the root `README.md` and `docs/*.md` directly. Jekyll publishes those files;
@@ -16,8 +34,14 @@ It describes the compatibility policy, dependency pins, checks and publishing se
   `DocsContentSpec` enforces that agreement. Preserve historical changelog entries.
 - Use relative links between published pages. Link to repository-only files through
   their GitHub URL from a public page; `DocsLinksSpec` checks this distinction.
-- Keep `AGENTS.md` and temporary development plans out of the public site through
-  `_config.yml`.
+- Keep `AGENTS.md`, `ARCHITECTURE.md` and temporary development plans out of the
+  public site through `_config.yml`.
+- A new published page gets a row in `docs/README.md`, a line in the README's
+  Documentation list and an entry in `llms.txt`, whose links are absolute URLs to
+  the built `.html` pages. Keep literal versions out of `llms.txt`; no spec checks it.
+- Code in a guide is a `<!-- compiled: path -->` snippet of a file the build compiles,
+  under `all/src/test/scala/snippets/` or in `consumer/`, wherever it can be.
+- When the code changes what `ARCHITECTURE.md` describes, update it in the same change.
 
 ## Validation
 

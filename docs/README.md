@@ -20,6 +20,10 @@ of all ten modules as one site. These pages are the guide.
 | [Failure messages](failure-messages.md) | a test is red and you want to read its output quickly |
 | [Adopting in an existing service](adopting.md) | you have a home-grown spec base to replace, or are moving from 1.x or 2.x |
 | [Troubleshooting](troubleshooting.md) | something does not behave as you expected |
+| [For coding agents](agents.md) | an agent, or you, wants the whole adoption as a procedure: decisions, commands, a definition of done, and instructions to keep in the service |
+
+Every page is also listed, for tools that read one, in
+[`llms.txt`](https://frikit.github.io/twirl-spec/llms.txt).
 
 ## Requirements
 
@@ -33,7 +37,7 @@ of all ten modules as one site. These pages are the guide.
 ## The shortest possible start
 
 ```scala
-libraryDependencies += "io.github.frikit" %% "twirl-spec-all" % "3.2.0" % Test
+libraryDependencies += "io.github.frikit" %% "twirl-spec-all" % "3.2.1" % Test
 ```
 
 ```scala
