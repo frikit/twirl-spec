@@ -10,6 +10,13 @@ release, and each one has a GitHub Release whose notes are its section here. Eve
 recorded in full; earlier lines are kept to one entry each, so the file stays
 readable.
 
+## [3.3.0] - 2026-11-22
+
+### Changed
+
+- Starts the 3.3 line on the code of 3.2.2. Nothing a service depends on has
+  changed: the API, behaviour and dependencies are those of 3.2.2.
+
 ## [3.2.2] - 2026-11-22
 
 ### Changed
@@ -129,7 +136,8 @@ the Twirl entry points in `twirl-spec-quality`; language parity in
 them in `twirl-spec-all`. The renames a service built against a 0.x snapshot
 would meet are listed in [the adoption guide](docs/adopting.md).
 
-[Unreleased]: https://github.com/frikit/twirl-spec/compare/v3.2.2...HEAD
+[Unreleased]: https://github.com/frikit/twirl-spec/compare/v3.3.0...HEAD
+[3.3.0]: https://github.com/frikit/twirl-spec/compare/v3.2.2...v3.3.0
 [3.2.2]: https://github.com/frikit/twirl-spec/compare/v3.2.1...v3.2.2
 [3.2.1]: https://github.com/frikit/twirl-spec/compare/v3.2.0...v3.2.1
 [3.2.0]: https://github.com/frikit/twirl-spec/compare/v3.1.0...v3.2.0
