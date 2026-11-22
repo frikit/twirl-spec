@@ -53,13 +53,13 @@ The full requirements are in the [documentation index](README.md#requirements).
 ScalaTest:
 
 ```scala
-libraryDependencies += "io.github.frikit" %% "twirl-spec-all" % "3.2.1" % Test
+libraryDependencies += "io.github.frikit" %% "twirl-spec-all" % "3.2.2" % Test
 ```
 
 MUnit (it brings `twirl-spec-all` with it):
 
 ```scala
-libraryDependencies += "io.github.frikit" %% "twirl-spec-munit" % "3.2.1" % Test
+libraryDependencies += "io.github.frikit" %% "twirl-spec-munit" % "3.2.2" % Test
 ```
 
 Play is `provided`: the service's own Play 3.0.x is used. On a service that keeps
