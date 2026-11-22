@@ -37,7 +37,7 @@ Every page is also listed, for tools that read one, in
 ## The shortest possible start
 
 ```scala
-libraryDependencies += "io.github.frikit" %% "twirl-spec-all" % "3.2.1" % Test
+libraryDependencies += "io.github.frikit" %% "twirl-spec-all" % "3.2.2" % Test
 ```
 
 ```scala
